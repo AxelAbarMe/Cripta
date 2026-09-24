@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True)
 class ErrorApiDTO:
     error: str
 
@@ -8,7 +8,7 @@ class ErrorApiDTO:
     def desde_json(datos):
         return ErrorApiDTO(error=datos["error"])
 
-dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True)
 class ErrorLimiteDTO:
     error: str
     reintentar_en : int

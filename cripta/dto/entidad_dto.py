@@ -1,4 +1,4 @@
-from ctypes import Union
+from typing import Union
 
 from cripta.dto.antidoto_dto import AntidotoDTO
 from cripta.dto.antorcha_dto import AntorchaDTO
@@ -14,7 +14,6 @@ EntidadCatalogoDTO = Union[
     EnemigoDTO, ArmaDTO, ArmaduraDTO, PocionDTO, AntidotoDTO, LlaveDTO, AntorchaDTO, PergaminoDTO, TrampaDTO,
 ]
 
-@staticmethod
 def entidad_desde_json(datos):
     if datos["clase"] == "enemigo":
         return EnemigoDTO.desde_json(datos)
@@ -30,7 +29,7 @@ def entidad_desde_json(datos):
         return LlaveDTO.desde_json(datos)
     if datos["clase"] == "antorcha":
         return AntorchaDTO.desde_json(datos)
-    if datos["clase"] == "pergamino":
+    if datos["clase"] == "pergamino_retroceso":
         return PergaminoDTO.desde_json(datos)
     if datos["clase"] == "trampa":
         return TrampaDTO.desde_json(datos)

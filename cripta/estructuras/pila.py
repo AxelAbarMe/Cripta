@@ -20,7 +20,7 @@ class Pila:
         return value
 
     def peek(self):
-        return None if self.top is None else self.top
+        return None if self.top is None else self.top.value
 
     def is_empty(self):
         return self.top is None

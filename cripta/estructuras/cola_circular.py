@@ -7,11 +7,13 @@ class ColaCircular:
         self.count = 0
 
     def enqueue(self, value):
-        if self.count == self.size:
-            raise Exception("Queue is full")
+        # Si la cola está llena y entra un nuevo elemento, sobrescribimos el elemento más antiguo
         self.data[self.rear] = value
         self.rear = (self.rear + 1) % self.size
-        self.count += 1
+        if self.count == self.size:
+            self.front = (self.front + 1) % self.size
+        else:
+            self.count += 1
 
     def dequeue(self):
         if self.count == 0:

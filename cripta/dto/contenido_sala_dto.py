@@ -18,7 +18,7 @@ class ContenidoSalaDTO:
         objetos = datos.get("objetos", [])
         trampas = datos.get("trampas", [])
         return ContenidoSalaDTO(
-            id=datos["id"],
+            id=datos["sala"],
             enemigos=tuple(EnemigoSalaDTO.desde_json(e) for e in enemigos),
             objetos=tuple(objetos),
             trampas=tuple(TrampaSalaDTO.desde_json(t) for t in trampas),

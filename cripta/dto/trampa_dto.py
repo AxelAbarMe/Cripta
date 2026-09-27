@@ -15,5 +15,5 @@ class TrampaDTO:
             nombre=datos["nombre"],
             clase=datos["clase"],
             daño=datos["daño"],
-            rearme=datos["rearme"],
+            rearme=datos.get("rearme"),
         )

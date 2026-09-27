@@ -19,7 +19,7 @@ class PocionDTO:
             clase=datos["clase"],
             peso=datos["peso"],
             valor=datos["valor"],
-            cura=datos["cura"],
-            modificador_velocidad=datos["modificador_velocidad"],
-            duracion=datos["duracion"],
+            cura=datos.get("cura"),
+            modificador_velocidad=datos.get("modificador_velocidad"),
+            duracion=datos.get("duracion"),
         )

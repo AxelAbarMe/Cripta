@@ -49,3 +49,7 @@ class AlmacenDiscoPuerto(Protocol):
     def escribir(self, clave: str, datos: bytes) -> None:
         """Guarda `datos` bajo `clave`, sobrescribiendo si ya existía."""
         ...
+ 
+    def existe(self, clave: str) -> bool:
+        """True si hay algo guardado bajo `clave`, sin leer su contenido."""
+        ...

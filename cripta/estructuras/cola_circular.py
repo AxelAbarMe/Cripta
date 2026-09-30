@@ -19,7 +19,7 @@ class ColaCircular:
         if self.count == 0:
             raise Exception("Queue is empty")
         value = self.data[self.front]
-        self.data[self.front] = None  # Optional: Clear the slot
+        self.data[self.front] = None  # Opcional: limpiar la referencia para ayudar al recolector de basura
         self.front = (self.front + 1) % self.size
         self.count -= 1
         return value
@@ -37,3 +37,7 @@ class ColaCircular:
 
     def __len__(self):
         return self.count
+
+    def elementos(self):
+        # Del más antiguo al más reciente, sin exponer front/rear al que llama
+        return tuple(self.data[(self.front + i) % self.size] for i in range(self.count))

@@ -56,3 +56,38 @@ class ListaDobleEnlazada:
                 return True
             current = current.next
         return False
+
+    def eliminar_nodo(self, nodo) -> None:
+        # Elimina un nodo ya conocido en O(1): el costo no depende de en qué
+        # posición de la lista esté, a diferencia de eliminar(valor).
+        self._desconectar(nodo)
+
+    def mover_al_inicio(self, nodo) -> None:
+        # Reubica un nodo que ya pertenece a la lista al frente, en O(1).
+        if nodo is self.head:
+            return
+        self._desconectar(nodo, actualizar_tamano=False)
+        nodo.next = self.head
+        nodo.prev = None
+        if self.head is not None:
+            self.head.prev = nodo
+        else:
+            self.tail = nodo
+        self.head = nodo
+
+    def _desconectar(self, nodo, actualizar_tamano: bool = True) -> None:
+        # Retira `nodo` de la lista actualizando head/tail y sus vecinos, sin
+        # recorrer nada más (O(1)). mover_al_inicio vuelve a fijar next/prev
+        # justo después, así que dejarlos en None aquí es seguro.
+        if nodo.prev:
+            nodo.prev.next = nodo.next
+        else:
+            self.head = nodo.next
+        if nodo.next:
+            nodo.next.prev = nodo.prev
+        else:
+            self.tail = nodo.prev
+        nodo.prev = None
+        nodo.next = None
+        if actualizar_tamano:
+            self._tamano -= 1

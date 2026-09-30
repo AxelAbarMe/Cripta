@@ -4,11 +4,7 @@ from cripta.estructuras.ordenamientos import Ordenamiento
 class VectorOrdenado:
     """Vector que se mantiene ordenado por una clave, para poder buscar
     por búsqueda binaria (O(log n)) en vez de recorrerlo completo (O(n)).
-    Reutiliza Ordenamiento.insertion_sort() de estructuras/ordenamientos.py
-
-    `clave` es una función que extrae el valor comparable de cada
-    elemento. Se guarda internamente como (clave(elemento), elemento): así el ordenamiento y la búsqueda
-    comparan tuplas, y Python solo mira el segundo valor (el elemento) si dos claves son iguales
+    `clave` es una función que extrae el valor comparable de cada elemento.
     """
 
     def __init__(self, clave=lambda elemento: elemento):

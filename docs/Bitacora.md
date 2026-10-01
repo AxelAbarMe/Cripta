@@ -1,3 +1,21 @@
+# 20/09/2026
+
+Antes de programar nada se hizo una prueba directa al API para ver qué devuelve el servidor de verdad y no solo lo que dice el Swagger. Se creó un script prueba_api.py que consulta las criptas publicadas, los datos generales, el esqueleto por páginas, el contenido de las salas y el catálogo por lotes, imprimiendo el código de estado y el JSON de cada respuesta. Con eso se confirmó la cripta-01 (Osario menor) de 6 salas y se revisaron los casos raros de los datos.
+
+Después se empezaron los DTO con los de la cripta y los del esqueleto. Se usó dataclass con frozen y slots para que los DTO queden inmutables y pesen menos, porque lo que cambia durante la partida es estado del modelo y no del DTO. Cada DTO tiene su método desde_json que es el único lugar donde se toca el diccionario que devuelve respuesta.json(), así el dict solo se usa para leer el JSON como lo permite el enunciado y de ahí para adentro el programa trabaja con objetos.
+
+Los DTO que quedaron hechos son:
+* CriptaResumenDTO
+* JugadorInicialDTO
+* CriptaGeneralDTO
+* SalidaDTO
+* SalaDTO
+* PaginaEsqueletoDTO
+
+Se definió que va una clase por archivo en dto/, igual que como se hace en Java, para que el criterio sea parejo en todos los DTO que falten. También las salidas no se guardan como diccionario sino en cuatro campos fijos norte, sur, este y oeste, porque las direcciones siempre son máximo cuatro y así no se ocupa ninguna estructura de búsqueda.
+
+Lo siguiente que hay que realizar son los DTO que faltan, que son los del contenido de las salas, los del catálogo con una ficha por cada clase y los de versiones, y después el cliente HTTP en infraestructura/ que debe usar un solo UUID por ejecución, revisar el código de estado antes de leer el JSON, esperar y reintentar cuando llega un 429, y llevar la cuenta de las solicitudes para no pasarse del presupuesto.
+
 # 26/09/2026
 
 Ya los DTO se encuentran al 100%, no hay que agregar nada y eso está verificado porque yo hice los DTO basados en el server, donde devuelve cada JSON y todo eso ya se maneja automatico

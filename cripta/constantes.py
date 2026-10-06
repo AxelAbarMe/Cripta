@@ -39,8 +39,12 @@ RETROCESO_MAX_ACCIONES = 5
 # Bitácora en pantalla: solo se muestran los últimos N mensajes (4.8)
 BITACORA_MAX_MENSAJES = 20
 
+# === RED / DISCO / BENCH (Saul) ===
 # Caché de catálogo en memoria: tope por defecto, configurable con --cache-size (4.4)
-CACHE_TAMANO_MAX = 25
+CACHE_TAMANO_DEFAULT = 25
+
+# Tope de elementos por solicitud en /contenido y /catalogo (3.4)
+MAX_ELEMENTOS_POR_LOTE = 10
 
 DIRECCIONES = ("N", "S", "E", "O")
 
@@ -56,3 +60,5 @@ def direccion_opuesta(direccion: str) -> str:
     if direccion == "O":
         return "E"
     raise ValueError(f"Dirección inválida: {direccion}")
+
+# === MODELO (Isaac) ===

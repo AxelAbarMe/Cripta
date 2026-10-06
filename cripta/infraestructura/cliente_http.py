@@ -12,10 +12,10 @@ from cripta.dto.version_dto import VersionCatalogoDTO, VersionCriptaDTO
 from cripta.excepciones import CriptaApiError
 from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
 from cripta.excepciones import CriptaApiError, CriptaLimiteError
+from cripta.infraestructura.lotes import validar_lote
 
 BASE_URL = "https://cripta-api.kad06a0zhgs84.us-east-2.cs.amazonlightsail.com/v1"
-TIEMPO_ESPERA_SEGUNDOS = 10 
-MAX_IDS_POR_LOTE = 10
+TIEMPO_ESPERA_SEGUNDOS = 10
 MAX_REINTENTOS_429 = 5 #MOVER A CONSTANTES.PY LUEGO
 
 class ClienteHttp:
@@ -127,7 +127,7 @@ class ClienteHttp:
         return PaginaEsqueletoDTO.desde_json(datos)
  
     def obtener_contenido(self, cripta_id: str, salas: list[int]) -> ContenidoSalaRespuestaDTO:
-        self._validar_lote(salas, "salas")
+        validar_lote(salas, "salas")
         parametro = ",".join(str(s) for s in salas)
         datos = self._get(
             f"/criptas/{cripta_id}/contenido",
@@ -137,7 +137,7 @@ class ClienteHttp:
         return ContenidoSalaRespuestaDTO.desde_json(datos)
  
     def obtener_catalogo(self, ids: list[str]) -> CatalogoDTO:
-        self._validar_lote(ids, "ids de catálogo")
+        validar_lote(ids, "ids de catálogo")
         parametro = ",".join(ids)
         datos = self._get(
             "/catalogo",
@@ -149,25 +149,3 @@ class ClienteHttp:
     def obtener_version_catalogo(self) -> VersionCatalogoDTO:
         datos = self._get("/catalogo/version", "versión de catálogo")
         return VersionCatalogoDTO.desde_json(datos)
-
-    @staticmethod
-    def _validar_lote(elementos: list, nombre_campo: str) -> None:
-        # Lotes repetidos o vacios son rechazados antes de la llamada de red, para no desperdiciar solicitudes.
-        if not elementos:
-            raise ValueError(f"El lote de {nombre_campo} no puede estar vacío.")
-        if len(elementos) > MAX_IDS_POR_LOTE:
-            raise ValueError(
-                f"El lote de {nombre_campo} admite hasta {MAX_IDS_POR_LOTE} "
-                f"elementos, se recibieron {len(elementos)}."
-            )
-        if ClienteHttp._tiene_repetidos(elementos):
-            raise ValueError(f"El lote de {nombre_campo} tiene elementos repetidos.")
- 
-    @staticmethod
-    def _tiene_repetidos(elementos: list) -> bool:
-        # Chequeo manual de repetidos para no depender de set() y mantener el orden de los elementos.
-        for i in range(len(elementos)):
-            for j in range(i + 1, len(elementos)):
-                if elementos[i] == elementos[j]:
-                    return True
-        return False

@@ -31,6 +31,7 @@ from cripta.dto.entidad_dto import entidad_desde_json
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.version_dto import VersionCatalogoDTO, VersionCriptaDTO
 from cripta.excepciones import CriptaDatosNoEncontradosError
+from cripta.infraestructura.lotes import validar_lote
 
 
 class ClienteOffline:
@@ -58,6 +59,7 @@ class ClienteOffline:
 
     def obtener_contenido(self, cripta_id: str, salas: list[int]) -> ContenidoSalaRespuestaDTO:
         # Un archivo por sala; se ensambla el mismo sobre "contenido" que devolvería el lote real
+        validar_lote(salas, "salas")
         entradas = []
         for sala_id in salas:
             ruta = self._raiz / cripta_id / "contenido" / f"{sala_id}.json"
@@ -67,6 +69,7 @@ class ClienteOffline:
 
     def obtener_catalogo(self, ids: list[str]) -> CatalogoDTO:
         # Un archivo por id de catálogo, con la forma "desempaquetada" (como /catalogo/<id>)
+        validar_lote(ids, "ids de catálogo")
         entidades = []
         for catalog_id in ids:
             ruta = self._raiz / "catalogo" / f"{catalog_id}.json"

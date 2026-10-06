@@ -391,7 +391,7 @@ def bench_ciclo_eventos(escala: float = 1.0):
             def accion():
                 if not enemigo.esta_vivo():
                     return
-                combate.resolver_ataque(enemigo, jugador, azar)
+                combate.atacar(enemigo, jugador, azar)
                 reloj.programar_en(calcular_intervalo(100, enemigo.velocidad), accion)
             return accion
 

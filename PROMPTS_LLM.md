@@ -1,3 +1,16 @@
+### 2026-09-20 — Claude (Opus 5, app de escritorio de Claude)
+**Prompt (resumido):** Se compartió el PDF del enunciado, el openapi.json y
+el esqueleto inicial del repo. Se preguntó cómo se organiza la arquitectura
+MVC + adaptadores que pide §6 y si el enunciado exige una estructura de
+carpetas específica. Luego se pidió, paso a paso y con explicación, probar
+el API con un script (prueba_api.py) e interpretar sus respuestas reales, y
+construir los primeros DTO de la cripta y del esqueleto (CriptaResumenDTO,
+JugadorInicialDTO, CriptaGeneralDTO, SalidaDTO, SalaDTO y
+PaginaEsqueletoDTO).
+
+**Para qué se usó:** Entender la arquitectura exigida, verificar el acceso al
+API y la forma de sus respuestas, y crear los primeros DTO.
+
 ### 2026-09-21 — Claude (Sonnet 5, claude.ai)
 **Prompt (resumido):** Se compartió el contexto acumulado del proyecto, el PDF del
 enunciado, el openapi.json y el estado actual del repo (zip). Se pidió: revisar si

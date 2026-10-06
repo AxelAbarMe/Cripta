@@ -2,6 +2,7 @@ class CriptaError(Exception):
     """Clase base para todas las excepciones de Cripta."""
     pass
 
+# === RED / DISCO (Saul) ===
 class CriptaApiError(CriptaError):
     """Excepción para errores de la API de Cripta."""
     def __init__(self, operacion : str, codigo : int, mensaje : str):
@@ -28,3 +29,5 @@ class CriptaFormatoIncompatibleError(CriptaError):
     def __init__(self, motivo: str):
         self.motivo = motivo
         super().__init__(f"Archivo de guardado incompatible: {motivo}")
+        
+# === MODELO (Isaac) ===

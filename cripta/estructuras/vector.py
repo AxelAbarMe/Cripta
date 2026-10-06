@@ -1,6 +1,3 @@
-from cripta.estructuras.ordenamientos import Ordenamiento
-
-
 class VectorOrdenado:
     """Vector que se mantiene ordenado por una clave, para poder buscar
     por búsqueda binaria (O(log n)) en vez de recorrerlo completo (O(n)).
@@ -12,8 +9,15 @@ class VectorOrdenado:
         self._pares = []  # cada entrada: (clave(elemento), elemento)
 
     def insertar(self, elemento):
-        self._pares.append((self._clave(elemento), elemento))
-        Ordenamiento(self._pares).insertion_sort()
+        clave = self._clave(elemento)
+        bajo, alto = 0, len(self._pares)
+        while bajo < alto:  # búsqueda binaria del punto de inserción (solo compara claves)
+            medio = (bajo + alto) // 2
+            if self._pares[medio][0] <= clave:
+                bajo = medio + 1
+            else:
+                alto = medio
+        self._pares.insert(bajo, (clave, elemento))
 
     def buscar(self, valor_clave):
         """Búsqueda binaria por clave. Devuelve el elemento o None si no está."""

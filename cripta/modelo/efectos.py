@@ -47,7 +47,7 @@ class EfectoVeneno:
             return
         self._objetivo.recibir_daño(self._daño_por_pulso)
         self._pulsos_restantes -= 1
-        self._programar_siguiente_pulso()
+        self._siguiente_pulso()
 
 
 class EfectoCambioVelocidad:

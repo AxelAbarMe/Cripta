@@ -66,7 +66,7 @@ class ServicioPrecarga:
         self._lotes = []                                                   # en orden de solicitud (list permitido, §7)
         self._primer_no_incorporado = 0
         self._indice_lote = VectorOrdenado(clave=lambda par: par[0])      # (sala_id, lote)
-        self._enemigos_por_crear = VectorOrdenado(clave=lambda c: c.sala)  # ContenidoSalaDTO con enemigos
+        self._enemigos_por_crear = VectorOrdenado(clave=lambda c: c.id)  # ContenidoSalaDTO con enemigos
         self._pobladas = VectorOrdenado()                                  # salas cuyos enemigos ya se instanciaron
 
         self._cola = Cola()
@@ -251,11 +251,11 @@ class ServicioPrecarga:
         return error
 
     def _incorporar_contenido(self, contenido) -> None:
-        sala = self._mapa.obtener(contenido.sala)
+        sala = self._mapa.obtener(contenido.id)
         if sala is None:
             return
         sala.cargar_contenido(contenido)
-        if len(contenido.enemigos) > 0 and not self._pobladas.contiene(contenido.sala):
+        if len(contenido.enemigos) > 0 and not self._pobladas.contiene(contenido.id):
             self._enemigos_por_crear.insertar(contenido)
         if self._catalogo is not None:
             ids = [e.tipo for e in contenido.enemigos] + list(contenido.objetos) + [t.tipo for t in contenido.trampas]

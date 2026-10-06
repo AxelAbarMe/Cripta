@@ -64,7 +64,7 @@ class CacheDisco:
 
     def guardar_contenido_sala(self, cripta_id: str, version: str, contenido_dto) -> None:
         self._almacen.escribir(
-            self._clave_contenido(cripta_id, version, contenido_dto.sala),
+            self._clave_contenido(cripta_id, version, contenido_dto.id),
             a_bytes(contenido_sala_a_json(contenido_dto)),
         )
 

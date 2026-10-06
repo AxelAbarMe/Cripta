@@ -57,7 +57,7 @@ def contenido_sala_a_json(contenido) -> dict:
             datos["vida"] = e.vida
         enemigos.append(datos)
     return {
-        "sala": contenido.sala,
+        "sala": contenido.id,
         "enemigos": enemigos,
         "objetos": list(contenido.objetos),
         "trampas": [{"instancia": t.instancia, "tipo": t.tipo} for t in contenido.trampas],

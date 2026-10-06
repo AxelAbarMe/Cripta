@@ -7,26 +7,33 @@ class ListaDobleEnlazada:
     def __init__(self):
         self.head = None
         self.tail = None  # puntero al último nodo: evita recorrer la lista para insertar al final
+        self._tamano = 0
 
     def agregar(self, value):
         # Insertar al final en O(1), aprovechando que tail siempre está disponible
         new_node = Node(value)
         if self.head is None:  # Lista vacía
             self.head = self.tail = new_node
-            return
+            self._tamano += 1
+            return new_node
         new_node.prev = self.tail
         self.tail.next = new_node
         self.tail = new_node
+        self._tamano += 1
+        return new_node
 
     def agregar_inicio(self, value):
         # Insertar al inicio en O(1), aprovechando que head siempre está disponible
         new_node = Node(value)
         if self.head is None:  # Lista vacía
             self.head = self.tail = new_node
-            return
+            self._tamano += 1
+            return new_node
         new_node.next = self.head
         self.head.prev = new_node
         self.head = new_node
+        self._tamano += 1
+        return new_node
 
     def eliminar(self, value):
         if self.head is None:  # Lista vacía
@@ -37,11 +44,13 @@ class ListaDobleEnlazada:
                 self.head.prev = None
             else:
                 self.tail = None  # la lista quedó vacía
+            self._tamano -= 1
             return
         current = self.head
         while current and current.data != value:
             current = current.next
         if current:  # Nodo encontrado
+            self._tamano -= 1
             if current.prev:
                 current.prev.next = current.next
             if current.next:
@@ -56,6 +65,9 @@ class ListaDobleEnlazada:
                 return True
             current = current.next
         return False
+    
+    def __len__(self): #Devuelve el tamaño actual de la lista O(1)
+        return self._tamano
 
     def eliminar_nodo(self, nodo) -> None:
         # Elimina un nodo ya conocido en O(1): el costo no depende de en qué

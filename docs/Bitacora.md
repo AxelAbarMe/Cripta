@@ -73,3 +73,24 @@ Faltante:
 Opcional:
 * Revisar posibilidad de transformar sistema monolítico actual en una app basada en microservicios
 * Revisar disponibilidad para creación de interfaz gráfica para el sistema de la app de Cripta
+
+
+# 06/10/2026
+
+Se revisó el proyecto completo contra el enunciado: base, estructuras, DTO, infraestructura, modelo, servicios y bench, ejecutando el código en cada capa para confirmar los fallos en vez de suponerlos. El diseño general es correcto, pero había 9 bugs que impedían que varias partes corrieran, y todavía no existe el motor del juego, ni el controlador, la vista, el guardado desde el modelo ni el replay.
+
+Se corrigieron los bugs que bloqueaban al resto:
+* Constantes: faltaban CACHE_TAMANO_DEFAULT y MAX_ELEMENTOS_POR_LOTE, así que no se podían importar el servicio de catálogo ni el de precarga.
+* Lista doble enlazada: no inicializaba su tamaño, no tenía __len__ y agregar y agregar_inicio no devolvían el nodo. Con eso el inventario no podía recoger objetos y la caché LRU fallaba al desalojar.
+* ContenidoSalaDTO tiene el campo id y no sala; se corrigió en cache.py, serializacion.py y servicio_precarga.py.
+* Veneno: llamaba a un método que no existe, así que fallaba en su primer pulso.
+* VectorOrdenado.insertar reordenaba todo el vector en cada inserción, lo que era cuadrático (unos 3.5 s con 8000 salas) y fallaba con claves repetidas. Ahora busca el punto de inserción con búsqueda binaria y solo compara claves.
+* El bench de ciclo llamaba a una función de combate que no existe.
+
+También se separaron constantes.py y excepciones.py en secciones por dueño para evitar conflictos al trabajar en paralelo. Con estos cambios los imports funcionan, la lista doble responde bien y el bench corre sus 8 cargas completas; el ciclo de eventos cumple el límite de 20 ms (6.17 ms con 600 actores, medición sintética).
+
+Lo siguiente que hay que realizar:
+* Endurecer el cliente HTTP: errores de red con contexto y tope de reintentos por 429 dentro del presupuesto.
+* Generar los fixtures y el formato --offline propio.
+* Sincronizar las dos caras de una puerta y validar el reloj y la velocidad de los efectos.
+* Escribir el motor del juego, el retroceso completo, el puente con el guardado y el replay.

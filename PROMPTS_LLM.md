@@ -69,3 +69,23 @@ solicitudes), verificando que todo compilara e importara correctamente.
 consumirán los servicios y el modelo, cumpliendo las reglas del PDF sobre
 identificador de cliente, manejo de errores/429 y presupuesto de
 solicitudes.
+
+
+### 2026-10-04 — Claude (Sonnet 5, claude.ai)
+**Prompt (resumido):** Se compartió el zip del proyecto, el PDF del enunciado, el
+openapi.json y el contexto acumulado. Se pidió revisar el proyecto completo por
+secciones (base, estructuras, DTO, infraestructura, modelo, servicios y bench),
+contrastarlo con el enunciado, ejecutar el código para confirmar los fallos y
+cerrar con un veredicto de qué falta antes de seguir con el resto del proyecto.
+
+**Para qué se usó:** Detectar y confirmar bugs, ver qué falta contra el enunciado
+y ordenar el trabajo pendiente.
+
+### 2026-10-06 — Claude (Sonnet 5, claude.ai)
+**Prompt (resumido):** Se pidió seguir paso a paso la corrección de los bugs
+bloqueantes (constantes faltantes, lista doble enlazada, campo id del contenido
+de sala, método del veneno, inserción en VectorOrdenado y llamada del bench),
+indicando solo las partes a cambiar y el archivo donde pegarlas.
+
+**Para qué se usó:** Corregir los bugs que impedían importar y ejecutar los
+servicios, el inventario, la caché y el bench.

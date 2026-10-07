@@ -8,6 +8,7 @@ from cripta.dto.cripta_general_dto import CriptaGeneralDTO
 from cripta.dto.cripta_resumen_dto import CriptaResumenDTO
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.version_dto import VersionCatalogoDTO, VersionCriptaDTO
+from cripta.infraestructura.lotes import validar_lote
 
 
 class ClienteFalso:
@@ -36,7 +37,9 @@ class ClienteFalso:
 
     def listar_criptas(self):
         self._registrar("listar_criptas")
-        return (CriptaResumenDTO(id="c1", nombre="Prueba", salas=len(self.paginas_json), dificultad=1),)
+        # salas = total de salas de todas las páginas (no la cantidad de páginas)
+        total_salas = sum(len(p["salas"]) for p in self.paginas_json)
+        return (CriptaResumenDTO(id="c1", nombre="Prueba", salas=total_salas, dificultad=1),)
 
     def obtener_general(self, cripta_id):
         self._registrar("obtener_general", cripta_id)
@@ -51,14 +54,15 @@ class ClienteFalso:
         return PaginaEsqueletoDTO.desde_json(self.paginas_json[pagina - 1])
 
     def obtener_contenido(self, cripta_id, salas):
+        # Mismas reglas de lote que los clientes reales: un lote inválido no cuenta como llamada
+        validar_lote(salas, "salas")
         self._registrar("obtener_contenido", tuple(salas))
         elegidos = [c for c in self.contenido_json if c["sala"] in salas]
         return ContenidoSalaRespuestaDTO.desde_json({"contenido": elegidos})
 
     def obtener_catalogo(self, ids):
+        validar_lote(ids, "ids de catálogo")
         self._registrar("obtener_catalogo", tuple(ids))
-        if len(ids) > 10:
-            raise AssertionError("lote de más de 10 ids")
         return CatalogoDTO.desde_json({"entidades": [f for f in self.fichas_json if f["id"] in ids]})
 
     def obtener_version_catalogo(self):

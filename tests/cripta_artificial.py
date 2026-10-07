@@ -32,7 +32,10 @@ def construir(filas: int, columnas: int, con_enemigos: bool = True, salas_por_pa
         enemigos = []
         if con_enemigos and i % 3 == 0:
             enemigos = [{"instancia": f"e-{i}{k}", "tipo": "ent_rata" if k == 1 else "ent_murcielago"} for k in (2, 1)]
-        contenido.append({"sala": i, "enemigos": enemigos, "objetos": ["itm_daga"] if i % 2 == 0 else ["itm_antorcha"],
+        objetos = ["itm_daga"] if i % 2 == 0 else ["itm_antorcha"]
+        if i == total // 2:
+            objetos.append("itm_llave")  # sin la llave de salida en alguna sala no se podría ganar, se pone a mitad del recorrido
+        contenido.append({"sala": i, "enemigos": enemigos, "objetos": objetos,
                           "trampas": [{"instancia": f"t-{i}", "tipo": "trp_dardos"}] if i % 5 == 0 else []})
 
     fichas = [
@@ -44,6 +47,7 @@ def construir(filas: int, columnas: int, con_enemigos: bool = True, salas_por_pa
         {"id": "itm_antorcha", "clase": "antorcha", "nombre": "Antorcha", "peso": 1, "valor": 5, "duracion": 2000},
         {"id": "itm_pocion", "clase": "pocion", "nombre": "Poción", "peso": 1, "valor": 8, "cura": 10},
         {"id": "trp_dardos", "clase": "trampa", "nombre": "Dardos", "daño": 4, "rearme": 300},
+        {"id": "itm_llave", "clase": "llave", "nombre": "Llave negra", "peso": 1, "valor": 0},
     ]
     general = {"id": "c1", "version": "v1", "salas_total": total, "paginas": n_paginas, "salas_por_pagina": salas_por_pagina,
                "sala_inicial": 1, "sala_salida": total, "llave_salida": "itm_llave", "presupuesto_solicitudes": 9,

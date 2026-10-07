@@ -68,8 +68,5 @@ class HistorialRetroceso:
             contador += 1
         return contador
 
-    def cantidad_intervalos(self) -> int:
-        return len(self._intervalos)
-
     def __len__(self) -> int:
-        return self.cantidad_intervalos()
+        return len(self._intervalos)

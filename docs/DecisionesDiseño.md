@@ -96,14 +96,27 @@ Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 El inventario usa una lista doble enlazada con un nodo por objeto. Para soltar el objeto que se está viendo en O(1), el inventario conserva el nodo que devuelve `agregar`, y la lista mantiene su tamaño para aplicar el límite `inventario_max` sin recorrerla.
 
+El jugador recorre el inventario con un cursor sobre los nodos (O(1) por paso). Para acciones sobre un objeto concreto (usar, equipar, soltar por posición) existe `ir_a_posicion`, que recorre la lista desde el principio: cuesta O(n), pero n está acotado por `inventario_max`, que es pequeño. Los pergaminos se cuentan y se consumen por clase (`cantidad_pergaminos`, `quitar_primero_de_clase`), sin tocar el historial de retroceso (§2.11). Las vistas ordenadas trabajan sobre una copia con el selector automático de ordenamiento; el orden por nombre ignora mayúsculas y tildes para que el resultado sea el que espera una persona. `fichas_en_uso` expone los ids de catálogo que el inventario mantiene referenciados, para que la caché no los libere (§4.4).
 
 
 ### Análisis de complejidad
 Pendiente — completar en reunión
+
+Recorrer, recoger, soltar el objeto actual y equipar cuestan O(1). Ir a una posición, contar por clase, quitar el primero de una clase y listar fichas en uso cuestan O(n), con n <= inventario_max. Una vista ordenada cuesta lo que cueste el algoritmo elegido por el selector sobre n elementos.
+
+
 ### Evidencia empírica
 Pendiente — completar en reunión
+
+
 ### Límites conocidos
 Pendiente — completar en reunión
+
+Con un inventario pequeño (`inventario_max` típico de unas decenas) una lista contigua (`list`) competiría con la lista doble: en el bench, soltar en el medio con n=10 cuesta 0.40 µs con la lista doble y 0.08 µs con `list.pop`. La ventaja de la lista doble solo aparece con inventarios muy grandes, donde `list.pop` mueve muchos elementos; una medición propia sin contar la construcción dio, soltando en el medio, 0.50 µs (lista doble) contra 0.39 µs (`list.pop`) con n=10 000, y 0.52 contra 7.73 µs con n=100 000. Esa medición habrá que repetirla con el bench corregido, porque el actual incluye la construcción de la lista dentro del tiempo medido (por eso con n=10 000 el bench actual muestra a la lista doble como más lenta).
+
+Las operaciones por posición y por clase recorren la lista; si `inventario_max` creciera mucho, convendría un índice auxiliar.
+
+
 
 ## 4.6 Pergaminos de retroceso e historial reversible
 ### Problema

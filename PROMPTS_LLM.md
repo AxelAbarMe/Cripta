@@ -89,3 +89,15 @@ indicando solo las partes a cambiar y el archivo donde pegarlas.
 
 **Para qué se usó:** Corregir los bugs que impedían importar y ejecutar los
 servicios, el inventario, la caché y el bench.
+
+
+### 2026-10-07 — Claude (Sonnet 5, claude.ai)
+**Prompt (resumido):** Se pidió definir el contrato de la API pública del motor
+Partida y después seguir paso a paso, por etapas con commits pequeños, la mejora
+del modelo para poder implementar retroceso y guardado (reloj de eventos, efectos
+de veneno y velocidad, historial de retroceso, puertas del mapa e inventario),
+indicando solo las partes a cambiar, el archivo donde pegarlas y las pruebas.
+
+**Para qué se usó:** Diseñar la interfaz de Partida y corregir y ampliar el
+modelo (reloj, efectos, historial, mapa e inventario), junto con el texto de las
+decisiones de diseño correspondientes.

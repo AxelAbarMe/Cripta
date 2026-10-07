@@ -94,3 +94,22 @@ Lo siguiente que hay que realizar:
 * Generar los fixtures y el formato --offline propio.
 * Sincronizar las dos caras de una puerta y validar el reloj y la velocidad de los efectos.
 * Escribir el motor del juego, el retroceso completo, el puente con el guardado y el replay.
+
+
+# 07/10/2026
+
+Se escribió el contrato de la API pública de Partida (docs/CONTRATO_PARTIDA.md): construcción, acciones del jugador, resultados, consultas, guardado y replay. Sirve de referencia para el motor, el controlador y el reproductor de replay.
+
+Se reforzó el modelo para poder implementar el retroceso y el guardado:
+* Reloj de eventos: ya no acepta eventos en el pasado, cuenta los eventos vigentes (esta_vacia ignora los cancelados) y expone siguiente_secuencia, restaurar, restituir y programar_con_secuencia, que se necesitan para revertir la agenda y reconstruir una partida guardada.
+* Efectos: un veneno nuevo reemplaza al anterior y reinicia su duración; el actor guarda su veneno activo para que el antídoto lo pueda cancelar. El cambio de velocidad resta al terminar lo que él mismo sumó, de modo que varios efectos solapados no se pisan, y la velocidad nunca baja de VELOCIDAD_MINIMA.
+* Historial de retroceso: registrar sin un intervalo abierto, o abrir un intervalo con otro ya abierto, lanza CriptaHistorialError en lugar de perder cambios en silencio.
+* Mapa: las dos caras de una puerta se abren y se cierran juntas, y sincronizar_puertas deja cerradas las dos si una sola lo estaba. Agregar una página repetida se ignora. Se agregó puerta_transitable para el movimiento y el comportamiento de los enemigos.
+* Inventario: ir_a_posicion, conteo y consumo de pergaminos, fichas_en_uso para la caché, orden por nombre sin distinguir mayúsculas ni tildes y vistas ordenadas con el selector automático.
+
+Se documentaron en el Documento de Decisiones la agenda de eventos (4.1), el retroceso (4.6) y el inventario (4.5).
+
+Lo siguiente que hay que realizar:
+* Enemigos: comportamientos guardián, errante y rastreador, con referencias directas a las salas vecinas.
+* Motor Partida: acciones del jugador con sus costos, activación de enemigos, movimiento que espera contenido, trampas, muerte de actores, victoria y derrota.
+* Retroceso completo, puente entre el modelo y el guardado, y replay.

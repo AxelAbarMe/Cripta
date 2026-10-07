@@ -16,6 +16,7 @@ class Actor:
         self.sala_actual = sala_actual
         self.tiempo_siguiente = 0  # el reloj lo fija al activar al actor
         self.evento_pendiente = None
+        self.veneno_activo = None   # EfectoVeneno en curso (a lo sumo uno)
 
     def esta_vivo(self) -> bool:
         return self.vida > 0

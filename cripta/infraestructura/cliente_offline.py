@@ -30,7 +30,7 @@ from cripta.dto.cripta_resumen_dto import CriptaResumenDTO
 from cripta.dto.entidad_dto import entidad_desde_json
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.version_dto import VersionCatalogoDTO, VersionCriptaDTO
-from cripta.excepciones import CriptaDatosNoEncontradosError
+from cripta.excepciones import CriptaDatosInvalidosError, CriptaDatosNoEncontradosError
 from cripta.infraestructura.lotes import validar_lote
 
 
@@ -38,52 +38,69 @@ class ClienteOffline:
     """Misma interfaz pública que ClienteHttp, leyendo de `raiz_fixtures` en vez de la red."""
 
     def __init__(self, raiz_fixtures: str):
+        # raiz_fixtures: carpeta donde están los archivos JSON que reemplazan al API
         self._raiz = Path(raiz_fixtures)
 
     def listar_criptas(self) -> tuple[CriptaResumenDTO, ...]:
-        datos = self._leer(self._raiz / "criptas.json", "listar criptas")
-        return tuple(CriptaResumenDTO.desde_json(c) for c in datos["criptas"])
+        # Lee criptas.json: lista de criptas disponibles (como GET /criptas)
+        return self._leer(self._raiz / "criptas.json", "listar criptas", CriptaResumenDTO.lista_desde_json)
 
     def obtener_general(self, cripta_id: str) -> CriptaGeneralDTO:
-        datos = self._leer(self._raiz / cripta_id / "general.json", f"datos generales de {cripta_id}")
-        return CriptaGeneralDTO.desde_json(datos)
+        # Lee <cripta>/general.json: datos generales de la cripta (como GET /criptas/{id})
+        return self._leer(self._raiz / cripta_id / "general.json",
+                          f"datos generales de {cripta_id}", CriptaGeneralDTO.desde_json)
 
     def obtener_version_cripta(self, cripta_id: str) -> VersionCriptaDTO:
-        datos = self._leer(self._raiz / cripta_id / "version.json", f"versión de {cripta_id}")
-        return VersionCriptaDTO.desde_json(datos)
+        # Lee <cripta>/version.json: versión de la cripta (como GET /criptas/{id}/version)
+        return self._leer(self._raiz / cripta_id / "version.json",
+                          f"versión de {cripta_id}", VersionCriptaDTO.desde_json)
 
     def obtener_pagina_esqueleto(self, cripta_id: str, pagina: int) -> PaginaEsqueletoDTO:
-        ruta = self._raiz / cripta_id / "salas" / f"pagina_{pagina}.json"
-        datos = self._leer(ruta, f"esqueleto de {cripta_id} (página {pagina})")
-        return PaginaEsqueletoDTO.desde_json(datos)
+        # Lee <cripta>/salas/pagina_N.json: una página del esqueleto (como GET /criptas/{id}/salas?pagina=N)
+        return self._leer(self._raiz / cripta_id / "salas" / f"pagina_{pagina}.json",
+                          f"esqueleto de {cripta_id} (página {pagina})", PaginaEsqueletoDTO.desde_json)
 
     def obtener_contenido(self, cripta_id: str, salas: list[int]) -> ContenidoSalaRespuestaDTO:
-        # Un archivo por sala; se ensambla el mismo sobre "contenido" que devolvería el lote real
+        # El API devuelve todas las salas del lote en una sola respuesta. Aquí hay un archivo por sala
+        # (contenido/<sala>.json), así que se lee cada uno y se juntan en el mismo DTO que daría el API
         validar_lote(salas, "salas")
         entradas = []
         for sala_id in salas:
             ruta = self._raiz / cripta_id / "contenido" / f"{sala_id}.json"
-            datos = self._leer(ruta, f"contenido de la sala {sala_id} de {cripta_id}")
-            entradas.append(ContenidoSalaDTO.desde_json(datos))
+            entradas.append(self._leer(ruta, f"contenido de la sala {sala_id} de {cripta_id}",
+                                       ContenidoSalaDTO.desde_json))
         return ContenidoSalaRespuestaDTO(salas=tuple(entradas))
 
     def obtener_catalogo(self, ids: list[str]) -> CatalogoDTO:
-        # Un archivo por id de catálogo, con la forma "desempaquetada" (como /catalogo/<id>)
+        # Un archivo por id (catalogo/<id>.json). Cada archivo trae una sola ficha, sin la lista
+        # {"entidades": [...]} de la respuesta por lote, es la forma en que responde GET /catalogo/{id}
         validar_lote(ids, "ids de catálogo")
         entidades = []
         for catalog_id in ids:
             ruta = self._raiz / "catalogo" / f"{catalog_id}.json"
-            datos = self._leer(ruta, f"ficha de catálogo {catalog_id}")
-            entidades.append(entidad_desde_json(datos))
+            entidades.append(self._leer(ruta, f"ficha de catálogo {catalog_id}", entidad_desde_json))
         return CatalogoDTO(entidades=tuple(entidades))
 
     def obtener_version_catalogo(self) -> VersionCatalogoDTO:
-        datos = self._leer(self._raiz / "catalogo" / "version.json", "versión de catálogo")
-        return VersionCatalogoDTO.desde_json(datos)
+        # Lee catalogo/version.json: versión del catálogo (como GET /catalogo/version)
+        return self._leer(self._raiz / "catalogo" / "version.json",
+                          "versión de catálogo", VersionCatalogoDTO.desde_json)
 
     @staticmethod
-    def _leer(ruta: Path, operacion: str) -> dict:
+    def _leer(ruta: Path, operacion: str, conversor):
+        # Lee el archivo y lo convierte en DTO. Tres fallas posibles, cada una con su error claro:
+        # el archivo no existe, no es JSON, o es JSON pero no tiene la forma esperada
         if not ruta.is_file():
             raise CriptaDatosNoEncontradosError(operacion=operacion, ruta=str(ruta))
         with ruta.open(encoding="utf-8") as archivo:
-            return json.load(archivo)
+            try:
+                datos = json.load(archivo)
+            except json.JSONDecodeError as error:
+                raise CriptaDatosInvalidosError(operacion, str(ruta),
+                                                f"no es JSON válido (línea {error.lineno})") from error
+        try:
+            return conversor(datos)
+        except (KeyError, TypeError, ValueError) as error:
+            raise CriptaDatosInvalidosError(operacion, str(ruta),
+                                            f"no tiene el formato esperado "
+                                            f"({type(error).__name__}: {error})") from error

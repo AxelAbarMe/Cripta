@@ -17,3 +17,8 @@ class CriptaResumenDTO:
             salas=datos["salas"],
             dificultad=datos["dificultad"],
         )
+
+    @staticmethod
+    def lista_desde_json(datos):
+        # GET /criptas devuelve {"criptas": [...]}: convierte cada elemento de esa lista en un resumen
+        return tuple(CriptaResumenDTO.desde_json(c) for c in datos["criptas"])

@@ -5,11 +5,16 @@ class CriptaError(Exception):
 # === RED / DISCO (Saul) ===
 class CriptaApiError(CriptaError):
     """Excepción para errores de la API de Cripta."""
-    def __init__(self, operacion : str, codigo : int, mensaje : str):
+    def __init__(self, operacion: str, codigo: int | None, mensaje: str):
+        # codigo es None cuando no hubo respuesta HTTP (sin conexión, timeout) o el problema
+        # fue el contenido de la respuesta, no su código
         self.operacion = operacion
         self.codigo = codigo
         self.mensaje = mensaje
-        super().__init__(f"Error en {operacion}: {codigo} - {mensaje}")
+        if codigo is None:
+            super().__init__(f"Error en {operacion}: {mensaje}")
+        else:
+            super().__init__(f"Error en {operacion} (HTTP {codigo}): {mensaje}")
 
 class CriptaDatosNoEncontradosError(CriptaError):
     """No se encontró en disco el archivo esperado para una operación en modo --offline."""
@@ -17,6 +22,14 @@ class CriptaDatosNoEncontradosError(CriptaError):
         self.operacion = operacion
         self.ruta = ruta
         super().__init__(f"No se encontró el archivo para «{operacion}»: {ruta}")
+
+class CriptaDatosInvalidosError(CriptaError):
+    """Un archivo de --offline existe, pero su contenido no es JSON o no tiene la forma esperada."""
+    def __init__(self, operacion: str, ruta: str, detalle: str):
+        self.operacion = operacion
+        self.ruta = ruta
+        self.detalle = detalle
+        super().__init__(f"Datos inválidos para «{operacion}» en {ruta}: {detalle}")
 
 class CriptaLimiteError(CriptaError):
     """Excepción para errores de límite de solicitudes de la API de Cripta."""

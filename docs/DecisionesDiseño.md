@@ -5,17 +5,42 @@
 Pendiente — completar en reunión
 ### Alternativas consideradas
 Pendiente — completar en reunión
+
+
+
 ### Decisión
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+La agenda es un montículo mínimo (`HeapMinimo`, implementación propia) ordenado por la pareja `(tiempo, secuencia)`. El número de secuencia lo asigna el reloj al programar cada evento, así que el orden es total y determinista aunque haya empates, cancelaciones o reprogramaciones.
+
+Cancelar un evento solo marca `cancelado = True`; el evento se descarta cuando sale del montículo. Reprogramar cancela el evento viejo y agenda uno nuevo con secuencia nueva (§2.3). La muerte de un actor no cancela sus eventos uno por uno: el turno comprueba `esta_vivo()` y no hace nada si ya murió. El reloj lleva un contador de eventos vigentes, de modo que `esta_vacia()` no tiene que recorrer la agenda.
+
+Efectos: un veneno nuevo reemplaza al anterior y reinicia su duración (no se acumula el daño), y el actor guarda cuál es su veneno activo para que el antídoto pueda cancelarlo. Los cambios de velocidad restan al terminar lo que ellos mismos sumaron, así varios efectos solapados no se pisan, y la velocidad nunca baja de `VELOCIDAD_MINIMA` (1).
+
+
+
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Programar y extraer el siguiente evento cuestan O(log n) con n eventos en la agenda. Cancelar es O(1) y reprogramar es O(log n). `esta_vacia()` es O(1) gracias al contador de eventos vigentes. Las operaciones más frecuentes del juego, extraer el siguiente evento y programar el siguiente turno del actor, son las que cuestan O(log n).
+
+
+
 ### Evidencia empírica
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 Medición con `--bench` (escala 0.3), heap contra lista lineal (alternativa descartada): con 100, 500 y 2000 eventos pendientes la lista lineal es 1.5x, 5.7x y 15.6x más lenta. Con 600 actores activos (1200 eventos) el peor ciclo tomó 6.17 ms, bajo el límite de 20 ms de §5.2 (carga sintética). Cancelar un tercio de los eventos y reprogramar otro tercio, de forma perezosa, cuesta 0.33 µs por operación.
 
+
+
 ### Límites conocidos
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+La cancelación es perezosa: los eventos cancelados siguen ocupando espacio en el montículo hasta que les toca salir. Con muchas cancelaciones sin consumir eventos, la agenda puede crecer más que el número de eventos vigentes (con 100 000 reprogramaciones, el montículo llegó a 100 001 entradas). Si eso fuera un problema, habría que compactar el montículo cada cierto número de cancelaciones.
+
+No se puede programar un evento en un tiempo anterior al del reloj (se lanza `ValueError`). El retroceso del pergamino restaura el reloj con un método propio (`restaurar`) en vez de programar hacia atrás.
+
+
 
 ## 4.2 Traer el contenido antes de que haga falta (precarga)
 ### Problema
@@ -64,10 +89,14 @@ Pendiente — completar en reunión
 Pendiente — completar en reunión
 ### Alternativas consideradas
 Pendiente — completar en reunión
+
+
 ### Decisión
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 El inventario usa una lista doble enlazada con un nodo por objeto. Para soltar el objeto que se está viendo en O(1), el inventario conserva el nodo que devuelve `agregar`, y la lista mantiene su tamaño para aplicar el límite `inventario_max` sin recorrerla.
+
+
 
 ### Análisis de complejidad
 Pendiente — completar en reunión
@@ -81,14 +110,41 @@ Pendiente — completar en reunión
 Pendiente — completar en reunión
 ### Alternativas consideradas
 Pendiente — completar en reunión
+
+
 ### Decisión
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+El historial guarda un intervalo por cada acción del jugador. Cada intervalo es una pila de operaciones inversas (funciones que deshacen un cambio), y los intervalos se guardan en una lista acotada a 5 (`RETROCESO_MAX_ACCIONES`); al pasar el límite se descarta el más antiguo. No se guardan copias del estado, solo lo necesario para invertir cada cambio.
+
+Deshacer un intervalo ejecuta sus inversas en orden LIFO, de modo que lo último que ocurrió se revierte primero. El historial es estricto: registrar un cambio sin un intervalo abierto, o abrir un intervalo con otro ya abierto, lanza `CriptaHistorialError`. Así un cambio que no se podría deshacer no pasa desapercibido.
+
+Para que el reloj pueda revertirse, expone `restaurar` (tiempo y contador de secuencia) y `restituir` (devuelve un evento cancelado o ya ejecutado a la agenda con su mismo `(tiempo, secuencia)`).
+
+
+
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Registrar un cambio es O(1) (apilar una operación inversa). Deshacer un intervalo cuesta O(k), con k el número de cambios de ese intervalo, y no depende del tamaño de la cripta ni de la cantidad de actores.
+
+
+
 ### Evidencia empírica
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Medición con `--bench` (escala 0.3), contra la alternativa descartada y prohibida por §4.6 (guardar una copia completa del estado, aquí con 200 salas y 60 actores): registrar una acción con operaciones inversas cuesta 2.17 µs, y con copia completa 1199 µs, o sea 553 veces más lenta, además de guardar 5 estados enteros. Deshacer 5 acciones (30 operaciones inversas) cuesta 3.34 µs por deshacer.
+
+
+
 ### Límites conocidos
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Si una operación inversa falla a mitad de un deshacer, la excepción no se captura: el intervalo ya salió de la pila y el estado puede quedar a medias. Se considera un error de programación, no una condición normal del juego. Una solución más robusta sería aplicar las inversas sobre una copia del estado o poder reanudar el deshacer.
+
+La medición compara el costo de registrar, no un retroceso completo del juego: esta evidencia habrá que repetirla cuando el motor registre inversas reales de reloj, vida, puertas y trampas.
+
+
 
 ## 4.7 El rastro del jugador
 ### Problema

@@ -9,8 +9,15 @@ El orden real de los objetos vive en una ListaDobleEnlazada:
   así que nunca alteran el orden real.
 """
 from cripta.estructuras.lista_doble_enlazada import ListaDobleEnlazada
-from cripta.estructuras.ordenamientos import Ordenamiento
 
+import unicodedata
+from cripta.estructuras.ordenamiento_selector import ordenar_auto
+
+
+def _normalizar_nombre(texto: str) -> str:
+    """Minúsculas y sin tildes, para que 'Ábaco' quede junto a 'abeja'."""
+    descompuesto = unicodedata.normalize("NFD", texto.lower())
+    return "".join(c for c in descompuesto if unicodedata.category(c) != "Mn")
 
 class InventarioLlenoError(Exception):
     """Se intentó recoger un objeto con el inventario lleno."""
@@ -53,6 +60,20 @@ class Inventario:
         if self._cursor and self._cursor.prev:
             self._cursor = self._cursor.prev
         return self.objeto_actual()
+    
+    def ir_a_posicion(self, indice: int) -> ObjetoInventario | None:
+        """Pone el cursor en la posición `indice` del orden real (0 = el primero).
+        Devuelve el objeto, o None si esa posición no existe. Cuesta O(n) con n <= inventario_max."""
+        if indice < 0:
+            return None
+        nodo = self._lista.head
+        while nodo is not None and indice > 0:
+            nodo = nodo.next
+            indice -= 1
+        if nodo is None:
+            return None
+        self._cursor = nodo
+        return nodo.data
 
     # --- recoger / soltar ---
     def recoger(self, objeto: ObjetoInventario) -> None:
@@ -90,6 +111,44 @@ class Inventario:
         self._lista.mover_al_inicio(self._cursor)
         return objeto
 
+
+    # --- consultas por clase y fichas en uso ---
+    def contar_clase(self, clase: str) -> int:
+        cantidad = 0
+        nodo = self._lista.head
+        while nodo is not None:
+            if nodo.data.ficha.clase == clase:
+                cantidad += 1
+            nodo = nodo.next
+        return cantidad
+
+    def cantidad_pergaminos(self) -> int:
+        return self.contar_clase("pergamino_retroceso")
+
+    def quitar_primero_de_clase(self, clase: str) -> ObjetoInventario | None:
+        """Quita y devuelve el primer objeto de esa clase (por ejemplo, el pergamino que se usa).
+        Devuelve None si no hay ninguno."""
+        nodo = self._lista.head
+        while nodo is not None and nodo.data.ficha.clase != clase:
+            nodo = nodo.next
+        if nodo is None:
+            return None
+        if nodo is self._cursor:
+            self._cursor = nodo.next or nodo.prev   # se lee ANTES de desconectar el nodo
+        objeto = nodo.data
+        self._lista.eliminar_nodo(nodo)
+        return objeto
+
+    def fichas_en_uso(self) -> tuple[str, ...]:
+        """Ids de catálogo de los objetos del inventario (no se pueden liberar de la caché, §4.4)."""
+        ids = []
+        nodo = self._lista.head
+        while nodo is not None:
+            ids.append(nodo.data.ficha.id)
+            nodo = nodo.next
+        return tuple(ids)
+
+
     # --- vistas ordenadas: no alteran el orden real ---
     def vista_ordenada(self, criterio: str) -> tuple[ObjetoInventario, ...]:
         extractor = self._extractor_de(criterio)
@@ -102,7 +161,7 @@ class Inventario:
             copia.append((extractor(nodo.data), indice, nodo.data))
             indice += 1
             nodo = nodo.next
-        Ordenamiento(copia).merge_sort()
+        ordenar_auto(copia)
         return tuple(objeto for _, _, objeto in copia)
 
     @staticmethod
@@ -112,5 +171,5 @@ class Inventario:
         if criterio == "valor":
             return lambda o: o.ficha.valor
         if criterio == "nombre":
-            return lambda o: o.ficha.nombre
+            return lambda o: _normalizar_nombre(o.ficha.nombre)
         raise ValueError(f"Criterio de orden desconocido: {criterio}")

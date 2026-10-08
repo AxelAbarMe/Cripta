@@ -10,6 +10,7 @@ RETROCESO_MAX_ACCIONES. Como el límite es una constante fija y pequeña
 (5, nunca crece más allá de 6 elementos antes de recortar).
 """
 from cripta.constantes import RETROCESO_MAX_ACCIONES
+from cripta.excepciones import CriptaHistorialError
 from cripta.estructuras.pila import Pila
 
 class HistorialRetroceso:
@@ -22,13 +23,16 @@ class HistorialRetroceso:
         """Se llama justo antes de ejecutar una acción del jugador: todo lo que
         pase después (la acción misma, reacciones enemigas, efectos) se
         registra en este intervalo hasta la siguiente decisión del jugador."""
+        if self._intervalo_actual is not None:
+            raise CriptaHistorialError("Ya hay un intervalo abierto: hay que cerrarlo antes de abrir otro.")
         self._intervalo_actual = Pila()
 
     def registrar(self, deshacer) -> None:
         """`deshacer` Se llama una vez por cada cambio que ocurra dentro del
         intervalo actualmente abierto. Si no hay ningún intervalo abierto"""
-        if self._intervalo_actual is not None:
-            self._intervalo_actual.push(deshacer)
+        if self._intervalo_actual is None:
+            raise CriptaHistorialError("No hay un intervalo abierto: este cambio no se podría deshacer.")
+        self._intervalo_actual.push(deshacer)
 
     def cerrar_intervalo(self) -> None:
         """Se llama justo antes de la siguiente decisión del jugador: el

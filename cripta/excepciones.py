@@ -44,3 +44,5 @@ class CriptaFormatoIncompatibleError(CriptaError):
         super().__init__(f"Archivo de guardado incompatible: {motivo}")
         
 # === MODELO (Isaac) ===
+class CriptaHistorialError(CriptaError):
+    """Uso incorrecto del historial de retroceso (registrar sin intervalo abierto, o abrir uno encima de otro)."""

@@ -25,6 +25,8 @@ class EventoProgramado:
         self.accion = accion
         self.descripcion = descripcion
         self.cancelado = False
+        self.ejecutado = False
+        self.en_agenda = True
 
     def __lt__(self, otro: "EventoProgramado") -> bool:
         return (self.tiempo, self.secuencia) < (otro.tiempo, otro.secuencia)
@@ -52,6 +54,7 @@ class RelojEventos:
         self._heap = HeapMinimo()
         self._reloj_actual = 0
         self._siguiente_secuencia = 0
+        self._vigentes = 0   # eventos que aún pueden ejecutarse (no cancelados ni ejecutados)
 
     @property
     def tiempo_actual(self) -> int:
@@ -60,9 +63,17 @@ class RelojEventos:
     def programar(self, tiempo: int, accion, descripcion: str = "") -> EventoProgramado:
         """Devuelve el EventoProgramado, necesario para poder cancelarlo o
         reprogramarlo más adelante."""
+        
+        if tiempo < self._reloj_actual:
+            raise ValueError(
+                f"No se puede programar un evento en el pasado "
+                f"(tiempo {tiempo}, reloj en {self._reloj_actual})."
+            )
+            
         evento = EventoProgramado(tiempo, self._siguiente_secuencia, accion, descripcion)
         self._siguiente_secuencia += 1
         self._heap.insertar(evento)
+        self._vigentes += 1
         return evento
 
     def programar_en(self, intervalo: int, accion, descripcion: str = "") -> EventoProgramado:
@@ -70,11 +81,15 @@ class RelojEventos:
         return self.programar(self._reloj_actual + intervalo, accion, descripcion)
 
     def cancelar(self, evento: EventoProgramado) -> None:
+        if not evento.cancelado and not evento.ejecutado:
+            self._vigentes -= 1
         evento.cancelado = True
 
     def reprogramar(self, evento: EventoProgramado, nuevo_tiempo: int) -> EventoProgramado:
+        # Se agenda primero el nuevo: si el tiempo es inválido, el viejo no queda cancelado a medias
+        nuevo = self.programar(nuevo_tiempo, evento.accion, evento.descripcion)
         self.cancelar(evento)
-        return self.programar(nuevo_tiempo, evento.accion, evento.descripcion)
+        return nuevo
 
     def ejecutar_siguiente(self) -> EventoProgramado | None:
         """Un paso del bucle principal: obtiene el evento VIGENTE con
@@ -84,11 +99,43 @@ class RelojEventos:
             evento = self._heap.eliminar_minimo()
             if evento is None:
                 return None
+            evento.en_agenda = False 
             if not evento.cancelado:
                 break
+        evento.ejecutado = True               
+        self._vigentes -= 1 
         self._reloj_actual = evento.tiempo
         evento.accion()
         return evento
 
     def esta_vacia(self) -> bool:
-        return len(self._heap.heap) == 0
+        """True si no queda ningún evento vigente (los cancelados no cuentan)."""
+        return self._vigentes == 0
+    
+    @property
+    def siguiente_secuencia(self) -> int:
+        return self._siguiente_secuencia
+
+    def restaurar(self, tiempo_actual: int, siguiente_secuencia: int) -> None:
+        """Deja el reloj y el contador de secuencia como estaban (retroceso y carga de partida)."""
+        self._reloj_actual = tiempo_actual
+        self._siguiente_secuencia = siguiente_secuencia
+
+    def restituir(self, evento: EventoProgramado) -> None:
+        """Inverso de cancelar o ejecutar: deja el evento vigente con su mismo (tiempo, secuencia)."""
+        if not evento.cancelado and not evento.ejecutado:
+            return
+        evento.cancelado = False
+        evento.ejecutado = False
+        if not evento.en_agenda:      # ya había salido del heap: se vuelve a insertar
+            self._heap.insertar(evento)
+            evento.en_agenda = True
+        self._vigentes += 1
+
+    def programar_con_secuencia(self, tiempo: int, secuencia: int, accion, descripcion: str = "") -> EventoProgramado:
+        """Agenda un evento con una secuencia ya conocida (reconstruir una partida guardada).
+        Después hay que llamar a restaurar() para fijar el contador."""
+        evento = EventoProgramado(tiempo, secuencia, accion, descripcion)
+        self._heap.insertar(evento)
+        self._vigentes += 1
+        return evento

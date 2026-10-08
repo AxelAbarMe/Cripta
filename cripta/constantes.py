@@ -62,3 +62,4 @@ def direccion_opuesta(direccion: str) -> str:
     raise ValueError(f"Dirección inválida: {direccion}")
 
 # === MODELO (Isaac) ===
+VELOCIDAD_MINIMA = 1   # ninguna velocidad (por efectos) puede bajar de este valor

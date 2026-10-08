@@ -6,6 +6,7 @@ la referencia necesaria para programar/cancelar.
 from cripta.constantes import (
     REGENERACION_ENEMIGO,
     TRAMPA_REARME_DEFAULT,
+    VELOCIDAD_MINIMA,
     VENENO_DURACION,
     VENENO_INTERVALO,
 )
@@ -26,17 +27,28 @@ class EfectoVeneno:
         self.evento_actual = None
 
     def iniciar(self) -> None:
+        # Un veneno nuevo reemplaza al anterior y reinicia la duración (no se acumula)
+        anterior = self._objetivo.veneno_activo
+        if anterior is not None:
+            anterior.cancelar()
+        self._objetivo.veneno_activo = self
         self._siguiente_pulso()
 
     def cancelar(self) -> None:
         self._cancelado = True
         if self.evento_actual is not None:
             self._reloj.cancelar(self.evento_actual)
+        self._liberar()
+
+    def _liberar(self) -> None:
+        if self._objetivo.veneno_activo is self:
+            self._objetivo.veneno_activo = None
 
     def _siguiente_pulso(self) -> None:
         if self._cancelado or self._pulsos_restantes <= 0:
+            self._liberar()
             return
-        # El primer pulso se aplica inmediatamente, y los siguientes se programan cada VENENO_INTERVALO unidades.
+        # Cada pulso se programa VENENO_INTERVALO unidades después del anterior (el primero, tras aplicar el veneno).
         self.evento_actual = self._reloj.programar_en(
             VENENO_INTERVALO, self._aplicar_pulso, descripcion="veneno: pulso"
         )
@@ -44,6 +56,7 @@ class EfectoVeneno:
     # El pulso se aplica solo si el efecto no fue cancelado y el objetivo sigue vivo. Luego se programa el siguiente pulso.
     def _aplicar_pulso(self) -> None:
         if self._cancelado or not self._objetivo.esta_vivo():
+            self._liberar()
             return
         self._objetivo.recibir_daño(self._daño_por_pulso)
         self._pulsos_restantes -= 1
@@ -56,20 +69,24 @@ class EfectoCambioVelocidad:
     def __init__(self, reloj, actor, modificador_velocidad: int, duracion: int):
         self._reloj = reloj
         self._actor = actor
-        self._velocidad_original = actor.velocidad
         self._modificador = modificador_velocidad
         self._duracion = duracion
+        self._cambio_aplicado = 0   # cuánto cambió realmente la velocidad (menos si se acotó al mínimo)
+        self.evento_fin = None
 
-    # El efecto se aplica inmediatamente, y el actor queda con la nueva velocidad durante `duracion` unidades de tiempo. Al terminar, se restaura la velocidad original y se reajusta la próxima acción del actor.
     def aplicar(self) -> None:
-        velocidad_nueva = self._velocidad_original + self._modificador
+        velocidad_anterior = self._actor.velocidad
+        velocidad_nueva = max(VELOCIDAD_MINIMA, velocidad_anterior + self._modificador)
+        self._cambio_aplicado = velocidad_nueva - velocidad_anterior
         self._reescalar_a(velocidad_nueva)
         self._actor.velocidad = velocidad_nueva
-        self._reloj.programar_en(self._duracion, self._terminar, "fin de cambio de velocidad")
+        self.evento_fin = self._reloj.programar_en(self._duracion, self._terminar, "fin de cambio de velocidad")
 
     def _terminar(self) -> None:
-        self._reescalar_a(self._velocidad_original)
-        self._actor.velocidad = self._velocidad_original
+        # Se resta lo que este efecto sumó, así varios efectos solapados no se pisan entre sí
+        velocidad_nueva = max(VELOCIDAD_MINIMA, self._actor.velocidad - self._cambio_aplicado)
+        self._reescalar_a(velocidad_nueva)
+        self._actor.velocidad = velocidad_nueva
 
     def _reescalar_a(self, velocidad_nueva: int) -> None:
         evento = getattr(self._actor, "evento_pendiente", None) # Forma segura de recuperar el evento pendiente, aunque no exista el atributo (ej. si el actor murió y se borró).

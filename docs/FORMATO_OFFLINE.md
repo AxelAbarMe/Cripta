@@ -29,8 +29,9 @@ fixtures/
 El contenido y el catálogo se guardan **un archivo por sala y uno por ficha**, aunque el API los
 entregue por lotes, para poder armar cualquier lote que pida la partida.
 
-## Paquete del curso
+## Origen de los datos
 
-Este formato es propio del equipo. El enunciado (§3) indica que el curso publicará su propio
-paquete de respuestas para `--offline`; cuando esté disponible, se ajustará `ClienteOffline`
-para leerlo.
+El profesor confirmó (08/10/2026) que para `--offline` se guardan en archivos los `.json` que
+devuelve el API, y que la organización de esos archivos queda a criterio nuestro. Este formato
+sigue las rutas del API, salvo el contenido (explicado arriba) y los datos generales
+(`general.json`, porque `<id_cripta>` ya es la carpeta).

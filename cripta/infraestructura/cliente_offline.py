@@ -3,15 +3,15 @@
  El modelo y los servicios no distinguen cuál de los dos reciben: 
  ambos exponen los mismos métodos y devuelven los mismos DTOs.
 
-Convención de archivos usada aquí (PROVISIONAL):
+Convención de archivos (confirmada con el API real; detalle en docs/FORMATO_OFFLINE.md):
 
     <raiz>/criptas.json                     misma forma que GET /criptas
     <raiz>/<cripta_id>/general.json         misma forma que GET /criptas/<id>
     <raiz>/<cripta_id>/version.json         misma forma que GET /criptas/<id>/version
     <raiz>/<cripta_id>/salas/pagina_N.json  misma forma que GET /criptas/<id>/salas?pagina=N
-    <raiz>/<cripta_id>/contenido/S.json     una entrada RoomContentEntry para la sala S
+    <raiz>/<cripta_id>/contenido/S.json     un elemento de la lista "contenido" del lote, para la sala S
     <raiz>/catalogo/version.json            misma forma que GET /catalogo/version
-    <raiz>/catalogo/ID.json                 una ficha "desempaquetada", forma de GET /catalogo/<id>
+    <raiz>/catalogo/ID.json                 una sola ficha, igual a la respuesta de GET /catalogo/<id>
 
 Se lee un archivo por sala/id de catálogo (en vez de un archivo por lote exacto) para no
 depender de qué combinación de ids pida cada partida; así cualquier subconjunto de hasta

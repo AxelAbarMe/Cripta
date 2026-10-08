@@ -101,3 +101,14 @@ indicando solo las partes a cambiar, el archivo donde pegarlas y las pruebas.
 **Para qué se usó:** Diseñar la interfaz de Partida y corregir y ampliar el
 modelo (reloj, efectos, historial, mapa e inventario), junto con el texto de las
 decisiones de diseño correspondientes.
+
+
+### 2026-10-08 — Claude (Sonnet 5, claude.ai)
+**Prompt (resumido):** Se compartió el proyecto actualizado con el trabajo de ambos
+y se pidió revisar lo relevante, probar el flujo con los datos reales de cripta-01
+guardados en fixtures/, y continuar paso a paso con el modelo: un método del mapa
+para la llave y el cierre automático de una puerta y el comportamiento de los
+enemigos (guardián, errante y rastreador).
+
+**Para qué se usó:** Verificar la integración, escribir la decisión del turno de
+los enemigos y redactar el texto de las decisiones de diseño del rastro.

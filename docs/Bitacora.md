@@ -113,3 +113,17 @@ Lo siguiente que hay que realizar:
 * Enemigos: comportamientos guardián, errante y rastreador, con referencias directas a las salas vecinas.
 * Motor Partida: acciones del jugador con sus costos, activación de enemigos, movimiento que espera contenido, trampas, muerte de actores, victoria y derrota.
 * Retroceso completo, puente entre el modelo y el guardado, y replay.
+
+
+# 08/10/2026
+
+Se unieron las dos ramas de trabajo en main y se comprobó el proyecto completo: los imports funcionan, el bench corre sus 8 cargas y el ciclo de eventos cumple el límite de 20 ms. Con los datos reales de cripta-01 guardados en fixtures/ se probó el flujo completo (cliente offline, mapa, catálogo y precarga) y los enemigos, las puertas y las fichas se construyen correctamente: un enemigo sin vida declarada nace con su vida máxima, el comportamiento "guardián" llega con tilde y la llave y el cierre automático de una puerta vienen marcados en un solo lado de la salida.
+
+Se agregó al mapa datos_de_puerta, que devuelve la llave y el cierre automático de una puerta mirando sus dos lados.
+
+Se escribió comportamiento_enemigo.py con la decisión del turno de un enemigo (§2.8): si comparte sala con el jugador ataca; si no, el guardián espera, el errante elige al azar una salida abierta y el rastreador sigue el rastro fresco más reciente de las salas vecinas, con desempate por menor id. El módulo solo decide; ejecutar la acción lo hará el motor.
+
+Lo siguiente que hay que realizar:
+* Motor Partida por partes: construcción e inicio, movimiento y puertas (llave comparada con el id de la ficha y cierre automático), combate y objetos.
+* Retroceso completo y puente entre el modelo y el guardado.
+* Replay.

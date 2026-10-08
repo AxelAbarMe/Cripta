@@ -161,17 +161,31 @@ La medición compara el costo de registrar, no un retroceso completo del juego: 
 
 ## 4.7 El rastro del jugador
 ### Problema
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Cada sala guarda el instante de la última visita del jugador (`rastro_ultima_visita`), y el rastro se refresca por cada acción del jugador. La caducidad se detecta al consultar el rastro (`rastro_es_fresco`, antigüedad menor que 400) y no se elimina activamente: no hay que programar eventos de borrado ni recorrer salas, y la consulta es O(1) por sala.
+
+En su turno, un rastreador mira únicamente las salas vecinas conectadas por salidas abiertas (`puerta_transitable`), descarta las de rastro vencido o inexistente, y se mueve hacia la de rastro más reciente; con rastros iguales gana la sala de menor id (§2.9). Si ninguna sirve, espera. No conoce el mapa ni busca rutas. La decisión vive en un módulo aparte (`comportamiento_enemigo.py`) que solo decide: ejecutar la acción y reprogramar el turno lo hace el motor.
+
+
 ### Alternativas consideradas
 Pendiente — completar en reunión
 ### Decisión
 Pendiente — completar en reunión
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Una decisión del rastreador examina como mucho 4 salidas, así que su costo no depende de la longitud del recorrido del jugador ni de la cantidad de salas visitadas. Con varios rastreadores, el trabajo por ciclo crece linealmente con los enemigos que realmente actúan (cada uno hace una decisión de a lo sumo 4 vecinos). Cada vecino se localiza en el mapa con búsqueda binaria, es decir O(log n) con n salas.
+
+
 ### Evidencia empírica
 Pendiente — completar en reunión
 ### Límites conocidos
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Estrictamente, §4.7 pide costo proporcional al número de salidas; localizar cada vecino con búsqueda binaria agrega un factor O(log n) en el tamaño de la cripta. Si esto pesara con criptas muy grandes, la mejora es que cada sala guarde referencias directas a sus salas vecinas. Un comportamiento de enemigo desconocido se trata como guardián (espera), para que un valor nuevo del API no detenga la partida. El errante consume el generador aleatorio solo cuando tiene al menos una salida abierta, y una sola vez, para que el replay sea idéntico.
+
+
 
 ## 4.8 Bitácora en pantalla
 ### Problema

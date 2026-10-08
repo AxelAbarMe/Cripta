@@ -108,7 +108,9 @@ decisiones de diseño correspondientes.
 y se pidió revisar lo relevante, probar el flujo con los datos reales de cripta-01
 guardados en fixtures/, y continuar paso a paso con el modelo: un método del mapa
 para la llave y el cierre automático de una puerta y el comportamiento de los
-enemigos (guardián, errante y rastreador).
+enemigos (guardián, errante y rastreador). Después se pidió el motor Partida por 
+trozos y la acción del jugador.
 
 **Para qué se usó:** Verificar la integración, escribir la decisión del turno de
-los enemigos y redactar el texto de las decisiones de diseño del rastro.
+los enemigos, la acción del jugador y el primer trozo del motor Partida, y
+redactar el texto de las decisiones de diseño del rastro y de la agenda.

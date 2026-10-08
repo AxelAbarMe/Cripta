@@ -123,7 +123,12 @@ Se agregó al mapa datos_de_puerta, que devuelve la llave y el cierre automátic
 
 Se escribió comportamiento_enemigo.py con la decisión del turno de un enemigo (§2.8): si comparte sala con el jugador ataca; si no, el guardián espera, el errante elige al azar una salida abierta y el rastreador sigue el rastro fresco más reciente de las salas vecinas, con desempate por menor id. El módulo solo decide; ejecutar la acción lo hará el motor.
 
+Se escribió accion.py con las 9 acciones del jugador definidas en el contrato de Partida, con su validación, su costo base y su conversión a dict para la bitácora de la partida.
+
+Se escribió el primer trozo del motor (partida.py y resultado_partida.py): construcción de la partida con su generador de azar propio, inicio según §2.4, ciclo de eventos hasta el siguiente turno del jugador, turnos de los enemigos (atacar, moverse o esperar), derrota, la consulta vista() con todo lo que debe mostrar la interfaz y la acción esperar. Se probó con la cripta real de fixtures: con la misma semilla dos partidas producen exactamente los mismos mensajes y tiempos, y con otra semilla cambian.
+
 Lo siguiente que hay que realizar:
-* Motor Partida por partes: construcción e inicio, movimiento y puertas (llave comparada con el id de la ficha y cierre automático), combate y objetos.
+* Motor Partida, trozo 2: mover y abrir (llave comparada con el id de la ficha y cierre automático), trampas y victoria.
+* Motor Partida, trozo 3: atacar, recoger, usar, equipar, soltar y pergamino.
 * Retroceso completo y puente entre el modelo y el guardado.
 * Replay.

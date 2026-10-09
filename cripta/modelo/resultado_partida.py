@@ -50,6 +50,7 @@ class VistaPartida:
     velocidad: int
     efectos_activos: tuple[str, ...]
     objeto_actual: str | None               # nombre del objeto que el cursor está viendo
+    objeto_actual_indice: int | None        # su posición en el orden real (0 = el primero)
     inventario_cantidad: int
     inventario_capacidad: int
     arma_equipada: str | None

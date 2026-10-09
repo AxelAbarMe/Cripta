@@ -10,8 +10,9 @@ from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, COSTO_MOVER, TRAMPA_R
 from cripta.modelo import combate
 from cripta.modelo.bitacora_mensajes import BitacoraMensajes
 from cripta.modelo.comportamiento_enemigo import decidir_accion_enemigo
-from cripta.modelo.efectos import EfectoTrampa
+from cripta.modelo.efectos import EfectoAntorcha, EfectoCambioVelocidad, EfectoTrampa
 from cripta.modelo.historial_retroceso import HistorialRetroceso
+from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
 from cripta.modelo.resultado_partida import (
@@ -44,6 +45,8 @@ class Partida:
         self._acciones_ejecutadas = 0
         self._enemigos_derrotados = 0
         self._turno_listo = False                # True cuando el jugador puede decidir
+        self._siguiente_instancia = 0            # para dar ids deterministas a los objetos recogidos
+        self._antorcha_encendida = False
         self._mensajes_nuevos: list[str] = []
         self._iniciada = False
 
@@ -65,6 +68,7 @@ class Partida:
     # --------------------------------------------------------- ciclo de eventos
     def _marcar_turno_jugador(self) -> None:
         self._turno_listo = True
+        self._jugador.evento_pendiente = None   # ya se ejecutó: no hay acción del jugador que reajustar
 
     def _avanzar_hasta_turno_jugador(self) -> None:
         """Ejecuta eventos (enemigos, efectos) hasta que le toque decidir al jugador."""
@@ -77,7 +81,7 @@ class Partida:
         self._turno_listo = False
         intervalo = calcular_intervalo(costo, self._jugador.velocidad)
         self._jugador.tiempo_siguiente = self._reloj.tiempo_actual + intervalo
-        self._reloj.programar(self._jugador.tiempo_siguiente, self._marcar_turno_jugador, "turno del jugador")
+        self._jugador.evento_pendiente = self._reloj.programar(self._jugador.tiempo_siguiente, self._marcar_turno_jugador, "turno del jugador")
         self._avanzar_hasta_turno_jugador()
 
     # --------------------------------------------------------------- enemigos
@@ -136,6 +140,16 @@ class Partida:
             return self._mover(accion)
         if accion.tipo == "abrir":
             return self._abrir(accion)
+        if accion.tipo == "atacar":
+            return self._atacar(accion)
+        if accion.tipo == "recoger":
+            return self._recoger(accion)
+        if accion.tipo == "soltar":
+            return self._soltar(accion)
+        if accion.tipo == "equipar":
+            return self._equipar(accion)
+        if accion.tipo == "usar":
+            return self._usar(accion)
         return self._rechazar(f"La acción '{accion.tipo}' todavía no está implementada.")
 
     def _esperar(self, accion) -> ResultadoAccion:
@@ -216,6 +230,131 @@ class Partida:
         self._decir("Una puerta se cierra sola.")
 
 
+    def _atacar(self, accion) -> ResultadoAccion:
+        sala = self._sala_actual()
+        enemigo = self._buscar_enemigo(sala, accion.argumento)
+        if enemigo is None:
+            return self._rechazar("Ese enemigo no está en esta sala.")
+        sala.marcar_visita(self._reloj.tiempo_actual)
+        daño = combate.atacar(self._jugador, enemigo, self._azar)
+        self._decir(f"Atacas a {self._etiqueta(enemigo)} y le haces {daño} de daño.")
+        if not enemigo.esta_vivo():
+            self._matar_enemigo(enemigo, sala)
+        self._terminar_accion_jugador(accion.costo_base)
+        return self._aceptar()
+
+    @staticmethod
+    def _buscar_enemigo(sala, instancia: str):
+        for enemigo in sala.enemigos_activos:
+            if enemigo.instancia_id == instancia and enemigo.esta_vivo():
+                return enemigo
+        return None
+
+    def _matar_enemigo(self, enemigo, sala) -> None:
+        if enemigo.evento_pendiente is not None:
+            self._reloj.cancelar(enemigo.evento_pendiente)   # sus eventos futuros ya no ocurren
+        sala.enemigos_activos.remove(enemigo)
+        self._enemigos_derrotados += 1
+        self._decir(f"{self._etiqueta(enemigo)} muere.")
+        if enemigo.suelta:
+            for ficha_id in enemigo.suelta:
+                sala.agregar_objeto(ficha_id)
+            nombres = ", ".join(f.nombre for f in self._catalogo.obtener_varias(enemigo.suelta))
+            self._decir(f"Deja caer: {nombres}.")
+
+    def _recoger(self, accion) -> ResultadoAccion:
+        sala = self._sala_actual()
+        inventario = self._jugador.inventario
+        ficha_id = accion.argumento
+        if ficha_id not in sala.objetos_en_suelo:
+            return self._rechazar("Ese objeto no está en el suelo.")
+        if inventario.esta_lleno():
+            return self._rechazar("El inventario está lleno; debes soltar algo primero.")
+        sala.marcar_visita(self._reloj.tiempo_actual)
+        sala.quitar_objeto(ficha_id)
+        ficha = self._catalogo.obtener(ficha_id)
+        inventario.recoger(ObjetoInventario(self._nueva_instancia(), ficha))
+        self._decir(f"Recoges {ficha.nombre}.")
+        self._terminar_accion_jugador(accion.costo_base)
+        return self._aceptar()
+
+    def _soltar(self, accion) -> ResultadoAccion:
+        sala = self._sala_actual()
+        inventario = self._jugador.inventario
+        if inventario.ir_a_posicion(accion.argumento) is None:
+            return self._rechazar("No hay ningún objeto en esa posición del inventario.")
+        sala.marcar_visita(self._reloj.tiempo_actual)
+        objeto = inventario.soltar_actual()
+        sala.agregar_objeto(objeto.ficha.id)
+        self._decir(f"Sueltas {objeto.ficha.nombre}.")
+        self._terminar_accion_jugador(accion.costo_base)
+        return self._aceptar()
+
+    def _equipar(self, accion) -> ResultadoAccion:
+        inventario = self._jugador.inventario
+        if inventario.ir_a_posicion(accion.argumento) is None:
+            return self._rechazar("No hay ningún objeto en esa posición del inventario.")
+        objeto = inventario.objeto_actual()
+        if objeto.ficha.clase not in ("arma", "armadura"):
+            return self._rechazar(f"{objeto.ficha.nombre} no se puede equipar.")
+        self._sala_actual().marcar_visita(self._reloj.tiempo_actual)
+        inventario.equipar_actual()   # lo mueve al frente del orden real
+        self._decir(f"Equipas {objeto.ficha.nombre}.")
+        self._terminar_accion_jugador(accion.costo_base)
+        return self._aceptar()
+
+    def _usar(self, accion) -> ResultadoAccion:
+        inventario = self._jugador.inventario
+        if inventario.ir_a_posicion(accion.argumento) is None:
+            return self._rechazar("No hay ningún objeto en esa posición del inventario.")
+        ficha = inventario.objeto_actual().ficha
+        motivo = self._motivo_no_usable(ficha)
+        if motivo is not None:
+            return self._rechazar(motivo)
+        self._sala_actual().marcar_visita(self._reloj.tiempo_actual)
+        self._aplicar_uso(ficha)
+        inventario.soltar_actual()   # se consume (no va al suelo)
+        self._terminar_accion_jugador(accion.costo_base)
+        return self._aceptar()
+
+    def _motivo_no_usable(self, ficha) -> str | None:
+        if ficha.clase == "pocion":
+            return None
+        if ficha.clase == "antorcha":
+            return "Ya tienes una antorcha encendida." if self._antorcha_encendida else None
+        if ficha.clase == "antidoto":
+            return None if self._jugador.veneno_activo is not None else "No estás envenenado."
+        if ficha.clase == "llave":
+            return "La llave se usa al abrir una puerta."
+        if ficha.clase in ("arma", "armadura"):
+            return f"{ficha.nombre} se equipa, no se usa."
+        return f"{ficha.nombre} no se puede usar así."
+
+    def _aplicar_uso(self, ficha) -> None:
+        if ficha.clase == "pocion":
+            if ficha.cura:
+                self._jugador.curar(ficha.cura)   # nunca supera vida_max
+                self._decir(f"Usas {ficha.nombre} y recuperas vida ({self._jugador.vida}/{self._jugador.vida_max}).")
+            if ficha.modificador_velocidad:
+                EfectoCambioVelocidad(self._reloj, self._jugador, ficha.modificador_velocidad, ficha.duracion).aplicar()
+                self._decir(f"Usas {ficha.nombre}: tu velocidad cambia durante {ficha.duracion} unidades.")
+        elif ficha.clase == "antidoto":
+            self._jugador.veneno_activo.cancelar()
+            self._decir(f"Usas {ficha.nombre} y el veneno desaparece.")
+        elif ficha.clase == "antorcha":
+            self._antorcha_encendida = True
+            EfectoAntorcha(self._reloj, ficha.duracion, self._apagar_antorcha).encender()
+            self._decir(f"Enciendes {ficha.nombre}.")
+
+    def _apagar_antorcha(self) -> None:
+        self._antorcha_encendida = False
+        self._decir("Tu antorcha se apaga.")
+
+    def _nueva_instancia(self) -> str:
+        self._siguiente_instancia += 1
+        return f"i-{self._siguiente_instancia}"
+
+
     def _rechazar(self, motivo: str) -> ResultadoAccion:
         self._decir(motivo)
         return ResultadoAccion(False, motivo, tuple(self._mensajes_nuevos), self._desenlace, self._reloj.tiempo_actual)
@@ -259,7 +398,7 @@ class Partida:
         jugador = self._jugador
         inventario = jugador.inventario
         actual = inventario.objeto_actual()
-        efectos = ("Veneno",) if jugador.veneno_activo is not None else ()
+        efectos = (("Veneno",) if jugador.veneno_activo is not None else ()) + (("Antorcha",) if self._antorcha_encendida else ())
         return VistaPartida(
             sala_id=sala.id,
             sala_nombre=sala.esqueleto.nombre,
@@ -274,6 +413,7 @@ class Partida:
             velocidad=jugador.velocidad,
             efectos_activos=efectos,
             objeto_actual=actual.ficha.nombre if actual else None,
+            objeto_actual_indice=inventario.posicion_actual(),
             inventario_cantidad=len(inventario),
             inventario_capacidad=self._datos.inventario_max,
             arma_equipada=inventario.arma_equipada.ficha.nombre if inventario.arma_equipada else None,

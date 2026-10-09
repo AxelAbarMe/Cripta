@@ -75,6 +75,19 @@ class Inventario:
         self._cursor = nodo
         return nodo.data
 
+
+    def posicion_actual(self) -> int | None:
+        """Posición (0 = el primero) del objeto que el cursor está viendo, o None si no hay."""
+        nodo = self._lista.head
+        indice = 0
+        while nodo is not None:
+            if nodo is self._cursor:
+                return indice
+            nodo = nodo.next
+            indice += 1
+        return None
+
+
     # --- recoger / soltar ---
     def recoger(self, objeto: ObjetoInventario) -> None:
         if self.esta_lleno():

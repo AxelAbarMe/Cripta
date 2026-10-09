@@ -145,6 +145,8 @@ Se completó el tercer trozo del motor Partida: atacar (el enemigo que muere can
 
 El pergamino de retroceso queda para cuando se haga el retroceso completo, porque necesita registrar la inversa de cada cambio.
 
+Se corrigió la vista para que los objetos del suelo lleguen con su id de ficha y su nombre, porque la interfaz necesita el id para pedir recoger. Se revisó el modelo en busca de código sin uso: EfectoCierrePuerta cerraba solo un lado de la puerta, lo que contradecía que una salida conecta dos salas, así que se adaptó para cerrar ambos lados y ahora lo usa Partida; Enemigo.etiqueta no se usaba y Partida repetía su lógica, así que ahora la usa; y sincronizar_puertas no lo llamaba nadie, lo que dejaba cruzar una puerta con llave desde el lado sin marcar, así que ahora lo llama Partida al crearse.
+
 Lo siguiente que hay que realizar:
 * Retroceso completo y pergamino de retroceso.
 * Puente entre el modelo y el guardado.

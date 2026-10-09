@@ -120,7 +120,8 @@ redactar el texto de las decisiones de diseño del rastro y de la agenda.
 **Prompt (resumido):** Se pidió continuar el motor Partida con el segundo trozo
 (movimiento entre salas, abrir puertas con llave, trampas, cierre automático y
 victoria), probándolo con la cripta real guardada en fixtures/. Después se pidió 
-el tercer trozo (atacar, recoger, soltar, equipar y usar objetos).
+el tercer trozo (atacar, recoger, soltar, equipar y usar objetos). Después se pidió 
+corregir objetos_suelo en la vista y revisar el código sin uso del modelo.
 
 **Para qué se usó:** Escribir y verificar el movimiento, las puertas y las
 trampas del motor, y redactar las decisiones de diseño correspondientes.

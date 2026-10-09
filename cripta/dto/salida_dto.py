@@ -11,7 +11,7 @@ class SalidaDTO:
     def desde_json(datos):
         return SalidaDTO(
             sala_destino=datos["sala"],
-            cerrada=datos.get("cerrada", False),
+            cerrada=bool(datos.get("cerrada")),  # un null del JSON queda como False, no como None
             llave=datos.get("llave"),
             cierre_automatico=datos.get("cierre_automatico"),
         )

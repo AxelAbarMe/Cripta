@@ -24,7 +24,7 @@ from pathlib import Path
 
 from cripta.dto.catalogo_dto import CatalogoDTO
 from cripta.dto.contenido_sala_dto import ContenidoSalaDTO
-from cripta.dto.contenido_salas_respuesta_dto import ContenidoSalaRespuestaDTO
+from cripta.dto.contenido_sala_respuesta_dto import ContenidoSalaRespuestaDTO
 from cripta.dto.cripta_general_dto import CriptaGeneralDTO
 from cripta.dto.cripta_resumen_dto import CriptaResumenDTO
 from cripta.dto.entidad_dto import entidad_desde_json

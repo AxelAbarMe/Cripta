@@ -6,10 +6,11 @@ El jugador y los enemigos son eventos del mismo reloj virtual; el orden sale sol
 """
 import random
 
-from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, COSTO_MOVER
+from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, COSTO_MOVER, TRAMPA_REARME_DEFAULT
 from cripta.modelo import combate
 from cripta.modelo.bitacora_mensajes import BitacoraMensajes
 from cripta.modelo.comportamiento_enemigo import decidir_accion_enemigo
+from cripta.modelo.efectos import EfectoTrampa
 from cripta.modelo.historial_retroceso import HistorialRetroceso
 from cripta.modelo.jugador import Jugador
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
@@ -131,6 +132,10 @@ class Partida:
             return self._rechazar("La partida ya terminó.")
         if accion.tipo == "esperar":
             return self._esperar(accion)
+        if accion.tipo == "mover":
+            return self._mover(accion)
+        if accion.tipo == "abrir":
+            return self._abrir(accion)
         return self._rechazar(f"La acción '{accion.tipo}' todavía no está implementada.")
 
     def _esperar(self, accion) -> ResultadoAccion:
@@ -138,6 +143,78 @@ class Partida:
         self._decir("Esperas.")
         self._terminar_accion_jugador(accion.costo_base)
         return self._aceptar()
+
+
+    def _mover(self, accion) -> ResultadoAccion:
+        sala = self._sala_actual()
+        direccion = accion.argumento
+        salida = sala.esqueleto.salida(direccion)
+        if salida is None:
+            return self._rechazar(f"No hay salida hacia el {direccion}.")
+        if not self._mapa.puerta_transitable(sala.id, direccion):
+            return self._rechazar("La puerta está cerrada.")
+        # El contenido de la sala destino debe estar en memoria antes de confirmar el movimiento 
+        # Si todavía no llegó, esta llamada espera: la espera real no mueve el reloj virtual.
+        destino = self._precarga.preparar_sala(salida.sala_destino)
+        tiempo = self._reloj.tiempo_actual
+        sala.marcar_visita(tiempo)
+        self._jugador.sala_actual = destino.id
+        destino.marcar_visita(tiempo)   # el rastro de la sala destino es el instante en que se entra
+        self._decir(f"Entras a {destino.esqueleto.nombre}.")
+        self._activar_enemigos_de(destino)
+        self._precarga.precargar_desde(destino.id)
+        self._activar_trampas_de(destino)   # antes de procesar el siguiente evento del reloj 
+        if self._jugador.esta_vivo() and destino.id == self._datos.sala_salida:
+            self._desenlace = VICTORIA
+            self._decir("¡Has llegado a la salida! Ganas la partida.")
+        self._terminar_accion_jugador(accion.costo_base)
+        return self._aceptar()
+
+    def _activar_trampas_de(self, sala) -> None:
+        for trampa in sala.trampas:
+            if not self._jugador.esta_vivo():
+                break
+            ficha = self._catalogo.obtener(trampa.tipo_catalogo)
+            rearme = ficha.rearme if ficha.rearme is not None else TRAMPA_REARME_DEFAULT
+
+            def aplicar(ficha=ficha):
+                # Decisión: el daño de la trampa es fijo (no pasa por la defensa ni consume azar)
+                self._jugador.recibir_daño(ficha.daño)
+                self._decir(f"Pisas {ficha.nombre} y recibes {ficha.daño} de daño.")
+
+            EfectoTrampa(self._reloj, trampa, rearme).activar(aplicar)
+        if not self._jugador.esta_vivo():
+            self._desenlace = DERROTA
+            self._decir("Has muerto.")
+
+    def _abrir(self, accion) -> ResultadoAccion:
+        sala = self._sala_actual()
+        direccion = accion.argumento
+        if sala.esqueleto.salida(direccion) is None:
+            return self._rechazar(f"No hay salida hacia el {direccion}.")
+        if self._mapa.puerta_transitable(sala.id, direccion):
+            return self._rechazar("La puerta ya está abierta.")
+        # La llave y el cierre automático el API solo los marca en uno de los dos lados de la puerta
+        llave, cierre = self._mapa.datos_de_puerta(sala.id, direccion)
+        if llave is None:
+            return self._rechazar("Esta puerta no tiene cerradura.")
+        if llave not in self._jugador.inventario.fichas_en_uso():   # la llave coincide con el id de su ficha
+            return self._rechazar("No tienes la llave de esta puerta.")
+        sala.marcar_visita(self._reloj.tiempo_actual)
+        self._mapa.abrir_puerta(sala.id, direccion)
+        self._decir(f"Abres la puerta hacia el {direccion}.")
+        if cierre is not None:
+            self._reloj.programar_en(
+                cierre, lambda s=sala.id, d=direccion: self._cerrar_puerta_automatica(s, d), "cierre automático de puerta"
+            )
+        self._terminar_accion_jugador(accion.costo_base)
+        return self._aceptar()
+
+    def _cerrar_puerta_automatica(self, sala_id: int, direccion: str) -> None:
+        # Cierra los dos lados; quien ya cruzó se queda donde está (solo se impide volver a atravesar)
+        self._mapa.cerrar_puerta(sala_id, direccion)
+        self._decir("Una puerta se cierra sola.")
+
 
     def _rechazar(self, motivo: str) -> ResultadoAccion:
         self._decir(motivo)

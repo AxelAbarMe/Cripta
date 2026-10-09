@@ -119,7 +119,8 @@ redactar el texto de las decisiones de diseño del rastro y de la agenda.
 ### 2026-10-09 — Claude (Sonnet 5, claude.ai)
 **Prompt (resumido):** Se pidió continuar el motor Partida con el segundo trozo
 (movimiento entre salas, abrir puertas con llave, trampas, cierre automático y
-victoria), probándolo con la cripta real guardada en fixtures/.
+victoria), probándolo con la cripta real guardada en fixtures/. Después se pidió 
+el tercer trozo (atacar, recoger, soltar, equipar y usar objetos).
 
 **Para qué se usó:** Escribir y verificar el movimiento, las puertas y las
 trampas del motor, y redactar las decisiones de diseño correspondientes.

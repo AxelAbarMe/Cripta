@@ -141,7 +141,12 @@ Se completó el segundo trozo del motor Partida: mover, abrir, trampas, cierre a
 
 Se dejó pendiente decidir qué hacer con la bitácora de la partida al cargar una partida guardada (seguir en la misma o empezar una nueva).
 
+Se completó el tercer trozo del motor Partida: atacar (el enemigo que muere cancela su evento pendiente, sale de la sala y suelta sus objetos), recoger (con rechazo sin consumir tiempo si el inventario está lleno), soltar, equipar y usar objetos (curar, cambiar la velocidad con reajuste del turno pendiente, cancelar el veneno con un antídoto y encender una antorcha). Se agregó al inventario posicion_actual y a la vista objeto_actual_indice para que la interfaz pueda pedir acciones por posición. Se probó con la cripta real de fixtures y con fichas inventadas para el antídoto y la poción de velocidad, que la cripta publicada no trae.
+
+El pergamino de retroceso queda para cuando se haga el retroceso completo, porque necesita registrar la inversa de cada cambio.
+
 Lo siguiente que hay que realizar:
-* Motor Partida, trozo 3: atacar, recoger, usar, equipar, soltar y pergamino.
-* Retroceso completo y puente entre el modelo y el guardado.
-* Replay.
+* Retroceso completo y pergamino de retroceso.
+* Puente entre el modelo y el guardado.
+* Servicio que arma la partida y coordina la bitácora, el puntaje y el reporte final.
+* Replay, y decidir qué hacer con la bitácora de la partida al cargar una partida guardada.

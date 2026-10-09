@@ -30,6 +30,12 @@ class EnemigoVista:
 
 
 @dataclass(frozen=True, slots=True)
+class ObjetoSueloVista:
+    ficha_id: str           # es lo que se pasa a Accion("recoger", ficha_id)
+    nombre: str             # lo que se muestra
+
+
+@dataclass(frozen=True, slots=True)
 class TrampaVista:
     nombre: str
     armada: bool
@@ -41,7 +47,7 @@ class VistaPartida:
     sala_nombre: str
     salidas: tuple[SalidaVista, ...]
     enemigos: tuple[EnemigoVista, ...]
-    objetos_suelo: tuple[str, ...]          # nombres
+    objetos_suelo: tuple[ObjetoSueloVista, ...]
     trampas: tuple[TrampaVista, ...]
     vida: int
     vida_max: int

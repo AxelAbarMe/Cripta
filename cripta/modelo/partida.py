@@ -10,13 +10,14 @@ from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, COSTO_MOVER, TRAMPA_R
 from cripta.modelo import combate
 from cripta.modelo.bitacora_mensajes import BitacoraMensajes
 from cripta.modelo.comportamiento_enemigo import decidir_accion_enemigo
-from cripta.modelo.efectos import EfectoAntorcha, EfectoCambioVelocidad, EfectoTrampa
+from cripta.modelo.efectos import EfectoAntorcha, EfectoCambioVelocidad, EfectoCierrePuerta, EfectoTrampa
 from cripta.modelo.historial_retroceso import HistorialRetroceso
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
 from cripta.modelo.resultado_partida import (
     EnemigoVista,
+    ObjetoSueloVista,
     ResultadoAccion,
     ResumenPuntaje,
     SalidaVista,
@@ -33,6 +34,7 @@ class Partida:
     def __init__(self, datos_generales, mapa, servicio_catalogo, servicio_precarga, semilla: int):
         self._datos = datos_generales            # CriptaGeneralDTO
         self._mapa = mapa
+        self._mapa.sincronizar_puertas()         # la puerta cerrada en un lado debe estarlo en los dos 
         self._catalogo = servicio_catalogo
         self._precarga = servicio_precarga
         self._semilla = semilla
@@ -106,7 +108,7 @@ class Partida:
         )
         if tipo == "atacar":
             daño = combate.atacar(enemigo, self._jugador, self._azar)
-            self._decir(f"{self._etiqueta(enemigo)} te ataca y te hace {daño} de daño.")
+            self._decir(f"{enemigo.etiqueta()} te ataca y te hace {daño} de daño.")
             if not self._jugador.esta_vivo():
                 self._desenlace = DERROTA
                 self._decir("Has muerto.")
@@ -218,15 +220,15 @@ class Partida:
         self._mapa.abrir_puerta(sala.id, direccion)
         self._decir(f"Abres la puerta hacia el {direccion}.")
         if cierre is not None:
-            self._reloj.programar_en(
-                cierre, lambda s=sala.id, d=direccion: self._cerrar_puerta_automatica(s, d), "cierre automático de puerta"
-            )
+            EfectoCierrePuerta(
+                self._reloj, self._mapa, sala.id, direccion, cierre, self._avisar_cierre_de_puerta
+            ).programar_cierre()
         self._terminar_accion_jugador(accion.costo_base)
         return self._aceptar()
 
-    def _cerrar_puerta_automatica(self, sala_id: int, direccion: str) -> None:
-        # Cierra los dos lados; quien ya cruzó se queda donde está (solo se impide volver a atravesar)
-        self._mapa.cerrar_puerta(sala_id, direccion)
+
+    def _avisar_cierre_de_puerta(self) -> None:
+        # El efecto cierra los dos lados; quien ya cruzó se queda donde está (solo se impide volver a atravesar)
         self._decir("Una puerta se cierra sola.")
 
 
@@ -237,7 +239,7 @@ class Partida:
             return self._rechazar("Ese enemigo no está en esta sala.")
         sala.marcar_visita(self._reloj.tiempo_actual)
         daño = combate.atacar(self._jugador, enemigo, self._azar)
-        self._decir(f"Atacas a {self._etiqueta(enemigo)} y le haces {daño} de daño.")
+        self._decir(f"Atacas a {enemigo.etiqueta()} y le haces {daño} de daño.")
         if not enemigo.esta_vivo():
             self._matar_enemigo(enemigo, sala)
         self._terminar_accion_jugador(accion.costo_base)
@@ -255,7 +257,7 @@ class Partida:
             self._reloj.cancelar(enemigo.evento_pendiente)   # sus eventos futuros ya no ocurren
         sala.enemigos_activos.remove(enemigo)
         self._enemigos_derrotados += 1
-        self._decir(f"{self._etiqueta(enemigo)} muere.")
+        self._decir(f"{enemigo.etiqueta()} muere.")
         if enemigo.suelta:
             for ficha_id in enemigo.suelta:
                 sala.agregar_objeto(ficha_id)
@@ -388,10 +390,10 @@ class Partida:
             for direccion, destino in self._mapa.vecinos(sala.id)
         )
         enemigos = tuple(
-            EnemigoVista(self._etiqueta(e), e.instancia_id, e.vida, e.vida_max)
+            EnemigoVista(e.etiqueta(), e.instancia_id, e.vida, e.vida_max)
             for e in sala.enemigos_activos if e.esta_vivo()
         )
-        objetos = tuple(f.nombre for f in self._catalogo.obtener_varias(sala.objetos_en_suelo)) if sala.objetos_en_suelo else ()
+        objetos = tuple(ObjetoSueloVista(i, self._catalogo.obtener(i).nombre) for i in sala.objetos_en_suelo)
         trampas = tuple(
             TrampaVista(self._catalogo.obtener(t.tipo_catalogo).nombre, t.armada) for t in sala.trampas
         )
@@ -425,10 +427,6 @@ class Partida:
     # ------------------------------------------------------------- auxiliares
     def _sala_actual(self):
         return self._mapa.obtener(self._jugador.sala_actual)
-
-    @staticmethod
-    def _etiqueta(enemigo) -> str:
-        return f"{enemigo.nombre} [{enemigo.instancia_id}]"
 
     def _decir(self, texto: str) -> None:
         self._bitacora.agregar(texto)

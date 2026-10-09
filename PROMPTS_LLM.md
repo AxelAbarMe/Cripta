@@ -114,3 +114,12 @@ trozos y la acción del jugador.
 **Para qué se usó:** Verificar la integración, escribir la decisión del turno de
 los enemigos, la acción del jugador y el primer trozo del motor Partida, y
 redactar el texto de las decisiones de diseño del rastro y de la agenda.
+
+
+### 2026-10-09 — Claude (Sonnet 5, claude.ai)
+**Prompt (resumido):** Se pidió continuar el motor Partida con el segundo trozo
+(movimiento entre salas, abrir puertas con llave, trampas, cierre automático y
+victoria), probándolo con la cripta real guardada en fixtures/.
+
+**Para qué se usó:** Escribir y verificar el movimiento, las puertas y las
+trampas del motor, y redactar las decisiones de diseño correspondientes.

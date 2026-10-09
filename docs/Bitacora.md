@@ -132,3 +132,16 @@ Lo siguiente que hay que realizar:
 * Motor Partida, trozo 3: atacar, recoger, usar, equipar, soltar y pergamino.
 * Retroceso completo y puente entre el modelo y el guardado.
 * Replay.
+
+
+
+# 09/10/2026
+
+Se completó el segundo trozo del motor Partida: mover, abrir, trampas, cierre automático y victoria. El movimiento rechaza una dirección sin salida o con puerta cerrada, espera a tener el contenido de la sala destino antes de confirmarse (la espera real no mueve el reloj virtual), refresca el rastro, activa a los enemigos dormidos de la sala y aplica las trampas armadas antes de procesar el siguiente evento. Abrir comprueba que el jugador tenga la llave comparando el id de la ficha, y busca la llave y el cierre automático en los dos lados de la puerta porque el API solo los marca en uno. El cierre automático cierra ambos lados. Entrar a la sala de salida con vida termina la partida con victoria. Se probó con la cripta real de fixtures: rechazos, trampa, ataques de enemigos, abrir con llave, cierre automático con el jugador al otro lado de la puerta y victoria.
+
+Se dejó pendiente decidir qué hacer con la bitácora de la partida al cargar una partida guardada (seguir en la misma o empezar una nueva).
+
+Lo siguiente que hay que realizar:
+* Motor Partida, trozo 3: atacar, recoger, usar, equipar, soltar y pergamino.
+* Retroceso completo y puente entre el modelo y el guardado.
+* Replay.

@@ -31,6 +31,6 @@ class Enemigo(Actor):
     def activar(self) -> None:
         self.activo = True
 
-    def etiqueta(self, numero: int) -> str:
-        # Presentación tipo "Rata gigante #1"
-        return f"{self.nombre} #{numero}"
+    def etiqueta(self) -> str:
+        # Presentación identificable de la instancia, por ejemplo "Rata gigante [e-201]"
+        return f"{self.nombre} [{self.instancia_id}]"

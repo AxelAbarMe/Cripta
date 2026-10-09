@@ -29,7 +29,9 @@ class CacheDisco:
         return f"catalogo.{version_catalogo}.{ficha_id}.json"
 
     def existe_ficha(self, version_catalogo: str, ficha_id: str) -> bool:
-        return self._almacen.existe(self._clave_ficha(version_catalogo, ficha_id))
+        # Se lee el archivo en vez de solo ver si existe: un archivo dañado debe contar como
+        # "no está", para que la ficha viaje en el próximo lote de red y no en una solicitud aparte.
+        return self.leer_ficha(version_catalogo, ficha_id) is not None
 
     def leer_ficha(self, version_catalogo: str, ficha_id: str):
         return self._leer(self._clave_ficha(version_catalogo, ficha_id), entidad_desde_json)
@@ -57,7 +59,8 @@ class CacheDisco:
         return f"cripta.{cripta_id}.{version}.contenido.{sala_id}.json"
 
     def existe_contenido(self, cripta_id: str, version: str, sala_id: int) -> bool:
-        return self._almacen.existe(self._clave_contenido(cripta_id, version, sala_id))
+        # Mismo criterio que existe_ficha: un archivo dañado cuenta como que no existe
+        return self.leer_contenido_sala(cripta_id, version, sala_id) is not None
 
     def leer_contenido_sala(self, cripta_id: str, version: str, sala_id: int):
         return self._leer(self._clave_contenido(cripta_id, version, sala_id), ContenidoSalaDTO.desde_json)

@@ -1,5 +1,7 @@
 """Trampa: estado de una trampa colocada en una sala."""
-class Trampa:
+from cripta.modelo.reversible import Reversible
+
+class Trampa(Reversible):
     def __init__(self, instancia_id: str, tipo_catalogo: str):
         self.instancia_id = instancia_id
         self.tipo_catalogo = tipo_catalogo

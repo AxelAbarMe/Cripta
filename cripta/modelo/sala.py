@@ -1,8 +1,8 @@
 """Sala: geometría fija del esqueleto (SalaDTO) + lo que cambia durante la partida. No programa eventos ni conoce el reloj; solo guarda estado."""
 from cripta.modelo.trampa import Trampa
+from cripta.modelo.reversible import Reversible
 
-
-class EstadoPuertas:
+class EstadoPuertas(Reversible):
     """Estado mutable de las hasta 4 puertas de una sala, inicializado desde el esqueleto"""
 
     def __init__(self, esqueleto):
@@ -47,7 +47,7 @@ class EstadoPuertas:
             raise ValueError(f"Dirección inválida: {direccion}")
 
 
-class Sala:
+class Sala(Reversible):
     """Une el esqueleto estático de una sala con su estado mutable durante la partida."""
 
     def __init__(self, esqueleto):
@@ -84,10 +84,13 @@ class Sala:
 
     def agregar_objeto(self, id_catalogo: str) -> None:
         self.objetos_en_suelo.append(id_catalogo)
+        self._registrar_inversa(lambda: self.objetos_en_suelo.pop())   # lo último que se agregó
 
     def quitar_objeto(self, id_catalogo: str) -> bool:
         if id_catalogo in self.objetos_en_suelo:
+            indice = self.objetos_en_suelo.index(id_catalogo)
             self.objetos_en_suelo.remove(id_catalogo)
+            self._registrar_inversa(lambda: self.objetos_en_suelo.insert(indice, id_catalogo))
             return True
         return False
 
@@ -97,4 +100,9 @@ class Sala:
         activados = list(self.enemigos_dormidos)
         self.enemigos_activos.extend(activados)
         self.enemigos_dormidos.clear()
+        if activados:
+            def deshacer():
+                del self.enemigos_activos[-len(activados):]   # eran los últimos agregados
+                self.enemigos_dormidos.extend(activados)
+            self._registrar_inversa(deshacer)
         return activados

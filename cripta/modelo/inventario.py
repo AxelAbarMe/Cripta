@@ -12,6 +12,7 @@ from cripta.estructuras.lista_doble_enlazada import ListaDobleEnlazada
 
 import unicodedata
 from cripta.estructuras.ordenamiento_selector import ordenar_auto
+from cripta.modelo.reversible import Reversible
 
 
 def _normalizar_nombre(texto: str) -> str:
@@ -33,7 +34,9 @@ class ObjetoInventario:
         self.ficha = ficha  # ArmaDTO / ArmaduraDTO / PocionDTO / AntidotoDTO / LlaveDTO / ...
 
 
-class Inventario:
+class Inventario(Reversible):
+    _no_reversibles = ("_cursor",)   # el cursor es de la interfaz, no del estado del juego
+    
     def __init__(self, capacidad_max: int):
         self._capacidad_max = capacidad_max
         self._lista = ListaDobleEnlazada()
@@ -93,6 +96,7 @@ class Inventario:
         if self.esta_lleno():
             raise InventarioLlenoError("El inventario está lleno; debe soltar algo primero.")
         nodo = self._lista.agregar(objeto)
+        self._registrar_inversa(lambda: self._deshacer_recoger(objeto))
         self._cursor = nodo  # el jugador queda viendo lo que acaba de recoger
 
     def soltar_actual(self) -> ObjetoInventario | None:
@@ -102,7 +106,9 @@ class Inventario:
         nodo = self._cursor
         objeto = nodo.data
         self._cursor = nodo.next or nodo.prev  # se lee ANTES de desconectar el nodo
+        prefijo = self._prefijo_de(nodo)
         self._lista.eliminar_nodo(nodo)
+        self._registrar_inversa(lambda: self._reponer_en_su_posicion(objeto, prefijo))
         if objeto is self.arma_equipada:
             self.arma_equipada = None
         if objeto is self.armadura_equipada:
@@ -121,7 +127,9 @@ class Inventario:
             self.armadura_equipada = objeto
         else:
             return None  # solo arma/armadura se "equipan"
+        prefijo = self._prefijo_de(self._cursor)
         self._lista.mover_al_inicio(self._cursor)
+        self._registrar_inversa(lambda: self._deshacer_equipar(prefijo))
         return objeto
 
 
@@ -149,7 +157,9 @@ class Inventario:
         if nodo is self._cursor:
             self._cursor = nodo.next or nodo.prev   # se lee ANTES de desconectar el nodo
         objeto = nodo.data
+        prefijo = self._prefijo_de(nodo)
         self._lista.eliminar_nodo(nodo)
+        self._registrar_inversa(lambda: self._reponer_en_su_posicion(objeto, prefijo))
         return objeto
 
     def fichas_en_uso(self) -> tuple[str, ...]:
@@ -160,6 +170,39 @@ class Inventario:
             ids.append(nodo.data.ficha.id)
             nodo = nodo.next
         return tuple(ids)
+
+
+    # --- inversas de los cambios (retroceso, §2.11) ---
+    # Las inversas buscan el nodo por su OBJETO y no por el nodo guardado: al reponer un objeto
+    # se crea un nodo nuevo, así que una referencia a un nodo viejo ya no sirve.
+    def _nodo_de(self, objeto):
+        actual = self._lista.head
+        while actual is not None and actual.data is not objeto:
+            actual = actual.next
+        return actual
+
+    def _prefijo_de(self, nodo) -> tuple:
+        """Los objetos que van antes de `nodo` en el orden real."""
+        prefijo = []
+        actual = self._lista.head
+        while actual is not None and actual is not nodo:
+            prefijo.append(actual.data)
+            actual = actual.next
+        return tuple(prefijo)
+
+    def _deshacer_recoger(self, objeto) -> None:
+        nodo = self._nodo_de(objeto)
+        self._cursor = nodo.prev or nodo.next
+        self._lista.eliminar_nodo(nodo)
+
+    def _reponer_en_su_posicion(self, objeto, prefijo) -> None:
+        nuevo = self._lista.agregar_inicio(objeto)
+        self._deshacer_equipar(prefijo)
+        self._cursor = nuevo
+
+    def _deshacer_equipar(self, prefijo) -> None:
+        for previo in reversed(prefijo):   # devuelve al frente los que iban antes, del más cercano al más lejano
+            self._lista.mover_al_inicio(self._nodo_de(previo))
 
 
     # --- vistas ordenadas: no alteran el orden real ---

@@ -1,7 +1,8 @@
 """Actor: comportamiento común a Jugador y Enemigo (vida, combate y reloj de acciones."""
 
+from cripta.modelo.reversible import Reversible
 
-class Actor:
+class Actor(Reversible):
     def __init__(self, nombre: str, vida_max: int, ataque: int, defensa: int, velocidad: int, sala_actual: int):
         if vida_max <= 0:
             raise ValueError("vida_max debe ser positivo")

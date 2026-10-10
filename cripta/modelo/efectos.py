@@ -11,8 +11,9 @@ from cripta.constantes import (
     VENENO_INTERVALO,
 )
 from cripta.modelo.reloj import calcular_tiempo_reprogramado
+from cripta.modelo.reversible import Reversible
 
-class EfectoVeneno:
+class EfectoVeneno(Reversible):
     """Aplica `daño_por_pulso` cada VENENO_INTERVALO unidades, durante
     VENENO_DURACION unidades desde que se aplicó. Un antídoto lo
     cancela antes de que se agoten los pulsos restantes; los pulsos ya
@@ -63,7 +64,7 @@ class EfectoVeneno:
         self._siguiente_pulso()
 
 
-class EfectoCambioVelocidad:
+class EfectoCambioVelocidad(Reversible):
     """Modifica temporalmente la velocidad de un actor y reajusta su próxima acción ya programada."""
 
     def __init__(self, reloj, actor, modificador_velocidad: int, duracion: int):

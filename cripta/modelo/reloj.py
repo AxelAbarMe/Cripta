@@ -49,7 +49,10 @@ class RelojEventos:
     El evento igual se extrae del heap y el reloj avanza a su tiempo, pero la
     acción en sí se "descarta".
     """
-
+    # Función(inversa) que asigna quien arma el retroceso. El reloj es la parte más caliente del juego,
+    # así que registra de forma explícita (un solo "if" por operación) y no con Reversible.
+    registrador = None
+    
     def __init__(self):
         self._heap = HeapMinimo()
         self._reloj_actual = 0
@@ -74,6 +77,8 @@ class RelojEventos:
         self._siguiente_secuencia += 1
         self._heap.insertar(evento)
         self._vigentes += 1
+        if self.registrador is not None:
+            self.registrador(lambda: self._deshacer_programar(evento))
         return evento
 
     def programar_en(self, intervalo: int, accion, descripcion: str = "") -> EventoProgramado:
@@ -83,6 +88,8 @@ class RelojEventos:
     def cancelar(self, evento: EventoProgramado) -> None:
         if not evento.cancelado and not evento.ejecutado:
             self._vigentes -= 1
+            if self.registrador is not None:
+                self.registrador(lambda: self.restituir(evento))
         evento.cancelado = True
 
     def reprogramar(self, evento: EventoProgramado, nuevo_tiempo: int) -> EventoProgramado:
@@ -104,6 +111,9 @@ class RelojEventos:
                 break
         evento.ejecutado = True               
         self._vigentes -= 1 
+        if self.registrador is not None:
+            tiempo_anterior = self._reloj_actual
+            self.registrador(lambda: self._deshacer_ejecutar(evento, tiempo_anterior))
         self._reloj_actual = evento.tiempo
         evento.accion()
         return evento
@@ -120,6 +130,14 @@ class RelojEventos:
         """Deja el reloj y el contador de secuencia como estaban (retroceso y carga de partida)."""
         self._reloj_actual = tiempo_actual
         self._siguiente_secuencia = siguiente_secuencia
+
+    def _deshacer_programar(self, evento: EventoProgramado) -> None:
+        self.cancelar(evento)
+        self._siguiente_secuencia = evento.secuencia   # la secuencia vuelve a ser la que se reservó
+
+    def _deshacer_ejecutar(self, evento: EventoProgramado, tiempo_anterior: int) -> None:
+        self.restituir(evento)
+        self._reloj_actual = tiempo_anterior
 
     def restituir(self, evento: EventoProgramado) -> None:
         """Inverso de cancelar o ejecutar: deja el evento vigente con su mismo (tiempo, secuencia)."""

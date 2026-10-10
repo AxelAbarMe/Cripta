@@ -147,6 +147,8 @@ El pergamino de retroceso queda para cuando se haga el retroceso completo, porqu
 
 Se corrigió la vista para que los objetos del suelo lleguen con su id de ficha y su nombre, porque la interfaz necesita el id para pedir recoger. Se revisó el modelo en busca de código sin uso: EfectoCierrePuerta cerraba solo un lado de la puerta, lo que contradecía que una salida conecta dos salas, así que se adaptó para cerrar ambos lados y ahora lo usa Partida; Enemigo.etiqueta no se usaba y Partida repetía su lógica, así que ahora la usa; y sincronizar_puertas no lo llamaba nadie, lo que dejaba cruzar una puerta con llave desde el lado sin marcar, así que ahora lo llama Partida al crearse.
 
+Se empezó el retroceso completo con los ganchos de inversa de cada objeto del modelo: una base Reversible que guarda el valor anterior de cada atributo que cambia, inversas explícitas en el reloj, las listas de la sala y el inventario, y un gancho del historial que ignora los cambios fuera de un intervalo y permite pausar el registro. Al probar el inventario se descubrió que reponer un objeto crea un nodo nuevo, así que las inversas buscan por objeto. Al usar la base también en el reloj el ciclo de eventos subió a 17 ms, por lo que el reloj registra de forma explícita. Se agregaron tests unitarios en tests/modelo.
+
 Lo siguiente que hay que realizar:
 * Retroceso completo y pergamino de retroceso.
 * Puente entre el modelo y el guardado.

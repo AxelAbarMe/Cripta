@@ -121,7 +121,9 @@ redactar el texto de las decisiones de diseño del rastro y de la agenda.
 (movimiento entre salas, abrir puertas con llave, trampas, cierre automático y
 victoria), probándolo con la cripta real guardada en fixtures/. Después se pidió 
 el tercer trozo (atacar, recoger, soltar, equipar y usar objetos). Después se pidió 
-corregir objetos_suelo en la vista y revisar el código sin uso del modelo.
+corregir objetos_suelo en la vista y revisar el código sin uso del modelo. Después 
+se pidió el retroceso completo (pergamino), empezando por los ganchos de inversa de 
+los objetos del modelo.
 
 **Para qué se usó:** Escribir y verificar el movimiento, las puertas y las
 trampas del motor, y redactar las decisiones de diseño correspondientes.

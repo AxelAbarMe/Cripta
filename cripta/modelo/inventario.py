@@ -192,6 +192,8 @@ class Inventario(Reversible):
 
     def _deshacer_recoger(self, objeto) -> None:
         nodo = self._nodo_de(objeto)
+        if nodo is None:   # ya no está (por ejemplo, un pergamino, que el retroceso no toca)
+            return
         self._cursor = nodo.prev or nodo.next
         self._lista.eliminar_nodo(nodo)
 
@@ -202,7 +204,9 @@ class Inventario(Reversible):
 
     def _deshacer_equipar(self, prefijo) -> None:
         for previo in reversed(prefijo):   # devuelve al frente los que iban antes, del más cercano al más lejano
-            self._lista.mover_al_inicio(self._nodo_de(previo))
+            nodo = self._nodo_de(previo)
+            if nodo is not None:           # un pergamino quitado o soltado no se restaura (§2.11)
+                self._lista.mover_al_inicio(nodo)
 
 
     # --- vistas ordenadas: no alteran el orden real ---

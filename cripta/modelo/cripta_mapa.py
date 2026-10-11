@@ -58,6 +58,12 @@ class CriptaMapa:
         return llave, cierre
 
 
+    def conectar_registrador(self, registrador) -> None:
+        """Conecta el retroceso a todas las salas y a sus puertas."""
+        for sala in self._salas.elementos():
+            sala.registrador = registrador
+            sala.puertas.registrador = registrador
+
     def abrir_puerta(self, sala_id: int, direccion: str) -> None:
         self._fijar_puerta(sala_id, direccion, cerrada=False)
 

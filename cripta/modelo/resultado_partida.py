@@ -59,6 +59,8 @@ class VistaPartida:
     objeto_actual_indice: int | None        # su posición en el orden real (0 = el primero)
     inventario_cantidad: int
     inventario_capacidad: int
+    pergaminos: int                         # pergaminos de retroceso que tiene
+    retrocesos_posibles: int                # cuántas acciones podría deshacer ahora
     arma_equipada: str | None
     armadura_equipada: str | None
     tiempo: int

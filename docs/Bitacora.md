@@ -164,7 +164,8 @@ Se midió el rendimiento del ciclo de eventos en dos series de cinco corridas, l
 
 Se empezó el guardado de la partida. Los eventos de la agenda ahora declaran sus datos para poder escribirse en un archivo, y Partida.a_estado_guardado convierte la partida viva a EstadoPartida: reloj, estado del azar, jugador, inventario, salas visitadas con sus enemigos, trampas y puertas, y la agenda pendiente. Se agregó el módulo persistencia_modelo.py y tests con la cripta real: estado inicial, sala con enemigos y trampa, puerta con cierre automático, antorcha, ida y vuelta por el archivo binario (incluida la carga de una sala suelta) y mismo estado con la misma semilla.
 
+Se completó el guardado de la partida con su segunda parte: Partida.desde_estado_guardado reconstruye el modelo desde un EstadoPartida (salas visitadas, enemigos, trampas, puertas, rastro, inventario, jugador, azar, mensajes) y recrea las acciones de la agenda a partir de sus descriptores; cada efecto sabe volver a programar su evento guardado. Al probarlo se encontró y corrigió un fallo de la primera parte: un enemigo activo que caminaba a una sala sin visitar se perdía al guardar. Los tests con la cripta real comparan una partida guardada y cargada contra una que nunca se guardó, incluso pasando por el archivo binario.
+
 Lo siguiente que hay que realizar:
-* Guardado, segunda parte: reconstruir la partida desde un estado guardado.
-* Servicio que arma la partida y coordina la bitácora, el puntaje y el reporte final.
-* Replay, y decidir qué hacer con la bitácora de la partida al cargar una partida guardada.
+* Servicio que arma la partida y coordina la bitácora, el puntaje, el guardado y el reporte final.
+* Decidir qué hacer con la bitácora de la partida al cargar una partida guardada, y el replay.

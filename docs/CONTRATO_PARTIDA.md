@@ -4,7 +4,7 @@ Archivo de referencia entre quien implementa el modelo y quien implementa el con
 Si algo de aquí cambia, se avisa antes (interfaz congelada).
 
 Módulos nuevos (en `cripta/modelo/`): `accion.py` (la acción del jugador) y `partida.py` (el motor).
-Convención: todos los nombres de métodos, atributos y clases nuevos van **en español**, igual que el resto del modelo. Los métodos especiales que exige Python (`__init__`, `__len__`) se mantienen y delegan en un método español (por ejemplo, `tamano()`).
+Convención: todos los nombres de métodos, atributos y clases nuevos van **en español**, igual que el resto del modelo. Los métodos especiales que exige Python (`__init__`, `__len__`) se mantienen.
 
 ---
 
@@ -106,7 +106,7 @@ Cuando `desenlace` deja de ser `"en_curso"`, `ejecutar_accion` ya no acepta más
 | `partida.inventario_ordenado(criterio)` | Vista ordenada por `"peso"`, `"valor"` o `"nombre"` sin alterar el orden real |
 | `partida.puntaje()` | Datos para la tabla de puntajes: acciones ejecutadas, enemigos derrotados, tiempo final |
 
-`VistaPartida` incluye: sala actual (id y nombre), salidas (dirección, destino, si está cerrada), enemigos presentes (etiqueta como "Rata gigante #1", instancia, vida), objetos del suelo, trampas visibles, estadísticas del jugador (vida, vida máxima, ataque, defensa, velocidad), efectos activos, inventario (objeto actual y capacidad) y tiempo virtual.
+`VistaPartida` incluye: sala actual (id y nombre), salidas (dirección, destino, si está cerrada), enemigos presentes (etiqueta como "Rata gigante [e-201]", instancia, vida), objetos del suelo, trampas visibles, estadísticas del jugador (vida, vida máxima, ataque, defensa, velocidad), efectos activos, inventario (objeto actual y capacidad) y tiempo virtual.
 
 ---
 
@@ -114,7 +114,7 @@ Cuando `desenlace` deja de ser `"en_curso"`, `ejecutar_accion` ya no acepta más
 
 ```python
 estado = partida.a_estado_guardado(version_catalogo)
-partida = Partida.desde_estado_guardado(estado, mapa, servicio_catalogo, servicio_precarga)
+partida = Partida.desde_estado_guardado(estado, datos_generales, mapa, servicio_catalogo, servicio_precarga)
 ```
 
 - `a_estado_guardado()` produce el `EstadoPartida` que ya sabe escribir `GuardadoBinario`. Incluye la semilla y el estado del generador aleatorio.
@@ -154,9 +154,9 @@ Dos `Partida` creadas con la **misma cripta, la misma semilla y la misma secuenc
 ## 10. Estado de implementación
 Este archivo define la interfaz **antes** de implementarla. Se marca cada punto cuando exista:
 
-- [ ] `accion.py`: `Accion`, `a_dict`, `desde_dict`
-- [ ] `partida.py`: construcción e `iniciar()`
-- [ ] `ejecutar_accion` con las 9 acciones
+- [x] `accion.py`: `Accion`, `a_dict`, `desde_dict`
+- [x] `partida.py`: construcción e `iniciar()`
+- [x] `ejecutar_accion` con las 9 acciones
 - [ ] consultas (`vista`, `mensajes`, `inventario_*`, `puntaje`)
-- [ ] `a_estado_guardado` / `desde_estado_guardado`
+- [x] `a_estado_guardado` / `desde_estado_guardado`
 - [ ] prueba de determinismo (sección 8)

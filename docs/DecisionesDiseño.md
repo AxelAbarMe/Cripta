@@ -241,15 +241,23 @@ Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 La partida viva se convierte a datos planos (`EstadoPartida`) en un módulo del modelo (`persistencia_modelo.py`), que no escribe archivos: eso lo hace `GuardadoBinario`. La agenda del reloj contiene funciones, que no se pueden escribir en disco, así que cada evento declara al programarse un descriptor (tipo, sujeto y dos números) y la agenda se guarda como esos descriptores; un evento sin descriptor produce un error en lugar de perderse en silencio. Solo se guardan como cargadas las salas a las que el jugador llegó: el contenido que solo se precargó es estado de la caché y se vuelve a pedir al cargar. No se guarda el historial de retroceso, de modo que tras cargar el pergamino no deshace acciones anteriores al guardado. Solo se puede guardar con la partida en curso y cuando al jugador le toca decidir, por lo que no hay un evento de turno del jugador pendiente.
 
+Cargar una partida reconstruye el modelo a partir del `EstadoPartida`. Se piden de nuevo el contenido y las fichas de las salas visitadas y el estado guardado manda sobre lo recién creado: suelo, trampas, enemigos (dormidos y activos), puertas, rastro, inventario con su equipo y su cursor, y estadísticas del jugador. Las acciones de la agenda, que son funciones, se recrean a partir de su descriptor con la misma pareja (tiempo, secuencia) con que se guardaron, y el estado del generador aleatorio se repone para que la partida continúe con la misma secuencia de azar. La carga se hace sin registrar inversas, de modo que no hay nada que el pergamino pueda deshacer de ella. Si el id o la versión de la cripta no coinciden con los guardados, se informa la incompatibilidad en lugar de cargar. Un enemigo activo que llegó caminando a una sala que el jugador nunca visitó se guarda con esa sala, porque es estado del juego y no de la caché.
+
 
 ### Análisis de complejidad
 Pendiente — completar en reunión
 ### Evidencia empírica
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+La prueba de ida y vuelta (tests/modelo/test_guardado_vuelta.py) compara una partida que se guardó y se cargó contra otra que nunca se guardó: tras las mismas acciones tienen el mismo estado completo, la misma vista y los mismos mensajes. Cubre trampas, antorcha, puerta con cierre automático, veneno, cambio de velocidad, un enemigo en una sala sin visitar y el paso por el archivo binario.
+
+
 ### Límites conocidos
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 El pergamino de retroceso no puede deshacer acciones anteriores a una partida cargada, porque el historial (solo inversas, nunca copias del estado) no se guarda. Guardar solo es posible con la partida en curso.
+
+El contador de ids de los objetos recogidos no forma parte del archivo de guardado: al cargar se retoma después del mayor id que queda en el inventario, de modo que nunca se repite un id existente, pero puede diferir del que habría tenido una partida que nunca se guardó. Cargar vuelve a pedir el contenido de las salas visitadas, lo que consume solicitudes si no están en el disco. Los efectos del veneno y del cambio de velocidad se probaron con efectos creados a mano, porque la cripta publicada no trae nada que los origine.
 
 
 ## 4.11 Bitácora de partida y reproducción

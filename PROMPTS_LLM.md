@@ -140,3 +140,10 @@ partida desde un estado guardado (la vuelta del guardado).
 
 **Para qué se usó:** Escribir la conversión de la partida a datos planos y sus tests, y
 redactar el texto de las decisiones de diseño del guardado y de la evidencia de rendimiento.
+
+
+
+### 2026-10-11 — Claude (claude-sonnet-5-5)
+**Prompt (resumido):** Se compartió el proyecto actualizado (versión 4) con el contrato de la partida y se pidió empezar el servicio que arma la partida: construcción, bitácora de acciones y reporte final, y revisar el contrato. También se preguntó qué necesita la parte de la interfaz para empezar los controladores.
+
+**Para qué se usó:** Escribir ServicioPartida y Partida.fichas_en_uso con sus tests, corregir la reversión de una acción que falla a mitad de camino y redactar las decisiones de diseño y la actualización del contrato.

@@ -83,14 +83,27 @@ Pendiente — completar en reunión
 Pendiente — completar en reunión
 ### Alternativas consideradas
 Pendiente — completar en reunión
+
 ### Decisión
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Las fichas en uso se obtienen del estado de la partida: `Partida.fichas_en_uso()` junta los ids del inventario, del suelo y las trampas de la sala actual y de los enemigos vivos, y `ServicioPartida` se la entrega al catálogo como una función que solo se consulta al desalojar, no en cada acceso. El catálogo se crea antes que la partida, por eso recibe la función y no la partida. La versión del catálogo se consulta una sola vez al iniciar (hace falta para el encabezado de la bitácora y para validar el disco) y se entrega ya conocida al catálogo.
+
+
 ### Análisis de complejidad
 Pendiente — completar en reunión
+
 ### Evidencia empírica
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Solicitudes de red al iniciar una partida en la cripta de pruebas (6 salas, presupuesto 9), contando cada llamada del cliente de archivos como una solicitud. En frío: 6 (datos generales, versión del catálogo, una página de esqueleto, un lote de contenido y dos lotes de catálogo). Con la caché de disco caliente: 2 (datos generales y versión del catálogo), y todo lo demás sale del disco. Con un tope de 3 fichas en memoria y disco, una partida de 7 acciones desalojó 11 fichas, recuperó 3 del disco y no hizo ninguna solicitud extra; sin disco, con ese mismo tope, se agotó el presupuesto de 9 al volver a descargar fichas desalojadas (tests/modelo/test_servicio_partida.py).
+
+
 ### Límites conocidos
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Sin caché en disco, un tope menor que las fichas distintas que necesita la partida hace que cada ficha desalojada que se vuelve a necesitar cueste una solicitud: la caché en disco es lo que hace viable un tope pequeño. Un enemigo cuya ficha se desalojó mientras dormía conserva su propia referencia y no la necesita de la caché. `fichas_en_uso` recorre las salas para encontrar enemigos vivos, así que cada desalojo cuesta O(salas); es aceptable porque solo ocurre al superar el tope, y lo primero a mejorar sería llevar una lista de enemigos activos si la cripta tuviera miles de salas.
+
 
 ## 4.5 Inventario
 ### Problema
@@ -148,6 +161,8 @@ Cada objeto del modelo que cambia durante la partida sabe deshacer sus propios c
 
 El motor abre un intervalo por cada acción del jugador aceptada y lo cierra cuando le vuelve a tocar decidir; una acción rechazada descarta su intervalo, porque no cambia nada. Todo lo que cambia durante el intervalo (reloj, agenda, vida, posición, rastro, puertas, trampas, suelo, inventario, enemigos y los contadores de la partida) registra su inversa; el estado del generador aleatorio también se restaura, de modo que repetir una acción tras retroceder da el mismo resultado y el pergamino no sirve para volver a tirar los dados. La carga de contenido de una sala y las operaciones con pergaminos se hacen dentro de `sin_registrar()`: cargar contenido es infraestructura y no estado del juego, y recoger o soltar un pergamino no se deshace (§2.11). Usar un pergamino primero revierte el último intervalo y después descuenta el pergamino, fuera del historial; no consume tiempo ni cuenta como acción. Sin pergamino, o sin intervalos que deshacer, se rechaza sin consumir nada; el historial guarda como máximo 5 intervalos.  
 
+Si la infraestructura falla a mitad de una acción (por ejemplo, se agota el presupuesto al pedir una ficha cuando el jugador ya entró a la sala), el intervalo abierto se revierte con las mismas inversas del retroceso en lugar de descartarse, de modo que la acción no deja cambios a medias y se puede reintentar. Una acción rechazada no cambió nada y su intervalo solo se descarta.
+
 
 ### Análisis de complejidad
 Pendiente — completar en reunión (revisar para eliminar esta linea)
@@ -173,6 +188,8 @@ Si una operación inversa falla a mitad de un deshacer, la excepción no se capt
 La medición compara el costo de registrar, no un retroceso completo del juego: esta evidencia habrá que repetirla cuando el motor registre inversas reales de reloj, vida, puertas y trampas.
 
 Cada acción del jugador guarda el estado del generador aleatorio (unos 625 enteros) además de las inversas; con un historial de 5 intervalos es poca memoria, pero sería lo primero a revisar si el límite de retroceso creciera mucho. Los efectos que no existen en los datos del API (el veneno, que ningún objeto ni trampa origina) están preparados para retroceder, pero solo se probaron de forma unitaria.
+
+Los mensajes de la bitácora en pantalla no forman parte del estado reversible: tras retroceder o tras revertir una acción fallida, un mensaje ya mostrado (por ejemplo «Entras a ...») permanece. Tampoco se deshace que una sala figure como cargada, porque es infraestructura.
 
 
 ## 4.7 El rastro del jugador
@@ -265,11 +282,24 @@ El contador de ids de los objetos recogidos no forma parte del archivo de guarda
 Pendiente — completar en reunión
 ### Alternativas consideradas
 Pendiente — completar en reunión
+
 ### Decisión
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+`ServicioPartida` escribe la bitácora: tras ejecutar una acción, si el modelo la acepta, la anota (incluido el pergamino, que cambia el estado y debe repetirse en el replay); las rechazadas no cambian el estado y no se anotan. El encabezado se escribe cuando la partida ya inició sin errores, con el id y la versión de la cripta, la versión del catálogo y la semilla; si no se da semilla se genera con un generador del sistema y queda en el encabezado. Sin ruta de bitácora (replay y bench) no se escribe nada.
+
+
 ### Análisis de complejidad
 Pendiente — completar en reunión
+
 ### Evidencia empírica
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+tests/modelo/test_servicio_partida.py reproduce la bitácora de una partida en una partida nueva con la semilla del encabezado y compara el estado guardado, la vista y el puntaje: son iguales.
+
+
 ### Límites conocidos
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Los mensajes de una acción rechazada quedan en la bitácora en pantalla pero no en el log, por lo que una partida reproducida puede diferir de la original solo en esos mensajes; el estado, la vista y el puntaje coinciden.
+

@@ -169,3 +169,14 @@ Se completó el guardado de la partida con su segunda parte: Partida.desde_estad
 Lo siguiente que hay que realizar:
 * Servicio que arma la partida y coordina la bitácora, el puntaje, el guardado y el reporte final.
 * Decidir qué hacer con la bitácora de la partida al cargar una partida guardada, y el replay.
+
+
+
+# 11/10/2026
+
+Se agregó ServicioPartida, que arma la partida a partir de un cliente (de red o de archivos): obtiene los datos generales, fija el presupuesto con el valor de la cripta, consulta una vez la versión del catálogo, carga el esqueleto, crea el catálogo y la precarga, inicia la partida y escribe en la bitácora cada acción aceptada con su encabezado. También entrega el reporte final de solicitudes, presupuesto y aciertos y fallos de caché. Se conectó la caché del catálogo con el estado del juego mediante Partida.fichas_en_uso, de modo que las fichas del inventario, del suelo y las trampas de la sala actual y de los enemigos vivos no se desalojan. Al probarlo se encontró que una acción que fallaba a mitad de camino por un error de infraestructura dejaba cambios sin deshacer; ahora se revierte el intervalo abierto. Se agregaron tests con la cripta real: solicitudes en frío y con la caché caliente, bitácora, reproducción de una partida desde su bitácora, caché chica y fallos de infraestructura.
+
+Lo siguiente que hay que realizar:
+* Servicio de partida, segunda parte: guardar y cargar, puntaje final y ranking.
+* Decidir qué hacer con la bitácora al cargar una partida guardada, y el replay.
+* Controlador y vista.

@@ -128,3 +128,14 @@ acción del pergamino.
 
 **Para qué se usó:** Escribir y verificar el movimiento, las puertas y las
 trampas del motor, y redactar las decisiones de diseño correspondientes.
+
+
+
+### 2026-10-10 — Claude (Sonnet 5, claude.ai)
+**Prompt (resumido):** Se compartió el proyecto actualizado (versión 4) y se pidió una
+revisión general y continuar con el puente de guardado: primero convertir la partida viva
+a EstadoPartida, con sus tests sobre la cripta real. También se pidió revisar la medición
+del rendimiento del ciclo de eventos y cómo documentarla.
+
+**Para qué se usó:** Escribir la conversión de la partida a datos planos y sus tests, y
+redactar el texto de las decisiones de diseño del guardado y de la evidencia de rendimiento.

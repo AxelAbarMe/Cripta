@@ -155,3 +155,16 @@ Lo siguiente que hay que realizar:
 * Puente entre el modelo y el guardado.
 * Servicio que arma la partida y coordina la bitácora, el puntaje y el reporte final.
 * Replay, y decidir qué hacer con la bitácora de la partida al cargar una partida guardada.
+
+
+
+# 10/10/2026
+
+Se midió el rendimiento del ciclo de eventos en dos series de cinco corridas, la segunda con el recolector de basura desactivado: la mediana fue de 7.1 y 7.5 ms con 600 actores activos, muy por debajo del límite de 20 ms, aunque aparecieron picos aislados (el mayor, 23.3 ms) que desactivar el recolector no eliminó. Se documentó el resultado y su límite en el Documento de Decisiones.
+
+Se empezó el guardado de la partida. Los eventos de la agenda ahora declaran sus datos para poder escribirse en un archivo, y Partida.a_estado_guardado convierte la partida viva a EstadoPartida: reloj, estado del azar, jugador, inventario, salas visitadas con sus enemigos, trampas y puertas, y la agenda pendiente. Se agregó el módulo persistencia_modelo.py y tests con la cripta real: estado inicial, sala con enemigos y trampa, puerta con cierre automático, antorcha, ida y vuelta por el archivo binario (incluida la carga de una sala suelta) y mismo estado con la misma semilla.
+
+Lo siguiente que hay que realizar:
+* Guardado, segunda parte: reconstruir la partida desde un estado guardado.
+* Servicio que arma la partida y coordina la bitácora, el puntaje y el reporte final.
+* Replay, y decidir qué hacer con la bitácora de la partida al cargar una partida guardada.

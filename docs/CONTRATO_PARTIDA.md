@@ -113,11 +113,12 @@ Cuando `desenlace` deja de ser `"en_curso"`, `ejecutar_accion` ya no acepta más
 ## 6. Guardado y carga
 
 ```python
-estado = partida.a_estado_guardado()                       # -> EstadoPartida (infraestructura)
+estado = partida.a_estado_guardado(version_catalogo)
 partida = Partida.desde_estado_guardado(estado, mapa, servicio_catalogo, servicio_precarga)
 ```
 
 - `a_estado_guardado()` produce el `EstadoPartida` que ya sabe escribir `GuardadoBinario`. Incluye la semilla y el estado del generador aleatorio.
+- `version_catalogo` la aporta quien arma la partida (`servicio_partida`), porque `Partida` no conoce esa versión.
 - `desde_estado_guardado()` reconstruye el modelo y **recrea las acciones del reloj** (hoy son closures) a partir de `EventoGuardado`.
 - Este puente vive en `modelo/persistencia_modelo.py`; `Partida` solo expone los dos métodos.
 

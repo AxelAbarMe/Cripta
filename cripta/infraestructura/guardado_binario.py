@@ -38,25 +38,81 @@ from cripta.infraestructura.estado_guardado import (
 
 MAGIC = b"CRPT"
 FORMATO_VERSION = 1
-_ENCABEZADO = struct.Struct("<4sHHIQI")
-_REGISTRO_INDICE = struct.Struct("<IQI")
 _ESTADO_RNG_ENTEROS = 625
+
+# Formatos precompilados: struct.Struct interpreta el texto del formato una vez y se reutiliza
+# en cada número, en vez de reinterpretar "<I" en cada llamada a struct.pack / struct.unpack.
+
+# Letras: < orden de bytes fijo | s texto | B, H, I, Q enteros sin signo de 1, 2, 4 y 8 bytes
+# | i, q enteros con signo de 4 y 8 bytes | d decimal de 8 byte
+
+_ENCABEZADO = struct.Struct("<4sHHIQI")   # magic (4s), versión (H), reservado (H), n_salas (I), offset global (Q), largo global (I)
+_REGISTRO_INDICE = struct.Struct("<IQI")  # id de sala (I), offset (Q), largo (I): 16 bytes por sala
+_U8 = struct.Struct("<B")    # entero sin signo, 1 byte (0 a 255)
+_U16 = struct.Struct("<H")   # entero sin signo, 2 bytes (0 a 65 535)
+_U32 = struct.Struct("<I")   # entero sin signo, 4 bytes
+_I32 = struct.Struct("<i")   # entero con signo, 4 bytes
+_I64 = struct.Struct("<q")   # entero con signo, 8 bytes
+_F64 = struct.Struct("<d")   # decimal, 8 bytes
+
+# Grupos de campos fijos que siempre van juntos: se escriben y leen con UNA llamada en vez de una por campo
+
+_ESTADO_RNG = struct.Struct(f"<{_ESTADO_RNG_ENTEROS}I")  # los 625 enteros del RNG
+_SALA_FIJO = struct.Struct("<iBBq")       # sala_id, contenido_cargado, banderas de puertas, rastro
+_ENEMIGO_FIJO = struct.Struct("<iBiq")    # vida, activo, sala_actual, tiempo_siguiente
+
+_MAX_U16 = 2**16 - 1  # tope de las cantidades y del largo de los textos, que se guardan en u16
 
 
 class _Escritor:
     def __init__(self):
         self.datos = bytearray()
 
-    def bool_(self, v): self.datos += struct.pack("<B", 1 if v else 0)
-    def u8(self, v): self.datos += struct.pack("<B", v)
-    def u16(self, v): self.datos += struct.pack("<H", v)
-    def u32(self, v): self.datos += struct.pack("<I", v)
-    def i32(self, v): self.datos += struct.pack("<i", v)
-    def i64(self, v): self.datos += struct.pack("<q", v)
-    def f64(self, v): self.datos += struct.pack("<d", v)
+    def _empacar(self, formato: struct.Struct, *valores) -> None:
+        # struct ya rechaza un valor que no cabe en su tipo (o que no es entero), pero con un
+        # struct.error poco claro: se convierte en ValueError diciendo qué valores fallaron.
+        # Sin costo extra cuando todo está bien: el try solo actúa si hay error.
+        try:
+            self.datos += formato.pack(*valores)
+        except struct.error as error:
+            raise ValueError(f"No se pudo guardar {valores!r} con el formato {formato.format!r}: {error}") from None
+
+    # Cada método escribe UN valor de tamaño fijo. Nombre: u = sin signo, i = con signo,
+    # f = decimal; el número son los bits (8 bits = 1 byte). Todos pasan por _empacar:
+    def bool_(self, v):
+        self._empacar(_U8, 1 if v else 0)  # verdadero/falso como 1 o 0, en 1 byte
+
+    def u8(self, v):
+        self._empacar(_U8, v)  # 0 a 255, 1 byte
+
+    def u16(self, v):
+        self._empacar(_U16, v)  # 0 a 65 535, 2 bytes
+
+    def u32(self, v):
+        self._empacar(_U32, v)  # positivo, 4 bytes
+
+    def i32(self, v):
+        self._empacar(_I32, v)  # con negativos, 4 bytes
+
+    def i64(self, v):
+        self._empacar(_I64, v)  # con negativos, 8 bytes
+
+    def f64(self, v):
+        self._empacar(_F64, v)  # decimal, 8 bytes
+
+    def grupo(self, formato: struct.Struct, *valores):
+        self._empacar(formato, *valores)  # varios campos fijos de una vez
+
+    def cantidad(self, n: int, que: str):
+        # Las cantidades de elementos (objetos, trampas, mensajes...) se guardan en u16
+        if n > _MAX_U16:
+            raise ValueError(f"Demasiados {que} para guardar: {n} (máximo {_MAX_U16})")
+        self.u16(n)
 
     def cadena(self, texto: str):
         crudo = texto.encode("utf-8")
+        if len(crudo) > _MAX_U16:
+            raise ValueError(f"Texto demasiado largo para guardar ({len(crudo)} bytes): {texto[:30]!r}...")
         self.u16(len(crudo))
         self.datos += crudo
 
@@ -66,22 +122,22 @@ class _Lector:
         self._datos = datos
         self._pos = 0
 
-    def _tomar(self, formato: str):
+    def _tomar(self, formato: struct.Struct):
         try:
-            tam = struct.calcsize(formato)
-            (valor,) = struct.unpack_from(formato, self._datos, self._pos)
+            valores = formato.unpack_from(self._datos, self._pos)
         except struct.error:
             raise CriptaFormatoIncompatibleError("archivo truncado o dañado") from None
-        self._pos += tam
-        return valor
+        self._pos += formato.size
+        return valores
 
-    def bool_(self): return self._tomar("<B") != 0
-    def u8(self): return self._tomar("<B")
-    def u16(self): return self._tomar("<H")
-    def u32(self): return self._tomar("<I")
-    def i32(self): return self._tomar("<i")
-    def i64(self): return self._tomar("<q")
-    def f64(self): return self._tomar("<d")
+    def bool_(self): return self._tomar(_U8)[0] != 0
+    def u8(self): return self._tomar(_U8)[0]
+    def u16(self): return self._tomar(_U16)[0]
+    def u32(self): return self._tomar(_U32)[0]
+    def i32(self): return self._tomar(_I32)[0]
+    def i64(self): return self._tomar(_I64)[0]
+    def f64(self): return self._tomar(_F64)[0]
+    def grupo(self, formato: struct.Struct): return self._tomar(formato)  # tupla con varios campos fijos
 
     def cadena(self) -> str:
         n = self.u16()
@@ -89,44 +145,44 @@ class _Lector:
         if len(crudo) != n:
             raise CriptaFormatoIncompatibleError("archivo truncado o dañado")
         self._pos += n
-        return crudo.decode("utf-8")
+        try:
+            return crudo.decode("utf-8")
+        except UnicodeDecodeError:
+            raise CriptaFormatoIncompatibleError("texto dañado en el archivo") from None
 
 
 # ----------------------------------------------------------------- sala
 def _escribir_sala(w: _Escritor, s: SalaGuardada) -> None:
-    w.i32(s.sala_id)
-    w.bool_(s.contenido_cargado)
     banderas = 0
     for bit, cerrada in enumerate(s.puertas_cerradas):
         if cerrada:
             banderas |= 1 << bit
-    w.u8(banderas)
-    w.i64(s.rastro)
-    w.u16(len(s.objetos_suelo))
+    w.grupo(_SALA_FIJO, s.sala_id, 1 if s.contenido_cargado else 0, banderas, s.rastro)
+    w.cantidad(len(s.objetos_suelo), "objetos en el suelo")
     for objeto in s.objetos_suelo:
         w.cadena(objeto)
-    w.u16(len(s.trampas))
+    w.cantidad(len(s.trampas), "trampas")
     for t in s.trampas:
         w.cadena(t.instancia_id); w.cadena(t.tipo); w.bool_(t.armada)
-    w.u16(len(s.enemigos))
+    w.cantidad(len(s.enemigos), "enemigos")
     for e in s.enemigos:
-        w.cadena(e.instancia_id); w.cadena(e.tipo); w.i32(e.vida)
-        w.bool_(e.activo); w.i32(e.sala_actual); w.i64(e.tiempo_siguiente)
+        w.cadena(e.instancia_id); w.cadena(e.tipo)
+        w.grupo(_ENEMIGO_FIJO, e.vida, 1 if e.activo else 0, e.sala_actual, e.tiempo_siguiente)
 
 
 def _leer_sala(r: _Lector) -> SalaGuardada:
-    sala_id = r.i32()
-    contenido_cargado = r.bool_()
-    banderas = r.u8()
+    sala_id, contenido_cargado, banderas, rastro = r.grupo(_SALA_FIJO)
     puertas = tuple(bool(banderas & (1 << bit)) for bit in range(4))
-    rastro = r.i64()
     objetos = tuple(r.cadena() for _ in range(r.u16()))
     trampas = tuple(TrampaGuardada(r.cadena(), r.cadena(), r.bool_()) for _ in range(r.u16()))
-    enemigos = tuple(
-        EnemigoGuardado(r.cadena(), r.cadena(), r.i32(), r.bool_(), r.i32(), r.i64())
-        for _ in range(r.u16())
-    )
-    return SalaGuardada(sala_id, contenido_cargado, puertas, rastro, objetos, trampas, enemigos)
+    enemigos = tuple(_leer_enemigo(r) for _ in range(r.u16()))
+    return SalaGuardada(sala_id, contenido_cargado != 0, puertas, rastro, objetos, trampas, enemigos)
+
+
+def _leer_enemigo(r: _Lector) -> EnemigoGuardado:
+    instancia, tipo = r.cadena(), r.cadena()
+    vida, activo, sala_actual, tiempo_siguiente = r.grupo(_ENEMIGO_FIJO)
+    return EnemigoGuardado(instancia, tipo, vida, activo != 0, sala_actual, tiempo_siguiente)
 
 
 # --------------------------------------------------------------- global
@@ -135,9 +191,8 @@ def _escribir_global(w: _Escritor, e: EstadoPartida) -> None:
     w.i64(e.semilla)
     w.u32(e.rng.version)
     if len(e.rng.estado) != _ESTADO_RNG_ENTEROS:
-        raise ValueError("El estado del RNG debe tener 625 enteros")
-    for entero in e.rng.estado:
-        w.u32(entero)
+        raise ValueError(f"El estado del RNG debe tener {_ESTADO_RNG_ENTEROS} enteros")
+    w.grupo(_ESTADO_RNG, *e.rng.estado)
     w.bool_(e.rng.gauss_next is not None)
     w.f64(e.rng.gauss_next if e.rng.gauss_next is not None else 0.0)
     w.i64(e.reloj_actual); w.i64(e.siguiente_secuencia)
@@ -147,14 +202,14 @@ def _escribir_global(w: _Escritor, e: EstadoPartida) -> None:
         w.i32(valor)
     w.i64(j.tiempo_siguiente)
     w.i32(j.capacidad_inventario); w.i32(j.indice_cursor)
-    w.u16(len(j.objetos))
+    w.cantidad(len(j.objetos), "objetos en el inventario")
     for o in j.objetos:
         w.cadena(o.instancia_id); w.cadena(o.ficha_id); w.bool_(o.equipado)
     w.u32(len(e.eventos))
     for ev in e.eventos:
         w.i64(ev.tiempo); w.i64(ev.secuencia); w.u8(ev.tipo); w.cadena(ev.sujeto)
         w.i64(ev.a); w.i64(ev.b)
-    w.u16(len(e.mensajes))
+    w.cantidad(len(e.mensajes), "mensajes")
     for mensaje in e.mensajes:
         w.cadena(mensaje)
 
@@ -163,7 +218,7 @@ def _leer_global(r: _Lector):
     cripta_id, cripta_version, catalogo_version = r.cadena(), r.cadena(), r.cadena()
     semilla = r.i64()
     rng_version = r.u32()
-    estado = tuple(r.u32() for _ in range(_ESTADO_RNG_ENTEROS))
+    estado = r.grupo(_ESTADO_RNG)  # tupla con los 625 enteros
     hay_gauss = r.bool_()
     gauss = r.f64()
     rng = EstadoRNG(rng_version, estado, gauss if hay_gauss else None)
@@ -190,6 +245,21 @@ def _validar_encabezado(crudo: bytes):
         raise CriptaFormatoIncompatibleError(
             f"versión de formato {version}, este programa entiende la {FORMATO_VERSION}")
     return n_salas, offset_global, longitud_global
+
+
+def _validar_estructura(tamano_archivo: int, n_salas: int, offset_global: int, longitud_global: int) -> None:
+    # Un encabezado dañado puede traer números absurdos (por ejemplo, millones de salas):
+    # se comparan con el tamaño real del archivo antes de leer nada más.
+    fin_indice = _ENCABEZADO.size + n_salas * _REGISTRO_INDICE.size
+    if fin_indice > tamano_archivo:
+        raise CriptaFormatoIncompatibleError(f"el índice dice {n_salas} salas, pero el archivo es demasiado corto")
+    if offset_global < fin_indice or offset_global + longitud_global > tamano_archivo:
+        raise CriptaFormatoIncompatibleError("el bloque global apunta fuera del archivo")
+
+
+def _validar_bloque(tamano_archivo: int, offset: int, longitud: int) -> None:
+    if offset + longitud > tamano_archivo:
+        raise CriptaFormatoIncompatibleError("un bloque de sala apunta fuera del archivo")
 
 
 # ------------------------------------------------------------ API pública
@@ -231,11 +301,13 @@ class GuardadoBinario:
         with open(ruta, "rb") as archivo:
             crudo = archivo.read()
         n_salas, offset_global, longitud_global = _validar_encabezado(crudo)
+        _validar_estructura(len(crudo), n_salas, offset_global, longitud_global)
         (cripta_id, cripta_version, catalogo_version, semilla, rng, reloj, siguiente, acciones,
          derrotados, jugador, eventos, mensajes) = _leer_global(_Lector(crudo[offset_global:offset_global + longitud_global]))
         salas = []
         for i in range(n_salas):
             _sala_id, offset, longitud = _REGISTRO_INDICE.unpack_from(crudo, _ENCABEZADO.size + i * _REGISTRO_INDICE.size)
+            _validar_bloque(len(crudo), offset, longitud)
             salas.append(_leer_sala(_Lector(crudo[offset:offset + longitud])))
         return EstadoPartida(cripta_id, cripta_version, catalogo_version, semilla, rng, reloj, siguiente,
                              acciones, derrotados, jugador, tuple(salas), eventos, mensajes)
@@ -244,7 +316,9 @@ class GuardadoBinario:
         """Devuelve la SalaGuardada de `sala_id` (o None) SIN leer el archivo completo:
         encabezado + O(log n) registros del índice + el bloque de esa sala."""
         with open(ruta, "rb") as archivo:
-            n_salas, _og, _lg = _validar_encabezado(archivo.read(_ENCABEZADO.size))
+            n_salas, offset_global, longitud_global = _validar_encabezado(archivo.read(_ENCABEZADO.size))
+            tamano = os.fstat(archivo.fileno()).st_size  # tamaño del archivo sin leerlo
+            _validar_estructura(tamano, n_salas, offset_global, longitud_global)
             bajo, alto = 0, n_salas - 1
             while bajo <= alto:
                 medio = (bajo + alto) // 2
@@ -254,6 +328,7 @@ class GuardadoBinario:
                     raise CriptaFormatoIncompatibleError("índice truncado")
                 id_medio, offset, longitud = _REGISTRO_INDICE.unpack(registro)
                 if id_medio == sala_id:
+                    _validar_bloque(tamano, offset, longitud)
                     archivo.seek(offset)
                     return _leer_sala(_Lector(archivo.read(longitud)))
                 if id_medio < sala_id:

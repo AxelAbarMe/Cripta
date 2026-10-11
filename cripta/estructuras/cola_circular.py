@@ -1,5 +1,17 @@
+class ColaCircularVaciaError(IndexError):
+    """Se intentó sacar o mirar un elemento de una ColaCircular vacía.
+    Es un error de programación (había que revisar is_empty() antes), por eso hereda
+    de IndexError y no de CriptaError, que es para errores externos (red, disco, archivos)."""
+
+    def __init__(self, operacion: str):
+        self.operacion = operacion
+        super().__init__(f"{operacion}() en una ColaCircular vacía")
+
 class ColaCircular:
     def __init__(self, size):
+        if size < 1:
+            # Con 0 el operador % fallaría con ZeroDivisionError en el primer enqueue
+            raise ValueError(f"La capacidad de la ColaCircular debe ser al menos 1 (se recibió {size})")
         self.size = size
         self.data = [None] * size
         self.front = 0
@@ -17,7 +29,7 @@ class ColaCircular:
 
     def dequeue(self):
         if self.count == 0:
-            raise Exception("Queue is empty")
+            raise ColaCircularVaciaError("dequeue")
         value = self.data[self.front]
         self.data[self.front] = None  # Opcional: limpiar la referencia para ayudar al recolector de basura
         self.front = (self.front + 1) % self.size
@@ -26,7 +38,7 @@ class ColaCircular:
 
     def peek(self):
         if self.count == 0:
-            raise Exception("Queue is empty")
+            raise ColaCircularVaciaError("peek")
         return self.data[self.front]
 
     def is_empty(self):

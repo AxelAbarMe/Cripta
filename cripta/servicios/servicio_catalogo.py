@@ -103,11 +103,17 @@ class ServicioCatalogo:
         self.solicitar(ids)
         descargadas = self.resolver_pendientes()
         resultado = []
+        contadas = []  # ids recién descargados que ya se contaron como fallo
         for ficha_id in ids:
-            ficha = self._buscar_en(descargadas, ficha_id)
+            ficha = None
+            if ficha_id not in contadas:
+                ficha = self._buscar_en(descargadas, ficha_id)
             if ficha is not None:
+                # La trajo la red en este mismo llamado: es un fallo de caché, pero solo la primera vez
                 self.estadisticas.fallos += 1
+                contadas.append(ficha_id)
             else:
+                # Ya estaba en memoria o en disco, o es una repetición: obtener() cuenta acierto o fallo
                 ficha = self.obtener(ficha_id)
             resultado.append(ficha)
         return tuple(resultado)

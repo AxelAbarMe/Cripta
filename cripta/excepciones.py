@@ -31,6 +31,13 @@ class CriptaDatosInvalidosError(CriptaError):
         self.detalle = detalle
         super().__init__(f"Datos inválidos para «{operacion}» en {ruta}: {detalle}")
 
+class CriptaBitacoraError(CriptaError):
+    """El archivo de bitácora de partida (--replay) no existe o no tiene el formato esperado (§4.11)."""
+    def __init__(self, ruta: str, motivo: str):
+        self.ruta = ruta
+        self.motivo = motivo
+        super().__init__(f"Bitácora de partida inválida ({ruta}): {motivo}")
+
 class CriptaLimiteError(CriptaError):
     """Excepción para errores de límite de solicitudes de la API de Cripta."""
     def __init__(self, presupuesto_max : int):

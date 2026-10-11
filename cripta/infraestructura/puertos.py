@@ -4,7 +4,7 @@ from cripta.dto.cripta_resumen_dto import CriptaResumenDTO
 from cripta.dto.cripta_general_dto import CriptaGeneralDTO
 from cripta.dto.version_dto import VersionCriptaDTO
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
-from cripta.dto.contenido_salas_respuesta_dto import ContenidoSalaRespuestaDTO
+from cripta.dto.contenido_sala_respuesta_dto import ContenidoSalaRespuestaDTO
 from cripta.dto.catalogo_dto import CatalogoDTO
 from cripta.dto.version_dto import VersionCatalogoDTO
 

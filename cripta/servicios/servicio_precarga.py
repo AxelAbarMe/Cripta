@@ -28,11 +28,11 @@ Estrategia:
 """
 import threading
 
-from cripta.constantes import MAX_ELEMENTOS_POR_LOTE
+from cripta.constantes import ESPERA_MAXIMA_LOTE_SEGUNDOS, MAX_ELEMENTOS_POR_LOTE
 from cripta.estructuras.cola import Cola
-from cripta.estructuras.ordenamientos import Ordenamiento
+from cripta.estructuras.ordenamiento_selector import ordenar_auto
 from cripta.estructuras.vector import VectorOrdenado
-from cripta.excepciones import CriptaDatosNoEncontradosError, CriptaError
+from cripta.excepciones import CriptaApiError, CriptaDatosNoEncontradosError, CriptaError
 from cripta.modelo.enemigo import Enemigo
 
 
@@ -50,7 +50,8 @@ class _Lote:
 
 class ServicioPrecarga:
     def __init__(self, cliente, cripta_id: str, mapa, servicio_catalogo=None, cache_disco=None,
-                 version_cripta: str | None = None, radio_anticipacion: int = 2, asincrono: bool = True):
+                 version_cripta: str | None = None, radio_anticipacion: int = 2, asincrono: bool = True,
+                 espera_maxima: float = ESPERA_MAXIMA_LOTE_SEGUNDOS):
         if cache_disco is not None and version_cripta is None:
             raise ValueError("Con caché en disco hace falta la versión de la cripta")
         self._cliente = cliente
@@ -61,6 +62,7 @@ class ServicioPrecarga:
         self._version = version_cripta
         self._radio = radio_anticipacion
         self._asincrono = asincrono
+        self._espera_maxima = espera_maxima  # segundos reales que se espera un lote antes de darlo por fallido
 
         self._solicitadas = VectorOrdenado()                              # ids de sala pedidas/recibidas/en disco
         self._lotes = []                                                   # en orden de solicitud (list permitido, §7)
@@ -160,6 +162,12 @@ class ServicioPrecarga:
 
     # ----------------------------------------------------------- hilo de red
     def _encolar(self, lote) -> None:
+        if self._cerrado:
+            # El hilo ya terminó (o va a terminar): nadie ejecutaría este lote y quien lo
+            # espere se quedaría bloqueado. Se marca como fallido de una vez
+            lote.error = CriptaError("La precarga ya se cerró: no se piden más salas")
+            lote.evento.set()
+            return
         with self._cond:
             self._cola.enqueue(lote)
             if self._hilo is None:
@@ -223,7 +231,11 @@ class ServicioPrecarga:
             lote = self._lotes[self._primer_no_incorporado]
             self._primer_no_incorporado += 1
             if not lote.incorporado:
-                lote.evento.wait()
+                if not lote.evento.wait(timeout=self._espera_maxima):
+                    # Si la respuesta no llegó a tiempo, el lote se da por fallido en lugar de esperar
+                    # para siempre. Si llega después, se ignora (el lote ya queda incorporado)
+                    lote.error = CriptaApiError(operacion=f"contenido de salas {list(lote.salas)}", codigo=None,
+                                                mensaje=f"la respuesta no llegó en {self._espera_maxima} s")
                 error = self._incorporar_lote(lote)
                 if lote is objetivo:
                     error_objetivo = error
@@ -281,7 +293,9 @@ class ServicioPrecarga:
         creados = []
         for e in pendiente.enemigos:
             creados.append((e.instancia, Enemigo(e.instancia, indice.buscar(e.tipo), sala_id, e.vida)))
-        Ordenamiento(creados).insertion_sort()  # orden ascendente por id de instancia (§2.4)
+            # Orden ascendente por id de instancia (§2.4). El algoritmo lo elige ordenar_auto según
+            # el tamaño y el desorden de la lista (§4.9), igual que en el resto del programa
+            ordenar_auto(creados)
         sala.enemigos_dormidos.extend(enemigo for _id, enemigo in creados)
         self._enemigos_por_crear.eliminar(sala_id)
         self._pobladas.insertar(sala_id)

@@ -46,6 +46,10 @@ CACHE_TAMANO_DEFAULT = 25
 # Tope de elementos por solicitud en /contenido y /catalogo (3.4)
 MAX_ELEMENTOS_POR_LOTE = 10
 
+# Precarga: tiempo real máximo (segundos) que se espera la respuesta de un lote de contenido
+# antes de darlo por fallido. Cubre el timeout de cada solicitud (10 s) y algunos reintentos por 429
+ESPERA_MAXIMA_LOTE_SEGUNDOS = 60
+
 DIRECCIONES = ("N", "S", "E", "O")
 
 

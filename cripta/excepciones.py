@@ -49,6 +49,12 @@ class CriptaFormatoIncompatibleError(CriptaError):
     def __init__(self, motivo: str):
         self.motivo = motivo
         super().__init__(f"Archivo de guardado incompatible: {motivo}")
+
+class CriptaPuntajesError(CriptaError):
+    """El archivo de la tabla de puntajes existe, pero está dañado o es de otro formato (§2.12)."""
+    def __init__(self, motivo: str):
+        self.motivo = motivo
+        super().__init__(f"Tabla de puntajes inválida: {motivo}")
         
 # === MODELO (Isaac) ===
 class CriptaHistorialError(CriptaError):

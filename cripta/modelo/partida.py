@@ -319,7 +319,7 @@ class Partida:
         try:
             resultado = self._despachar(accion)
         except BaseException:
-            self._historial.descartar_intervalo_actual()
+            self._historial.revertir_intervalo_actual()   # si la infraestructura falla a medias, no queda nada a medias
             raise
         if not resultado.aceptada:
             self._historial.descartar_intervalo_actual()   # una acción rechazada no cambia nada
@@ -594,6 +594,18 @@ class Partida:
 
     def puntaje(self) -> ResumenPuntaje:
         return ResumenPuntaje(self._acciones_ejecutadas, self._enemigos_derrotados, self._reloj.tiempo_actual)
+
+    def fichas_en_uso(self) -> tuple[str, ...]:
+        """Ids de ficha que la caché del catálogo no puede liberar (§4.4): objetos del inventario, objetos
+        y trampas de la sala actual y enemigos vivos. Solo se consulta al desalojar, no en cada acceso."""
+        sala = self._sala_actual()
+        ids = list(self._jugador.inventario.fichas_en_uso())
+        ids.extend(sala.objetos_en_suelo)
+        ids.extend(t.tipo_catalogo for t in sala.trampas)
+        ids.extend(e.tipo_catalogo for e in sala.enemigos_dormidos)   # los de la sala actual, aún sin activar
+        for otra in self._mapa.todas_las_salas():
+            ids.extend(e.tipo_catalogo for e in otra.enemigos_activos if e.esta_vivo())
+        return tuple(ids)
 
     def inventario_siguiente(self):
         return self._jugador.inventario.siguiente()

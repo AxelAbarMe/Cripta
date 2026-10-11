@@ -44,6 +44,12 @@ class HistorialRetroceso:
         """Abandona el intervalo abierto sin guardarlo (la acción fue rechazada y no cambió nada)."""
         self._intervalo_actual = None
 
+    def revertir_intervalo_actual(self) -> None:
+        """Deshace lo que ya cambió en el intervalo abierto y lo abandona (una acción que falló a medias)."""
+        intervalo, self._intervalo_actual = self._intervalo_actual, None
+        if intervalo is not None:
+            self._aplicar_inversas(intervalo)
+
     def registrar_cambio(self, deshacer) -> None:
         """Gancho para los objetos del modelo (ver Reversible): registra la inversa solo si hay un
         intervalo abierto y no se está revirtiendo ni en pausa. A diferencia de registrar(),
@@ -85,8 +91,9 @@ class HistorialRetroceso:
         """
         if not self._intervalos:
             return 0
-        intervalo = self._intervalos.pop()
-        
+        return self._aplicar_inversas(self._intervalos.pop())
+
+    def _aplicar_inversas(self, intervalo) -> int:
         contador = 0
         self._revirtiendo = True   # revertir no debe registrar nuevas inversas
         try:

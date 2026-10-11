@@ -7,18 +7,41 @@ El jugador y los enemigos son eventos del mismo reloj virtual; el orden sale sol
 import random
 from contextlib import nullcontext
 
-from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, COSTO_MOVER, TRAMPA_REARME_DEFAULT
+from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, COSTO_MOVER, DIRECCIONES, TRAMPA_REARME_DEFAULT
 from cripta.estructuras.vector import VectorOrdenado
-from cripta.infraestructura.estado_guardado import EV_TURNO_ACTOR
+from cripta.excepciones import CriptaFormatoIncompatibleError
+
+from cripta.infraestructura.estado_guardado import (
+    EV_ANTORCHA_APAGAR,
+    EV_CIERRE_PUERTA,
+    EV_FIN_VELOCIDAD,
+    EV_REARME_TRAMPA,
+    EV_TURNO_ACTOR,
+    EV_VENENO_PULSO,
+)
 from cripta.modelo import combate
 from cripta.modelo.bitacora_mensajes import BitacoraMensajes
 from cripta.modelo.comportamiento_enemigo import decidir_accion_enemigo
-from cripta.modelo.efectos import EfectoAntorcha, EfectoCambioVelocidad, EfectoCierrePuerta, EfectoTrampa
+
+from cripta.modelo.efectos import (
+    EfectoAntorcha,
+    EfectoCambioVelocidad,
+    EfectoCierrePuerta,
+    EfectoTrampa,
+    EfectoVeneno,
+)
 from cripta.modelo.historial_retroceso import HistorialRetroceso
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
-from cripta.modelo.persistencia_modelo import crear_estado
+
+from cripta.modelo.persistencia_modelo import (
+    crear_estado,
+    restaurar_jugador,
+    restaurar_sala,
+    siguiente_instancia_tras,
+)
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
+
 from cripta.modelo.resultado_partida import (
     EnemigoVista,
     ObjetoSueloVista,
@@ -104,6 +127,92 @@ class Partida:
             salas_preparadas=self._salas_preparadas, acciones_jugador=self._acciones_ejecutadas,
             enemigos_derrotados=self._enemigos_derrotados, mensajes=self._bitacora.mensajes(),
         )
+
+
+    @classmethod
+    def desde_estado_guardado(cls, estado, datos_generales, mapa, servicio_catalogo, servicio_precarga):
+        """Reconstruye una partida guardada (§4.10). `mapa`, `servicio_catalogo` y `servicio_precarga`
+        deben ser nuevos (con el esqueleto ya cargado). La partida queda lista para que el jugador decida.
+        El historial de retroceso empieza vacío: el pergamino no deshace lo anterior al guardado."""
+        if estado.cripta_id != datos_generales.id or estado.cripta_version != datos_generales.version:
+            raise CriptaFormatoIncompatibleError(
+                f"La partida es de {estado.cripta_id} (versión {estado.cripta_version}) y la cripta actual es "
+                f"{datos_generales.id} (versión {datos_generales.version}): no se puede garantizar una carga fiel."
+            )
+        partida = cls(datos_generales, mapa, servicio_catalogo, servicio_precarga, estado.semilla)
+        with partida._historial.sin_registrar():   # cargar no es una acción: nada de esto se podría deshacer
+            partida._restaurar(estado)
+        partida._precarga.precargar_desde(partida._jugador.sala_actual)
+        return partida
+
+    def _restaurar(self, estado) -> None:
+        enemigos = VectorOrdenado(clave=lambda e: e.instancia_id)
+        trampas = VectorOrdenado(clave=lambda t: t.instancia_id)
+        for guardada in estado.salas:
+            sala = self._mapa.obtener(guardada.sala_id)
+            if sala is None:
+                raise CriptaFormatoIncompatibleError(f"La partida guardada menciona la sala {guardada.sala_id}, que no existe.")
+            restaurar_sala(sala, guardada, self._precarga, self._catalogo, enemigos, trampas)
+            if guardada.contenido_cargado:
+                self._marcar_preparada(sala.id)
+        restaurar_jugador(self._jugador, estado.jugador, self._catalogo)
+        for trampa in trampas.elementos():
+            self._con_retroceso(trampa)
+        for enemigo in enemigos.elementos():
+            if enemigo.activo:
+                self._con_retroceso(enemigo)
+        self._restaurar_agenda(estado.eventos, enemigos, trampas)
+        self._reloj.restaurar(estado.reloj_actual, estado.siguiente_secuencia)
+        estado.rng.aplicar_a(self._azar)
+        self._acciones_ejecutadas = estado.acciones_jugador
+        self._enemigos_derrotados = estado.enemigos_derrotados
+        for mensaje in estado.mensajes:
+            self._bitacora.agregar(mensaje)
+        self._siguiente_instancia = siguiente_instancia_tras(self._jugador.inventario)
+        self._turno_listo = True                    # solo se guarda cuando al jugador le toca decidir
+        self._mensajes_nuevos = []
+        self._iniciada = True
+
+    def _restaurar_agenda(self, eventos, enemigos, trampas) -> None:
+        """Recrea las acciones del reloj (que son funciones) a partir de sus descriptores guardados."""
+        for ev in eventos:
+            datos = (ev.tipo, ev.sujeto, ev.a, ev.b)
+            if ev.tipo == EV_TURNO_ACTOR:
+                enemigo = enemigos.buscar(ev.sujeto)
+                if enemigo is None:    # el turno del jugador nunca está pendiente al guardar
+                    raise CriptaFormatoIncompatibleError(f"El turno pendiente de «{ev.sujeto}» no corresponde a ningún enemigo.")
+                enemigo.evento_pendiente = self._reloj.programar_con_secuencia(
+                    ev.tiempo, ev.secuencia, lambda e=enemigo: self._turno_enemigo(e),
+                    f"turno de {enemigo.instancia_id}", datos,
+                )
+            elif ev.tipo == EV_VENENO_PULSO:
+                efecto = EfectoVeneno(self._reloj, self._actor_de(ev.sujeto, enemigos), ev.a)
+                self._con_retroceso(efecto).restaurar(ev.b, ev.tiempo, ev.secuencia)
+            elif ev.tipo == EV_FIN_VELOCIDAD:
+                efecto = EfectoCambioVelocidad(self._reloj, self._actor_de(ev.sujeto, enemigos), ev.a, 0)
+                self._con_retroceso(efecto).restaurar(ev.a, ev.tiempo, ev.secuencia)
+            elif ev.tipo == EV_ANTORCHA_APAGAR:
+                self._antorcha_encendida = True
+                EfectoAntorcha(self._reloj, 0, self._apagar_antorcha).restaurar(ev.tiempo, ev.secuencia)
+            elif ev.tipo == EV_REARME_TRAMPA:
+                trampa = trampas.buscar(ev.sujeto)
+                if trampa is None:
+                    raise CriptaFormatoIncompatibleError(f"El rearme pendiente de «{ev.sujeto}» no corresponde a ninguna trampa.")
+                EfectoTrampa(self._reloj, trampa).restaurar_rearme(ev.tiempo, ev.secuencia)
+            elif ev.tipo == EV_CIERRE_PUERTA:
+                EfectoCierrePuerta(
+                    self._reloj, self._mapa, int(ev.sujeto), DIRECCIONES[ev.a], 0, self._avisar_cierre_de_puerta
+                ).restaurar(ev.tiempo, ev.secuencia)
+            else:
+                raise CriptaFormatoIncompatibleError(f"Tipo de evento desconocido en la agenda guardada: {ev.tipo}.")
+
+    def _actor_de(self, sujeto: str, enemigos):
+        if sujeto == "jugador":
+            return self._jugador
+        actor = enemigos.buscar(sujeto)
+        if actor is None:
+            raise CriptaFormatoIncompatibleError(f"La agenda guardada menciona a «{sujeto}», que no existe.")
+        return actor
 
 
     # ------------------------------------------------------------------ inicio

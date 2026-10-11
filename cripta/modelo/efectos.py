@@ -58,6 +58,15 @@ class EfectoVeneno(Reversible):
         if self._objetivo.veneno_activo is self:
             self._objetivo.veneno_activo = None
 
+    def restaurar(self, pulsos_restantes: int, tiempo: int, secuencia: int) -> None:
+        """Reconstruye un veneno guardado: su próximo pulso queda en (tiempo, secuencia)."""
+        self._pulsos_restantes = pulsos_restantes
+        self._objetivo.veneno_activo = self
+        self.evento_actual = self._reloj.programar_con_secuencia(
+            tiempo, secuencia, self._aplicar_pulso, "veneno: pulso",
+            datos=(EV_VENENO_PULSO, sujeto_de(self._objetivo), self._daño_por_pulso, pulsos_restantes),
+        )
+
     def _siguiente_pulso(self) -> None:
         if self._cancelado or self._pulsos_restantes <= 0:
             self._liberar()
@@ -99,6 +108,14 @@ class EfectoCambioVelocidad(Reversible):
             self._duracion, self._terminar, "fin de cambio de velocidad",
             datos=(EV_FIN_VELOCIDAD, sujeto_de(self._actor), self._cambio_aplicado, 0),   # a = cuánto sumó este efecto
         )
+        
+    def restaurar(self, cambio: int, tiempo: int, secuencia: int) -> None:
+        """Reconstruye un cambio de velocidad guardado: `cambio` es lo que había sumado."""
+        self._cambio_aplicado = cambio
+        self.evento_fin = self._reloj.programar_con_secuencia(
+            tiempo, secuencia, self._terminar, "fin de cambio de velocidad",
+            datos=(EV_FIN_VELOCIDAD, sujeto_de(self._actor), cambio, 0),
+        )
 
     def _terminar(self) -> None:
         # Se resta lo que este efecto sumó, así varios efectos solapados no se pisan entre sí
@@ -129,6 +146,11 @@ class EfectoAntorcha:
     def encender(self) -> None:
         self._reloj.programar_en(
             self._duracion, self._al_apagar, "antorcha: apagar", datos=(EV_ANTORCHA_APAGAR, "antorcha", 0, 0)
+        )
+    
+    def restaurar(self, tiempo: int, secuencia: int) -> None:
+        self._reloj.programar_con_secuencia(
+            tiempo, secuencia, self._al_apagar, "antorcha: apagar", datos=(EV_ANTORCHA_APAGAR, "antorcha", 0, 0)
         )
 
 
@@ -184,6 +206,12 @@ class EfectoTrampa:
             datos=(EV_REARME_TRAMPA, self._trampa.instancia_id, 0, 0),
         )
         return True
+    
+    def restaurar_rearme(self, tiempo: int, secuencia: int) -> None:
+        self._reloj.programar_con_secuencia(
+            tiempo, secuencia, self._trampa.rearmar, "trampa: rearme",
+            datos=(EV_REARME_TRAMPA, self._trampa.instancia_id, 0, 0),
+        )
 
 
 class EfectoCierrePuerta:
@@ -201,6 +229,12 @@ class EfectoCierrePuerta:
     def programar_cierre(self) -> None:
         self._reloj.programar_en(
             self._intervalo, self._cerrar, "cierre automático de puerta",
+            datos=(EV_CIERRE_PUERTA, str(self._sala_id), ("N", "S", "E", "O").index(self._direccion), 0),
+        )
+
+    def restaurar(self, tiempo: int, secuencia: int) -> None:
+        self._reloj.programar_con_secuencia(
+            tiempo, secuencia, self._cerrar, "cierre automático de puerta",
             datos=(EV_CIERRE_PUERTA, str(self._sala_id), ("N", "S", "E", "O").index(self._direccion), 0),
         )
 

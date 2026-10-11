@@ -123,7 +123,8 @@ victoria), probándolo con la cripta real guardada en fixtures/. Después se pid
 el tercer trozo (atacar, recoger, soltar, equipar y usar objetos). Después se pidió 
 corregir objetos_suelo en la vista y revisar el código sin uso del modelo. Después 
 se pidió el retroceso completo (pergamino), empezando por los ganchos de inversa de 
-los objetos del modelo.
+los objetos del modelo. Después se pidió conectar el retroceso a Partida y la 
+acción del pergamino.
 
 **Para qué se usó:** Escribir y verificar el movimiento, las puertas y las
 trampas del motor, y redactar las decisiones de diseño correspondientes.

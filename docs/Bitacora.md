@@ -149,8 +149,9 @@ Se corrigió la vista para que los objetos del suelo lleguen con su id de ficha 
 
 Se empezó el retroceso completo con los ganchos de inversa de cada objeto del modelo: una base Reversible que guarda el valor anterior de cada atributo que cambia, inversas explícitas en el reloj, las listas de la sala y el inventario, y un gancho del historial que ignora los cambios fuera de un intervalo y permite pausar el registro. Al probar el inventario se descubrió que reponer un objeto crea un nodo nuevo, así que las inversas buscan por objeto. Al usar la base también en el reloj el ciclo de eventos subió a 17 ms, por lo que el reloj registra de forma explícita. Se agregaron tests unitarios en tests/modelo.
 
+Se completó el retroceso con el pergamino: Partida conecta el registro de inversas a todos los objetos que cambian, abre un intervalo por acción aceptada y lo descarta si la acción se rechaza, y la acción pergamino revierte el último intervalo sin consumir tiempo ni contar como acción. El pergamino usado se descuenta fuera de la reversión y recoger o soltar un pergamino dentro del intervalo no se deshace; el estado del azar también se restaura. Se agregaron tests con la cripta real para los casos del Apéndice B (dos pergaminos seguidos, pergamino recogido en el intervalo, tope de 5 acciones). Con la base Reversible en los actores el ciclo de eventos costó cerca de un 10 % más, sin acercarse al límite de 20 ms.
+
 Lo siguiente que hay que realizar:
-* Retroceso completo y pergamino de retroceso.
 * Puente entre el modelo y el guardado.
 * Servicio que arma la partida y coordina la bitácora, el puntaje y el reporte final.
 * Replay, y decidir qué hacer con la bitácora de la partida al cargar una partida guardada.

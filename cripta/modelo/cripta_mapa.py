@@ -40,6 +40,24 @@ class CriptaMapa:
             return False
         return not sala.puertas.esta_cerrada(direccion)
 
+
+    def datos_de_puerta(self, sala_id: int, direccion: str) -> tuple[str | None, int | None]:
+        """Devuelve (llave, cierre_automatico) de la puerta, mirando los dos lados:
+        el API solo marca la llave y el cierre en uno de ellos (§2.1)."""
+        sala = self.obtener(sala_id)
+        salida = sala.esqueleto.salida(direccion) if sala is not None else None
+        if salida is None:
+            raise ValueError(f"La sala {sala_id} no tiene salida hacia {direccion}")
+        llave, cierre = salida.llave, salida.cierre_automatico
+        otra = self.obtener(salida.sala_destino)
+        if otra is not None:
+            salida_opuesta = otra.esqueleto.salida(direccion_opuesta(direccion))
+            if salida_opuesta is not None:
+                llave = llave if llave is not None else salida_opuesta.llave
+                cierre = cierre if cierre is not None else salida_opuesta.cierre_automatico
+        return llave, cierre
+
+
     def abrir_puerta(self, sala_id: int, direccion: str) -> None:
         self._fijar_puerta(sala_id, direccion, cerrada=False)
 

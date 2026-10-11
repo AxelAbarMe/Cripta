@@ -101,3 +101,27 @@ indicando solo las partes a cambiar, el archivo donde pegarlas y las pruebas.
 **Para qué se usó:** Diseñar la interfaz de Partida y corregir y ampliar el
 modelo (reloj, efectos, historial, mapa e inventario), junto con el texto de las
 decisiones de diseño correspondientes.
+
+
+### 2026-10-08 — Claude (Sonnet 5, claude.ai)
+**Prompt (resumido):** Se compartió el proyecto actualizado con el trabajo de ambos
+y se pidió revisar lo relevante, probar el flujo con los datos reales de cripta-01
+guardados en fixtures/, y continuar paso a paso con el modelo: un método del mapa
+para la llave y el cierre automático de una puerta y el comportamiento de los
+enemigos (guardián, errante y rastreador). Después se pidió el motor Partida por 
+trozos y la acción del jugador.
+
+**Para qué se usó:** Verificar la integración, escribir la decisión del turno de
+los enemigos, la acción del jugador y el primer trozo del motor Partida, y
+redactar el texto de las decisiones de diseño del rastro y de la agenda.
+
+
+### 2026-10-09 — Claude (Sonnet 5, claude.ai)
+**Prompt (resumido):** Se pidió continuar el motor Partida con el segundo trozo
+(movimiento entre salas, abrir puertas con llave, trampas, cierre automático y
+victoria), probándolo con la cripta real guardada en fixtures/. Después se pidió 
+el tercer trozo (atacar, recoger, soltar, equipar y usar objetos). Después se pidió 
+corregir objetos_suelo en la vista y revisar el código sin uso del modelo.
+
+**Para qué se usó:** Escribir y verificar el movimiento, las puertas y las
+trampas del motor, y redactar las decisiones de diseño correspondientes.

@@ -113,3 +113,42 @@ Lo siguiente que hay que realizar:
 * Enemigos: comportamientos guardián, errante y rastreador, con referencias directas a las salas vecinas.
 * Motor Partida: acciones del jugador con sus costos, activación de enemigos, movimiento que espera contenido, trampas, muerte de actores, victoria y derrota.
 * Retroceso completo, puente entre el modelo y el guardado, y replay.
+
+
+# 08/10/2026
+
+Se unieron las dos ramas de trabajo en main y se comprobó el proyecto completo: los imports funcionan, el bench corre sus 8 cargas y el ciclo de eventos cumple el límite de 20 ms. Con los datos reales de cripta-01 guardados en fixtures/ se probó el flujo completo (cliente offline, mapa, catálogo y precarga) y los enemigos, las puertas y las fichas se construyen correctamente: un enemigo sin vida declarada nace con su vida máxima, el comportamiento "guardián" llega con tilde y la llave y el cierre automático de una puerta vienen marcados en un solo lado de la salida.
+
+Se agregó al mapa datos_de_puerta, que devuelve la llave y el cierre automático de una puerta mirando sus dos lados.
+
+Se escribió comportamiento_enemigo.py con la decisión del turno de un enemigo (§2.8): si comparte sala con el jugador ataca; si no, el guardián espera, el errante elige al azar una salida abierta y el rastreador sigue el rastro fresco más reciente de las salas vecinas, con desempate por menor id. El módulo solo decide; ejecutar la acción lo hará el motor.
+
+Se escribió accion.py con las 9 acciones del jugador definidas en el contrato de Partida, con su validación, su costo base y su conversión a dict para la bitácora de la partida.
+
+Se escribió el primer trozo del motor (partida.py y resultado_partida.py): construcción de la partida con su generador de azar propio, inicio según §2.4, ciclo de eventos hasta el siguiente turno del jugador, turnos de los enemigos (atacar, moverse o esperar), derrota, la consulta vista() con todo lo que debe mostrar la interfaz y la acción esperar. Se probó con la cripta real de fixtures: con la misma semilla dos partidas producen exactamente los mismos mensajes y tiempos, y con otra semilla cambian.
+
+Lo siguiente que hay que realizar:
+* Motor Partida, trozo 2: mover y abrir (llave comparada con el id de la ficha y cierre automático), trampas y victoria.
+* Motor Partida, trozo 3: atacar, recoger, usar, equipar, soltar y pergamino.
+* Retroceso completo y puente entre el modelo y el guardado.
+* Replay.
+
+
+
+# 09/10/2026
+
+Se completó el segundo trozo del motor Partida: mover, abrir, trampas, cierre automático y victoria. El movimiento rechaza una dirección sin salida o con puerta cerrada, espera a tener el contenido de la sala destino antes de confirmarse (la espera real no mueve el reloj virtual), refresca el rastro, activa a los enemigos dormidos de la sala y aplica las trampas armadas antes de procesar el siguiente evento. Abrir comprueba que el jugador tenga la llave comparando el id de la ficha, y busca la llave y el cierre automático en los dos lados de la puerta porque el API solo los marca en uno. El cierre automático cierra ambos lados. Entrar a la sala de salida con vida termina la partida con victoria. Se probó con la cripta real de fixtures: rechazos, trampa, ataques de enemigos, abrir con llave, cierre automático con el jugador al otro lado de la puerta y victoria.
+
+Se dejó pendiente decidir qué hacer con la bitácora de la partida al cargar una partida guardada (seguir en la misma o empezar una nueva).
+
+Se completó el tercer trozo del motor Partida: atacar (el enemigo que muere cancela su evento pendiente, sale de la sala y suelta sus objetos), recoger (con rechazo sin consumir tiempo si el inventario está lleno), soltar, equipar y usar objetos (curar, cambiar la velocidad con reajuste del turno pendiente, cancelar el veneno con un antídoto y encender una antorcha). Se agregó al inventario posicion_actual y a la vista objeto_actual_indice para que la interfaz pueda pedir acciones por posición. Se probó con la cripta real de fixtures y con fichas inventadas para el antídoto y la poción de velocidad, que la cripta publicada no trae.
+
+El pergamino de retroceso queda para cuando se haga el retroceso completo, porque necesita registrar la inversa de cada cambio.
+
+Se corrigió la vista para que los objetos del suelo lleguen con su id de ficha y su nombre, porque la interfaz necesita el id para pedir recoger. Se revisó el modelo en busca de código sin uso: EfectoCierrePuerta cerraba solo un lado de la puerta, lo que contradecía que una salida conecta dos salas, así que se adaptó para cerrar ambos lados y ahora lo usa Partida; Enemigo.etiqueta no se usaba y Partida repetía su lógica, así que ahora la usa; y sincronizar_puertas no lo llamaba nadie, lo que dejaba cruzar una puerta con llave desde el lado sin marcar, así que ahora lo llama Partida al crearse.
+
+Lo siguiente que hay que realizar:
+* Retroceso completo y pergamino de retroceso.
+* Puente entre el modelo y el guardado.
+* Servicio que arma la partida y coordina la bitácora, el puntaje y el reporte final.
+* Replay, y decidir qué hacer con la bitácora de la partida al cargar una partida guardada.

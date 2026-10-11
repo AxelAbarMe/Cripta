@@ -26,7 +26,7 @@ Partida(datos_generales, mapa, servicio_catalogo, servicio_precarga, semilla)
 
 | Parámetro | Qué es |
 |---|---|
-| `datos_generales` | `DatosGeneralesDTO` de la cripta (sala inicial, sala de salida, llave de salida, estadísticas del jugador, `inventario_max`) |
+| `datos_generales` | `CriptaGeneralDTO` de la cripta (sala inicial, sala de salida, llave de salida, estadísticas del jugador, `inventario_max`) |
 | `mapa` | `CriptaMapa` ya construido con el esqueleto completo |
 | `servicio_catalogo` | `ServicioCatalogo` (fichas) |
 | `servicio_precarga` | `ServicioPrecarga` (contenido de salas) |

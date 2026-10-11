@@ -16,6 +16,10 @@ class CriptaMapa:
                 continue   # página repetida (por ejemplo, un reintento): se ignora
             self._salas.insertar(Sala(sala_dto))
 
+    def todas_las_salas(self) -> tuple:
+        """Todas las salas, en orden ascendente de id."""
+        return self._salas.elementos()
+
     def obtener(self, sala_id: int) -> Sala | None:
         return self._salas.buscar(sala_id)
 

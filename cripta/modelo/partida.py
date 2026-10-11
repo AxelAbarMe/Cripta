@@ -8,6 +8,8 @@ import random
 from contextlib import nullcontext
 
 from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, COSTO_MOVER, TRAMPA_REARME_DEFAULT
+from cripta.estructuras.vector import VectorOrdenado
+from cripta.infraestructura.estado_guardado import EV_TURNO_ACTOR
 from cripta.modelo import combate
 from cripta.modelo.bitacora_mensajes import BitacoraMensajes
 from cripta.modelo.comportamiento_enemigo import decidir_accion_enemigo
@@ -15,6 +17,7 @@ from cripta.modelo.efectos import EfectoAntorcha, EfectoCambioVelocidad, EfectoC
 from cripta.modelo.historial_retroceso import HistorialRetroceso
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
+from cripta.modelo.persistencia_modelo import crear_estado
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
 from cripta.modelo.resultado_partida import (
     EnemigoVista,
@@ -51,6 +54,7 @@ class Partida:
         self._turno_listo = False                # True cuando el jugador puede decidir
         self._siguiente_instancia = 0            # para dar ids deterministas a los objetos recogidos
         self._antorcha_encendida = False
+        self._salas_preparadas = VectorOrdenado()   # ids de las salas ya pobladas (el jugador llegó a ellas)
         self._mensajes_nuevos: list[str] = []
         self._iniciada = False
 
@@ -82,6 +86,26 @@ class Partida:
         self._azar.setstate(estado_azar)
 
 
+    def _marcar_preparada(self, sala_id: int) -> None:
+        if not self._salas_preparadas.contiene(sala_id):
+            self._salas_preparadas.insertar(sala_id)
+
+    # ---------------------------------------------------------------- guardado
+    def a_estado_guardado(self, version_catalogo: str):
+        """Convierte la partida a datos planos (EstadoPartida) para GuardadoBinario (§4.10).
+        Solo se puede guardar cuando al jugador le toca decidir y la partida sigue en curso."""
+        if not self._iniciada:
+            raise RuntimeError("Hay que llamar a iniciar() antes de guardar.")
+        if self._desenlace != EN_CURSO:
+            raise RuntimeError("No se puede guardar una partida terminada.")
+        return crear_estado(
+            cripta_id=self._datos.id, cripta_version=self._datos.version, catalogo_version=version_catalogo,
+            semilla=self._semilla, azar=self._azar, reloj=self._reloj, jugador=self._jugador, mapa=self._mapa,
+            salas_preparadas=self._salas_preparadas, acciones_jugador=self._acciones_ejecutadas,
+            enemigos_derrotados=self._enemigos_derrotados, mensajes=self._bitacora.mensajes(),
+        )
+
+
     # ------------------------------------------------------------------ inicio
     def iniciar(self) -> None:
         """§2.4: contenido de la sala inicial, rastro en tiempo 0, enemigos activados y
@@ -89,10 +113,11 @@ class Partida:
         if self._iniciada:
             raise RuntimeError("La partida ya fue iniciada.")
         sala = self._precarga.preparar_sala(self._datos.sala_inicial)
+        self._marcar_preparada(sala.id)
         self._precarga.precargar_desde(self._datos.sala_inicial)
         sala.marcar_visita(0)
         self._activar_enemigos_de(sala)
-        self._reloj.programar(0, self._marcar_turno_jugador, "turno del jugador")
+        self._reloj.programar(0, self._marcar_turno_jugador, "turno del jugador", datos=(EV_TURNO_ACTOR, "jugador", 0, 0))
         self._avanzar_hasta_turno_jugador()
         self._mensajes_nuevos = []
         self._iniciada = True
@@ -113,7 +138,10 @@ class Partida:
         self._turno_listo = False
         intervalo = calcular_intervalo(costo, self._jugador.velocidad)
         self._jugador.tiempo_siguiente = self._reloj.tiempo_actual + intervalo
-        self._jugador.evento_pendiente = self._reloj.programar(self._jugador.tiempo_siguiente, self._marcar_turno_jugador, "turno del jugador")
+        self._jugador.evento_pendiente = self._reloj.programar(
+            self._jugador.tiempo_siguiente, self._marcar_turno_jugador, "turno del jugador",
+            datos=(EV_TURNO_ACTOR, "jugador", 0, 0),
+        )
         self._avanzar_hasta_turno_jugador()
         self._historial.cerrar_intervalo()   # el intervalo llega hasta la siguiente decisión del jugador
 
@@ -129,7 +157,8 @@ class Partida:
         intervalo = calcular_intervalo(costo, enemigo.velocidad)
         enemigo.tiempo_siguiente = self._reloj.tiempo_actual + intervalo
         enemigo.evento_pendiente = self._reloj.programar(
-            enemigo.tiempo_siguiente, lambda e=enemigo: self._turno_enemigo(e), f"turno de {enemigo.instancia_id}"
+            enemigo.tiempo_siguiente, lambda e=enemigo: self._turno_enemigo(e), f"turno de {enemigo.instancia_id}",
+            datos=(EV_TURNO_ACTOR, enemigo.instancia_id, 0, 0),
         )
 
     def _turno_enemigo(self, enemigo) -> None:
@@ -239,6 +268,7 @@ class Partida:
         # Si todavía no llegó, esta llamada espera: la espera real no mueve el reloj virtual.
         with self._historial.sin_registrar():   # cargar contenido es infraestructura, no estado del juego
             destino = self._precarga.preparar_sala(salida.sala_destino)
+        self._marcar_preparada(destino.id)
         tiempo = self._reloj.tiempo_actual
         sala.marcar_visita(tiempo)
         self._jugador.sala_actual = destino.id

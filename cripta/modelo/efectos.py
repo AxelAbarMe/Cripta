@@ -10,8 +10,21 @@ from cripta.constantes import (
     VENENO_DURACION,
     VENENO_INTERVALO,
 )
+
+from cripta.infraestructura.estado_guardado import (
+    EV_ANTORCHA_APAGAR,
+    EV_CIERRE_PUERTA,
+    EV_FIN_VELOCIDAD,
+    EV_REARME_TRAMPA,
+    EV_VENENO_PULSO,
+)
+
 from cripta.modelo.reloj import calcular_tiempo_reprogramado
 from cripta.modelo.reversible import Reversible
+
+def sujeto_de(actor) -> str:
+    """Cómo se nombra a un actor en la agenda guardada: "jugador" o la instancia del enemigo."""
+    return getattr(actor, "instancia_id", "jugador")
 
 class EfectoVeneno(Reversible):
     """Aplica `daño_por_pulso` cada VENENO_INTERVALO unidades, durante
@@ -51,7 +64,8 @@ class EfectoVeneno(Reversible):
             return
         # Cada pulso se programa VENENO_INTERVALO unidades después del anterior (el primero, tras aplicar el veneno).
         self.evento_actual = self._reloj.programar_en(
-            VENENO_INTERVALO, self._aplicar_pulso, descripcion="veneno: pulso"
+            VENENO_INTERVALO, self._aplicar_pulso, descripcion="veneno: pulso",
+            datos=(EV_VENENO_PULSO, sujeto_de(self._objetivo), self._daño_por_pulso, self._pulsos_restantes),
         )
 
     # El pulso se aplica solo si el efecto no fue cancelado y el objetivo sigue vivo. Luego se programa el siguiente pulso.
@@ -81,7 +95,10 @@ class EfectoCambioVelocidad(Reversible):
         self._cambio_aplicado = velocidad_nueva - velocidad_anterior
         self._reescalar_a(velocidad_nueva)
         self._actor.velocidad = velocidad_nueva
-        self.evento_fin = self._reloj.programar_en(self._duracion, self._terminar, "fin de cambio de velocidad")
+        self.evento_fin = self._reloj.programar_en(
+            self._duracion, self._terminar, "fin de cambio de velocidad",
+            datos=(EV_FIN_VELOCIDAD, sujeto_de(self._actor), self._cambio_aplicado, 0),   # a = cuánto sumó este efecto
+        )
 
     def _terminar(self) -> None:
         # Se resta lo que este efecto sumó, así varios efectos solapados no se pisan entre sí
@@ -110,7 +127,9 @@ class EfectoAntorcha:
 
     # Al encenderse, programa el apagado de la antorcha tras `duracion` unidades de tiempo, llamando a `al_apagar` cuando se apague.
     def encender(self) -> None:
-        self._reloj.programar_en(self._duracion, self._al_apagar, "antorcha: apagar")
+        self._reloj.programar_en(
+            self._duracion, self._al_apagar, "antorcha: apagar", datos=(EV_ANTORCHA_APAGAR, "antorcha", 0, 0)
+        )
 
 
 class EfectoRegeneracion:
@@ -160,7 +179,10 @@ class EfectoTrampa:
             return False
         aplicar_efecto()
         self._trampa.desarmar()
-        self._reloj.programar_en(self._intervalo_rearme, self._trampa.rearmar, "trampa: rearme")
+        self._reloj.programar_en(
+            self._intervalo_rearme, self._trampa.rearmar, "trampa: rearme",
+            datos=(EV_REARME_TRAMPA, self._trampa.instancia_id, 0, 0),
+        )
         return True
 
 
@@ -177,7 +199,10 @@ class EfectoCierrePuerta:
         self._al_cerrar = al_cerrar
 
     def programar_cierre(self) -> None:
-        self._reloj.programar_en(self._intervalo, self._cerrar, "cierre automático de puerta")
+        self._reloj.programar_en(
+            self._intervalo, self._cerrar, "cierre automático de puerta",
+            datos=(EV_CIERRE_PUERTA, str(self._sala_id), ("N", "S", "E", "O").index(self._direccion), 0),
+        )
 
     def _cerrar(self) -> None:
         self._mapa.cerrar_puerta(self._sala_id, self._direccion)

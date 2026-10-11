@@ -44,6 +44,10 @@ class Inventario(Reversible):
         self.arma_equipada: ObjetoInventario | None = None
         self.armadura_equipada: ObjetoInventario | None = None
 
+    @property
+    def capacidad_max(self) -> int:
+        return self._capacidad_max
+
     def esta_lleno(self) -> bool:
         return len(self._lista) >= self._capacidad_max
 
@@ -161,6 +165,17 @@ class Inventario(Reversible):
         self._lista.eliminar_nodo(nodo)
         self._registrar_inversa(lambda: self._reponer_en_su_posicion(objeto, prefijo))
         return objeto
+
+
+    def objetos_en_orden(self) -> tuple:
+        """Los objetos en el orden real del inventario (el primero es el que está al frente)."""
+        objetos = []
+        nodo = self._lista.head
+        while nodo is not None:
+            objetos.append(nodo.data)
+            nodo = nodo.next
+        return tuple(objetos)
+
 
     def fichas_en_uso(self) -> tuple[str, ...]:
         """Ids de catálogo de los objetos del inventario (no se pueden liberar de la caché, §4.4)."""

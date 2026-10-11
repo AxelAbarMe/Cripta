@@ -19,11 +19,12 @@ def calcular_tiempo_reprogramado(tiempo_siguiente: int, tiempo_actual: int, velo
 class EventoProgramado:
     """Un evento agendado en el RelojEventos, con tiempo absoluto y secuencia para desempatar.
     Se puede cancelar (sin sacarlo del heap) y reprogramar (cancelando el viejo y creando uno nuevo)."""
-    def __init__(self, tiempo: int, secuencia: int, accion, descripcion: str = ""):
+    def __init__(self, tiempo: int, secuencia: int, accion, descripcion: str = "", datos=None):
         self.tiempo = tiempo
         self.secuencia = secuencia
         self.accion = accion
         self.descripcion = descripcion
+        self.datos = datos   # (tipo, sujeto, a, b) para guardar la partida; ver estado_guardado.py
         self.cancelado = False
         self.ejecutado = False
         self.en_agenda = True
@@ -63,7 +64,7 @@ class RelojEventos:
     def tiempo_actual(self) -> int:
         return self._reloj_actual
 
-    def programar(self, tiempo: int, accion, descripcion: str = "") -> EventoProgramado:
+    def programar(self, tiempo: int, accion, descripcion: str = "", datos=None) -> EventoProgramado:
         """Devuelve el EventoProgramado, necesario para poder cancelarlo o
         reprogramarlo más adelante."""
         
@@ -73,7 +74,7 @@ class RelojEventos:
                 f"(tiempo {tiempo}, reloj en {self._reloj_actual})."
             )
             
-        evento = EventoProgramado(tiempo, self._siguiente_secuencia, accion, descripcion)
+        evento = EventoProgramado(tiempo, self._siguiente_secuencia, accion, descripcion, datos)
         self._siguiente_secuencia += 1
         self._heap.insertar(evento)
         self._vigentes += 1
@@ -81,9 +82,9 @@ class RelojEventos:
             self.registrador(lambda: self._deshacer_programar(evento))
         return evento
 
-    def programar_en(self, intervalo: int, accion, descripcion: str = "") -> EventoProgramado:
+    def programar_en(self, intervalo: int, accion, descripcion: str = "", datos=None) -> EventoProgramado:
         """Atajo: programa `accion` `intervalo` unidades después del reloj actual."""
-        return self.programar(self._reloj_actual + intervalo, accion, descripcion)
+        return self.programar(self._reloj_actual + intervalo, accion, descripcion, datos)
 
     def cancelar(self, evento: EventoProgramado) -> None:
         if not evento.cancelado and not evento.ejecutado:
@@ -94,7 +95,7 @@ class RelojEventos:
 
     def reprogramar(self, evento: EventoProgramado, nuevo_tiempo: int) -> EventoProgramado:
         # Se agenda primero el nuevo: si el tiempo es inválido, el viejo no queda cancelado a medias
-        nuevo = self.programar(nuevo_tiempo, evento.accion, evento.descripcion)
+        nuevo = self.programar(nuevo_tiempo, evento.accion, evento.descripcion, evento.datos)
         self.cancelar(evento)
         return nuevo
 
@@ -117,6 +118,11 @@ class RelojEventos:
         self._reloj_actual = evento.tiempo
         evento.accion()
         return evento
+
+    def eventos_vigentes(self) -> tuple:
+        """Los eventos que aún pueden ejecutarse (sin los cancelados), sin orden garantizado:
+        cada uno trae su (tiempo, secuencia). Sirve para guardar la partida."""
+        return tuple(e for e in self._heap.heap if not e.cancelado)
 
     def esta_vacia(self) -> bool:
         """True si no queda ningún evento vigente (los cancelados no cuentan)."""
@@ -150,10 +156,10 @@ class RelojEventos:
             evento.en_agenda = True
         self._vigentes += 1
 
-    def programar_con_secuencia(self, tiempo: int, secuencia: int, accion, descripcion: str = "") -> EventoProgramado:
+    def programar_con_secuencia(self, tiempo: int, secuencia: int, accion, descripcion: str = "", datos=None) -> EventoProgramado:
         """Agenda un evento con una secuencia ya conocida (reconstruir una partida guardada).
         Después hay que llamar a restaurar() para fijar el contador."""
-        evento = EventoProgramado(tiempo, secuencia, accion, descripcion)
+        evento = EventoProgramado(tiempo, secuencia, accion, descripcion, datos)
         self._heap.insertar(evento)
         self._vigentes += 1
         return evento

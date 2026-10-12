@@ -77,10 +77,11 @@ class ServicioBench:
         return "\n".join(lineas)
 
     def verificar_limite_ciclo(self, salida: dict, limite_ms: float = 20.0) -> bool:
-        """True si TODOS los casos de 'ciclo' cumplieron el límite de §5.2."""
-        if "ciclo" not in salida:
-            return True
-        return all("NO CUMPLE" not in (r.nota or "") for r in salida["ciclo"][1])
+        """True si TODOS los casos de 'ciclo' y 'partida' cumplieron el límite de §5.2."""
+        for nombre in ("ciclo", "partida"):
+            if nombre in salida and any("NO CUMPLE" in (r.nota or "") for r in salida[nombre][1]):
+                return False
+        return True
 
 
 def ejecutar_bench_cli(argv=None) -> int:

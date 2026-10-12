@@ -1,7 +1,7 @@
 """Cargas sintéticas para --bench (§5.3). Cada función mide UN subsistema y, cuando el
 Documento de Decisiones lo exige (§8.5), mide TAMBIÉN la alternativa descartada, con
 los mismos datos, para que la comparación sea justa. Ninguna toca red, vista ni una
-cripta real: todo son datos generados aquí con una semilla fija (reproducible).
+cripta real: todo son datos generados aquí (o en tests/cripta_artificial.py) con una semilla fija (reproducible).
 
 `escala` multiplica los tamaños de las cargas (1.0 = rápido; 5.0 = mediciones más finas).
 """
@@ -20,15 +20,19 @@ from cripta.estructuras.vector import VectorOrdenado
 from cripta.infraestructura import guardado_binario as gb
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
 from cripta.infraestructura.cache import CacheDisco
+from cripta.infraestructura.cliente_general import ClienteGeneral
+from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
 from cripta.infraestructura.estado_guardado import (
     EnemigoGuardado, EstadoPartida, EstadoRNG, EventoGuardado, JugadorGuardado,
     ObjetoGuardado, SalaGuardada, TrampaGuardada,
 )
 from cripta.modelo import combate
+from cripta.modelo.accion import Accion
 from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.historial_retroceso import HistorialRetroceso
 from cripta.modelo.jugador import Jugador
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
+from cripta.servicios.servicio_partida import ServicioPartida
 
 SEMILLA_BENCH = 20260928
 
@@ -423,6 +427,77 @@ def bench_ciclo_eventos(escala: float = 1.0):
                                     f"{peores * 1000:.2f} ms  -> {cumple} el límite de 20 ms (§5.2)"))
     return resultados
 
+# ===================================== 8. CICLO CON LA PARTIDA REAL (§5.2)
+def _recorrido_en_zigzag(filas: int, columnas: int):
+    """Direcciones para recorrer la cuadrícula fila por fila (E, S, O, S, E...) sin entrar a la
+    última fila: en la cripta artificial la sala de salida es la última y entrar ahí termina la partida."""
+    pasos = []
+    for fila in range(filas - 1):
+        pasos.extend(["E" if fila % 2 == 0 else "O"] * (columnas - 1))
+        if fila < filas - 2:
+            pasos.append("S")
+    return pasos
+
+
+def _jugar_y_medir(lado: int):
+    """Una corrida: arma la partida, recorre la cripta, espera 50 veces y devuelve
+    (tiempos de cada acción en segundos, enemigos activos al final)."""
+    # Imports locales: tests/ no es parte del paquete cripta; si fallaran, solo fallaría esta carga
+    from tests.cliente_falso import ClienteFalso
+    from tests.cripta_artificial import construir
+
+    datos = construir(lado, lado)
+    cliente = ClienteFalso(datos["fichas"], datos["contenido"], datos["paginas"], datos["general"])
+    servicio = ServicioPartida(ClienteGeneral(cliente), ContadorSolicitudes(), asincrono=False)
+    servicio.iniciar_nueva(datos["general"]["id"], semilla=SEMILLA_BENCH)
+    jugador = servicio.partida._jugador
+    jugador.vida_max = jugador.vida = 10 ** 9      # que los enemigos no terminen la partida antes de medir
+
+    tiempos = []
+    acciones = [Accion("mover", d) for d in _recorrido_en_zigzag(lado, lado)] + [Accion("esperar")] * 50
+    for accion in acciones:
+        t0 = time.perf_counter()
+        servicio.ejecutar(accion)
+        tiempos.append(time.perf_counter() - t0)
+    activos = 0
+    for sala in servicio.partida._mapa.todas_las_salas():
+        activos += len(sala.enemigos_activos)
+    servicio.cerrar()
+    return tiempos, activos
+
+
+def _mediana(valores):
+    ordenados = list(valores)
+    ordenar_auto(ordenados)
+    return ordenados[len(ordenados) // 2]
+
+
+def bench_partida_real(escala: float = 1.0, corridas: int = 3):
+    """§5.2 con el modelo real: Partida + ServicioPartida sobre una cripta artificial, sin red (ClienteFalso
+    responde al instante) ni vista. El jugador recorre la cripta despertando enemigos y después espera;
+    se mide cada ejecutar(), que es un ciclo completo entre dos decisiones del jugador. Cada tamaño se
+    corre varias veces y se reporta la mediana, porque el peor caso de una sola corrida varía mucho."""
+    resultados = []
+    for lado in (5, 10, max(15, int(20 * escala))):
+        peores, medianas = [], []
+        for _ in range(corridas):
+            tiempos, activos = _jugar_y_medir(lado)
+            peores.append(max(tiempos))
+            medianas.append(_mediana(tiempos))
+        peor = _mediana(peores)  # mediana de los peores de cada corrida
+        mediana = _mediana(medianas)
+        cumple = "CUMPLE" if peor * 1000 < 20 else "NO CUMPLE"
+        peor_ms = f"{peor * 1000:.2f}"
+        mediana_ms = f"{mediana * 1000:.2f}"
+        detalle = ", ".join(f"{p * 1000:.2f}" for p in peores)
+        resultados.append(Resultado(
+            "partida real",
+            f"{lado * lado} salas, {activos} enemigos activos al final, {len(tiempos)} acciones x {corridas} corridas",
+            peor, 1, f"tiempo típico de una acción: {mediana_ms} ms, peor caso: {peor_ms} ms "
+                     f"(peor de cada corrida: {detalle} ms; se toma el del medio: {peor_ms}) "
+                     f"-> {cumple} el límite de 20 ms (§5.2, decide la mediana de los peores casos)"))
+    return resultados
+
 
 CARGAS = (
     ("agenda", bench_agenda),
@@ -433,4 +508,5 @@ CARGAS = (
     ("ordenamiento", bench_ordenamiento),
     ("guardado", bench_guardado),
     ("ciclo", bench_ciclo_eventos),
+    ("partida", bench_partida_real),
 )

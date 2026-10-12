@@ -195,31 +195,56 @@ def bench_recuperacion_disco(escala: float = 1.0):
 
 
 # ========================================================== 3. INVENTARIO (§4.5)
+def _medir_sin_contar_preparacion(preparar, operar, repeticiones: int = 3) -> float:
+    """Como _medir, pero solo cronometra `operar`: `preparar` arma los datos antes de cada
+    repetición y su tiempo no se cuenta (por ejemplo, construir la lista que se va a medir)."""
+    mejor = None
+    for _ in range(repeticiones):
+        datos = preparar()
+        t0 = time.perf_counter()
+        operar(datos)
+        dt = time.perf_counter() - t0
+        mejor = dt if mejor is None or dt < mejor else mejor
+    return mejor
+
+
 def bench_inventario(escala: float = 1.0):
     resultados = []
     for n in (10, 10000):
         repeticiones = max(200, int(2000 * escala)) if n == 10 else max(50, int(300 * escala))
 
-        def con_lista_doble():
+        def preparar_lista_doble():
             lista = ListaDobleEnlazada()
             nodos = [lista.agregar(i) for i in range(n)]
+            return lista, nodos
+
+        def con_lista_doble(datos):
+            lista, nodos = datos
             for k in range(repeticiones):
                 nodo = nodos[(n // 2 + k) % n]
                 lista.eliminar_nodo(nodo)              # soltar el objeto que se está viendo: O(1)
                 nodos[(n // 2 + k) % n] = lista.agregar(k)
 
-        def con_list():
-            plana = list(range(n))
+        def preparar_list():
+            return list(range(n))
+
+        def con_list(plana):
             for k in range(repeticiones):
                 pos = (n // 2 + k) % n
                 plana.pop(pos)                        # desplaza todo lo posterior: O(n)
                 plana.append(k)
 
-        t1, t2 = _medir(con_lista_doble), _medir(con_list)
+        t1 = _medir_sin_contar_preparacion(preparar_lista_doble, con_lista_doble)
+        t2 = _medir_sin_contar_preparacion(preparar_list, con_list)
         resultados.append(Resultado("inventario", f"soltar en medio, n={n}: lista doble (elegida)", t1, repeticiones))
+        if t2 > t1:
+            comparacion = f"list.pop(i) es {t2 / t1:.1f}x más lenta que la lista doble"
+        else:
+            comparacion = f"list.pop(i) es {t1 / t2:.1f}x más rápida que la lista doble"
+        if n == 10:
+            comparacion += "  <- con inventario_max típico (~10) la diferencia es despreciable"
         resultados.append(Resultado("inventario", f"soltar en medio, n={n}: list.pop(i) (descartada)", t2, repeticiones,
-                                    f"{t2 / t1:.1f}x {'más lenta' if t2 > t1 else 'más rápida'}"
-                                    + ("  <- con inventario_max típico (~10) la diferencia es despreciable" if n == 10 else "")))
+                                    comparacion))
     return resultados
 
 

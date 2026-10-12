@@ -593,7 +593,9 @@ class Partida:
         return self._bitacora.mensajes()
 
     def puntaje(self) -> ResumenPuntaje:
-        return ResumenPuntaje(self._acciones_ejecutadas, self._enemigos_derrotados, self._reloj.tiempo_actual)
+        return ResumenPuntaje(
+            self._acciones_ejecutadas, self._enemigos_derrotados, self._reloj.tiempo_actual, self._desenlace == VICTORIA
+        )
 
     def fichas_en_uso(self) -> tuple[str, ...]:
         """Ids de ficha que la caché del catálogo no puede liberar (§4.4): objetos del inventario, objetos

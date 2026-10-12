@@ -73,3 +73,4 @@ class ResumenPuntaje:
     acciones_jugador: int
     enemigos_derrotados: int
     tiempo_final: int
+    victoria: bool

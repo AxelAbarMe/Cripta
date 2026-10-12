@@ -165,7 +165,7 @@ Este archivo define la interfaz **antes** de implementarla. Se marca cada punto 
 - [x] prueba de determinismo (sección 8)
 
 ## 11. `ServicioPartida` (lo que usan el controlador y el replay)
-Archivo: `cripta/servicios/servicio_partida.py`. Construcción: `ServicioPartida(cliente, contador, cache_disco=None, tamano_cache=25)`, con `cliente` = `ClienteGeneral(...)` y `contador` el mismo que usa el cliente.
+Archivo: `cripta/servicios/servicio_partida.py`. Construcción: `ServicioPartida(cliente, contador, cache_disco=None, tamano_cache=25, asincrono=True, repositorio_puntajes=None)`, con `cliente` = `ClienteGeneral(...)` y `contador` el mismo que usa el cliente.
 
 | Miembro | Qué hace |
 |---|---|
@@ -178,4 +178,12 @@ Archivo: `cripta/servicios/servicio_partida.py`. Construcción: `ServicioPartida
 | `datos_generales`, `version_catalogo`, `semilla` | Datos de la partida en curso |
 
 Cualquier error de infraestructura hereda de `CriptaError` y puede salir de `ejecutar` **y también de `vista()`** (que consulta el catálogo): el controlador captura `CriptaError`, muestra el mensaje y sigue; la partida no quedó a medias.
-Pendiente (parte 2): `guardar(ruta)`, `cargar(ruta)`, puntaje final y ranking.
+
+| Miembro | Qué hace |
+|---|---|
+| `guardar(ruta)` | Guarda la partida y una copia de la bitácora en `ruta.log`. `RuntimeError` si la partida terminó |
+| `cargar(ruta, ruta_bitacora=None)` | Reemplaza la partida en curso. `FileNotFoundError` o `CriptaFormatoIncompatibleError` si el archivo falta o no es compatible, y entonces la partida en curso no se toca |
+| `registrar_puntaje(nombre)` | Solo con la partida terminada y una vez por partida. Devuelve el ranking de la cripta |
+| `ranking()` | Puntajes de la cripta y versión de la partida en curso |
+| `bitacora_completa` | `False` si se cargó un guardado sin su copia de la bitácora |
+

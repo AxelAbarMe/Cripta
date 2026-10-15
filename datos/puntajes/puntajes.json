@@ -1,0 +1,14 @@
+{
+  "formato": 2,
+  "puntajes": [
+    {
+      "nombre_jugador": "Axel",
+      "cripta_id": "cripta-01",
+      "cripta_version": "fd58f7743b9e",
+      "acciones_jugador": 4,
+      "enemigos_derrotados": 0,
+      "tiempo_final": 223,
+      "victoria": false
+    }
+  ]
+}

@@ -61,6 +61,14 @@ def _medir(funcion, repeticiones: int = 3) -> float:
     return mejor
 
 
+def _comparar(descartada: str, t_descartada: float, elegida: str, t_elegida: float) -> str:
+    """Texto que dice cuántas veces más lenta o más rápida es la alternativa descartada que la
+    elegida, con el número siempre mayor que 1 (por ejemplo "5.3x más rápido", no "0.2x")."""
+    if t_descartada > t_elegida:
+        return f"{descartada} es {t_descartada / t_elegida:.1f}x más lento que {elegida}"
+    return f"{descartada} es {t_elegida / t_descartada:.1f}x más rápido que {elegida}"
+
+
 # ============================================================ 1. AGENDA (§4.1)
 class _AgendaLineal:
     """ALTERNATIVA DESCARTADA: lista sin orden, el mínimo se busca recorriéndola."""
@@ -152,7 +160,7 @@ def bench_cache(escala: float = 1.0):
         tb, tl = _medir(busqueda_binaria), _medir(busqueda_lineal)
         resultados.append(Resultado("caché", f"buscar en {tamano} fichas: VectorOrdenado (elegida)", tb, consultas))
         resultados.append(Resultado("caché", f"buscar en {tamano} fichas: recorrido lineal (descartada)", tl, consultas,
-                                    f"{tl / tb:.1f}x {'más lenta' if tl > tb else 'más rápida'}"))
+                                    _comparar("el recorrido lineal", tl, "VectorOrdenado", tb)))
 
         # "usé esta ficha" -> pasa a ser la más reciente
         lista = ListaDobleEnlazada()
@@ -172,7 +180,7 @@ def bench_cache(escala: float = 1.0):
         t1, t2 = _medir(lru_lista_doble), _medir(lru_lista_plana)
         resultados.append(Resultado("caché", f"marcar uso LRU con {tamano} fichas: lista doble (elegida)", t1, consultas))
         resultados.append(Resultado("caché", f"marcar uso LRU con {tamano} fichas: list.remove+insert (descartada)", t2, consultas,
-                                    f"{t2 / t1:.1f}x {'más lenta' if t2 > t1 else 'más rápida'}"))
+                                    _comparar("list.remove+insert", t2, "la lista doble", t1)))
     return resultados
 
 
@@ -237,10 +245,7 @@ def bench_inventario(escala: float = 1.0):
         t1 = _medir_sin_contar_preparacion(preparar_lista_doble, con_lista_doble)
         t2 = _medir_sin_contar_preparacion(preparar_list, con_list)
         resultados.append(Resultado("inventario", f"soltar en medio, n={n}: lista doble (elegida)", t1, repeticiones))
-        if t2 > t1:
-            comparacion = f"list.pop(i) es {t2 / t1:.1f}x más lenta que la lista doble"
-        else:
-            comparacion = f"list.pop(i) es {t1 / t2:.1f}x más rápida que la lista doble"
+        comparacion = _comparar("list.pop(i)", t2, "la lista doble", t1)
         if n == 10:
             comparacion += "  <- con inventario_max típico (~10) la diferencia es despreciable"
         resultados.append(Resultado("inventario", f"soltar en medio, n={n}: list.pop(i) (descartada)", t2, repeticiones,
@@ -396,8 +401,9 @@ def bench_guardado(escala: float = 1.0):
             tb = _medir(lambda: binario.cargar(ruta_bin), r)
             tj = _medir(lambda: gb.cargar_json(ruta_json), r)
             resultados.append(Resultado("guardado", f"{n_salas} salas: cargar todo binario", tb, 1))
-            resultados.append(Resultado("guardado", f"{n_salas} salas: cargar todo JSON", tj, 1, f"{tj / tb:.1f}x el binario"))
-            objetivo = ids_medio = n_salas // 2
+            resultados.append(Resultado("guardado", f"{n_salas} salas: cargar todo JSON", tj, 1,
+                                        _comparar("cargar JSON", tj, "cargar binario", tb)))
+            objetivo = n_salas // 2
             ts = _medir(lambda: binario.cargar_sala(ruta_bin, objetivo), 5)
             resultados.append(Resultado("guardado", f"{n_salas} salas: cargar UNA sala (binario, con índice)", ts, 1,
                                         f"{tb / ts:.0f}x más rápido que cargar todo"))
@@ -426,15 +432,7 @@ def bench_ciclo_eventos(escala: float = 1.0):
 
         for i, enemigo in enumerate(enemigos):
             reloj.programar(66 + i % 5, turno(enemigo))
-        meta = 66 + 100                                 # un intervalo entre dos decisiones del jugador
-        ejecutados = [0]
 
-        def ciclo():
-            while True:
-                siguiente = reloj.ejecutar_siguiente()
-                ejecutados[0] += 1
-                if reloj.tiempo_actual >= meta + ejecutados[0] // actores * 0:
-                    break
         # varios ciclos consecutivos; se reporta el peor
         peores = 0.0
         for k in range(20):

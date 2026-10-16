@@ -2,7 +2,7 @@
 
 El ClienteOffline no cuenta solicitudes, así que se envuelve en un cliente que las cuenta y respeta el
 presupuesto igual que ClienteHttp. Se ejecuta desde la raíz del proyecto con:
-    python -m unittest tests.modelo.test_servicio_partida -v
+    python -m unittest tests.servicios.test_servicio_partida -v
 """
 import dataclasses
 import tempfile

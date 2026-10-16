@@ -96,7 +96,7 @@ Pendiente — completar en reunión
 ### Evidencia empírica
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
-Solicitudes de red al iniciar una partida en la cripta de pruebas (6 salas, presupuesto 9), contando cada llamada del cliente de archivos como una solicitud. En frío: 6 (datos generales, versión del catálogo, una página de esqueleto, un lote de contenido y dos lotes de catálogo). Con la caché de disco caliente: 2 (datos generales y versión del catálogo), y todo lo demás sale del disco. Con un tope de 3 fichas en memoria y disco, una partida de 7 acciones desalojó 11 fichas, recuperó 3 del disco y no hizo ninguna solicitud extra; sin disco, con ese mismo tope, se agotó el presupuesto de 9 al volver a descargar fichas desalojadas (tests/modelo/test_servicio_partida.py).
+Solicitudes de red al iniciar una partida en la cripta de pruebas (6 salas, presupuesto 9), contando cada llamada del cliente de archivos como una solicitud. En frío: 6 (datos generales, versión del catálogo, una página de esqueleto, un lote de contenido y dos lotes de catálogo). Con la caché de disco caliente: 2 (datos generales y versión del catálogo), y todo lo demás sale del disco. Con un tope de 3 fichas en memoria y disco, una partida de 7 acciones desalojó 11 fichas, recuperó 3 del disco y no hizo ninguna solicitud extra; sin disco, con ese mismo tope, se agotó el presupuesto de 9 al volver a descargar fichas desalojadas (tests/servicios/test_servicio_partida.py).
 
 
 ### Límites conocidos
@@ -276,7 +276,7 @@ Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 La prueba de ida y vuelta (tests/modelo/test_guardado_vuelta.py) compara una partida que se guardó y se cargó contra otra que nunca se guardó: tras las mismas acciones tienen el mismo estado completo, la misma vista y los mismos mensajes. Cubre trampas, antorcha, puerta con cierre automático, veneno, cambio de velocidad, un enemigo en una sala sin visitar y el paso por el archivo binario.
 
-Cargar un guardado en frío, sin caché de disco, con 3 salas visitadas en la cripta de pruebas (presupuesto 9), costó 6 solicitudes (datos generales, versión del catálogo, esqueleto, un lote de contenido y dos de catálogo), igual que iniciar una partida nueva. La partida cargada y la que nunca se guardó dan el mismo estado antes y después de seguir jugando (tests/modelo/test_servicio_partida_guardado.py).
+Cargar un guardado en frío, sin caché de disco, con 3 salas visitadas en la cripta de pruebas (presupuesto 9), costó 6 solicitudes (datos generales, versión del catálogo, esqueleto, un lote de contenido y dos de catálogo), igual que iniciar una partida nueva. La partida cargada y la que nunca se guardó dan el mismo estado antes y después de seguir jugando (tests/servicios/test_servicio_partida_guardado.py).
 
 
 ### Límites conocidos
@@ -309,9 +309,9 @@ Pendiente — completar en reunión
 ### Evidencia empírica
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
-tests/modelo/test_servicio_partida.py reproduce la bitácora de una partida en una partida nueva con la semilla del encabezado y compara el estado guardado, la vista y el puntaje: son iguales.
+tests/servicios/test_servicio_partida.py reproduce la bitácora de una partida en una partida nueva con la semilla del encabezado y compara el estado guardado, la vista y el puntaje: son iguales.
 
-tests/modelo/test_servicio_partida_guardado.py guarda una partida, sigue jugando, carga el guardado y comprueba que la bitácora restaurada contiene solo las acciones hasta el guardado; después reproduce esa bitácora desde cero y obtiene el mismo estado que la partida cargada.
+tests/servicios/test_servicio_partida_guardado.py guarda una partida, sigue jugando, carga el guardado y comprueba que la bitácora restaurada contiene solo las acciones hasta el guardado; después reproduce esa bitácora desde cero y obtiene el mismo estado que la partida cargada.
 
 
 ### Límites conocidos

@@ -1,6 +1,6 @@
 """Pruebas de ServicioPartida parte 2: guardar, cargar (con su bitácora), puntaje final y ranking.
 Usan la cripta real de fixtures/. Se ejecutan desde la raíz del proyecto con:
-    python -m unittest tests.modelo.test_servicio_partida_guardado -v
+    python -m unittest tests.servicios.test_servicio_partida_guardado -v
 """
 import dataclasses
 import tempfile
@@ -17,7 +17,7 @@ from cripta.modelo.accion import Accion as A
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.puntajes import Puntaje
 from cripta.servicios.servicio_partida import ServicioPartida
-from tests.modelo.test_servicio_partida import ClienteContado, juego
+from tests.servicios.test_servicio_partida import ClienteContado, juego
 
 CRIPTA = "cripta-01"
 

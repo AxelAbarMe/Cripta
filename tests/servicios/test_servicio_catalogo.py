@@ -2,7 +2,7 @@
 
 El caso con disco (ficha dañada que viaja en el mismo lote) está en
 tests/infraestructura/test_cache_disco.py; el desalojo durante una partida real, en
-tests/modelo/test_servicio_partida.py. Aquí se prueba el catálogo solo, con un cliente falso.
+tests/servicios/test_servicio_partida.py. Aquí se prueba el catálogo solo, con un cliente falso.
 
 Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.servicios.test_servicio_catalogo -v
 """

@@ -3,7 +3,7 @@
 Revisan que los puntajes se guarden y se lean igual, y sobre todo que un archivo dañado o de
 otro formato dé error en vez de tratarse como vacío: si se tratara como vacío, el siguiente
 registro lo sobrescribiría y se perderían todos los puntajes anteriores.
-El orden del ranking se prueba en tests/modelo/test_servicio_partida_guardado.py.
+El orden del ranking se prueba en tests/servicios/test_servicio_partida_guardado.py.
 
 Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.infraestructura.test_puntajes_disco -v
 """

@@ -176,7 +176,9 @@ Lo siguiente que hay que realizar:
 
 Se agregó ServicioPartida, que arma la partida a partir de un cliente (de red o de archivos): obtiene los datos generales, fija el presupuesto con el valor de la cripta, consulta una vez la versión del catálogo, carga el esqueleto, crea el catálogo y la precarga, inicia la partida y escribe en la bitácora cada acción aceptada con su encabezado. También entrega el reporte final de solicitudes, presupuesto y aciertos y fallos de caché. Se conectó la caché del catálogo con el estado del juego mediante Partida.fichas_en_uso, de modo que las fichas del inventario, del suelo y las trampas de la sala actual y de los enemigos vivos no se desalojan. Al probarlo se encontró que una acción que fallaba a mitad de camino por un error de infraestructura dejaba cambios sin deshacer; ahora se revierte el intervalo abierto. Se agregaron tests con la cripta real: solicitudes en frío y con la caché caliente, bitácora, reproducción de una partida desde su bitácora, caché chica y fallos de infraestructura.
 
+Se agregaron al servicio de partida guardar y cargar. Guardar escribe el archivo binario y, junto a él, una copia de la bitácora hasta ese instante; cargar valida las versiones de la cripta y del catálogo, reconstruye la partida y restaura esa bitácora, de modo que la partida sigue en la misma historia sin acciones de una rama abandonada. Si falta la copia, la bitácora nueva queda marcada como parcial. También se agregó el puntaje final con victoria o derrota: se guarda en la tabla local al terminar y el ranking se muestra por cripta y versión, con las victorias primero. Se probó con la cripta real, incluida la reproducción desde cero de la bitácora de una partida cargada, y la carga en frío cuesta las mismas 6 solicitudes que iniciar una partida.
+
 Lo siguiente que hay que realizar:
-* Servicio de partida, segunda parte: guardar y cargar, puntaje final y ranking.
-* Decidir qué hacer con la bitácora al cargar una partida guardada, y el replay.
-* Controlador y vista.
+* Replay (--replay), con revisión de las versiones y rechazo de las bitácoras parciales.
+* Medir el ciclo real de una acción contra el límite de 20 ms.
+* Controlador y vista, y el programa principal con sus banderas.

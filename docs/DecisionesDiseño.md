@@ -239,8 +239,13 @@ Pendiente — completar en reunión
 Pendiente — completar en reunión
 ### Alternativas consideradas
 Pendiente — completar en reunión
+
 ### Decisión
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+El ranking de la tabla de puntajes ordena con el selector automático una tupla (grupo, tiempo, orden de registro): primero las victorias y luego las derrotas, menor tiempo primero, y el orden de registro desempata para que el resultado sea estable. Solo incluye los puntajes de la cripta y la versión jugadas.
+
+
 ### Análisis de complejidad
 Pendiente — completar en reunión
 ### Evidencia empírica
@@ -260,13 +265,18 @@ La partida viva se convierte a datos planos (`EstadoPartida`) en un módulo del 
 
 Cargar una partida reconstruye el modelo a partir del `EstadoPartida`. Se piden de nuevo el contenido y las fichas de las salas visitadas y el estado guardado manda sobre lo recién creado: suelo, trampas, enemigos (dormidos y activos), puertas, rastro, inventario con su equipo y su cursor, y estadísticas del jugador. Las acciones de la agenda, que son funciones, se recrean a partir de su descriptor con la misma pareja (tiempo, secuencia) con que se guardaron, y el estado del generador aleatorio se repone para que la partida continúe con la misma secuencia de azar. La carga se hace sin registrar inversas, de modo que no hay nada que el pergamino pueda deshacer de ella. Si el id o la versión de la cripta no coinciden con los guardados, se informa la incompatibilidad en lugar de cargar. Un enemigo activo que llegó caminando a una sala que el jugador nunca visitó se guarda con esa sala, porque es estado del juego y no de la caché.
 
+Guardar y cargar pasan por el servicio de partida. Cargar valida primero el archivo, la versión de la cripta y la del catálogo con que se guardó, y solo entonces reemplaza la partida en curso, así un fallo de validación no destruye la partida actual. Las salas visitadas se piden de nuevo a la precarga (de disco si la caché está caliente) y después se pisan con el estado guardado. Las salas que solo se precargaron no se guardan como cargadas, porque son estado de la caché.
+
 
 ### Análisis de complejidad
 Pendiente — completar en reunión
+
 ### Evidencia empírica
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 La prueba de ida y vuelta (tests/modelo/test_guardado_vuelta.py) compara una partida que se guardó y se cargó contra otra que nunca se guardó: tras las mismas acciones tienen el mismo estado completo, la misma vista y los mismos mensajes. Cubre trampas, antorcha, puerta con cierre automático, veneno, cambio de velocidad, un enemigo en una sala sin visitar y el paso por el archivo binario.
+
+Cargar un guardado en frío, sin caché de disco, con 3 salas visitadas en la cripta de pruebas (presupuesto 9), costó 6 solicitudes (datos generales, versión del catálogo, esqueleto, un lote de contenido y dos de catálogo), igual que iniciar una partida nueva. La partida cargada y la que nunca se guardó dan el mismo estado antes y después de seguir jugando (tests/modelo/test_servicio_partida_guardado.py).
 
 
 ### Límites conocidos
@@ -275,6 +285,8 @@ Pendiente — completar en reunión (revisar para eliminar esta linea)
 El pergamino de retroceso no puede deshacer acciones anteriores a una partida cargada, porque el historial (solo inversas, nunca copias del estado) no se guarda. Guardar solo es posible con la partida en curso.
 
 El contador de ids de los objetos recogidos no forma parte del archivo de guardado: al cargar se retoma después del mayor id que queda en el inventario, de modo que nunca se repite un id existente, pero puede diferir del que habría tenido una partida que nunca se guardó. Cargar vuelve a pedir el contenido de las salas visitadas, lo que consume solicitudes si no están en el disco. Los efectos del veneno y del cambio de velocidad se probaron con efectos creados a mano, porque la cripta publicada no trae nada que los origine.
+
+Al cargar se vuelve a pedir el contenido de las salas visitadas: con la caché de disco vacía cuesta hasta un lote por cada diez salas visitadas, más los lotes de fichas, y no se midió en una cripta grande. Los identificadores de instancia de los objetos recogidos después de cargar pueden diferir de los de una partida continua; no se muestran ni intervienen en ninguna acción.
 
 
 ## 4.11 Bitácora de partida y reproducción
@@ -288,6 +300,8 @@ Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 `ServicioPartida` escribe la bitácora: tras ejecutar una acción, si el modelo la acepta, la anota (incluido el pergamino, que cambia el estado y debe repetirse en el replay); las rechazadas no cambian el estado y no se anotan. El encabezado se escribe cuando la partida ya inició sin errores, con el id y la versión de la cripta, la versión del catálogo y la semilla; si no se da semilla se genera con un generador del sistema y queda en el encabezado. Sin ruta de bitácora (replay y bench) no se escribe nada.
 
+El guardado lleva consigo una copia de la bitácora hasta el instante de guardar (archivo del guardado más `.log`). Cargar la restaura como bitácora activa y la partida sigue anexando en ella. Se descartó recortar la bitácora original por el número de acciones del jugador, porque el log también anota el pergamino y las acciones que luego se deshicieron, así que no coincide con ese contador; guardar el número de líneas habría exigido cambiar el formato del guardado, y poner marcas dentro del log habría obligado al lector a distinguirlas de las acciones. Con la copia, la bitácora de una partida cargada es exactamente la historia que llevó a ese estado y se puede reproducir desde cero. Si la copia no existe, la bitácora nueva lleva `"parcial": true` en el encabezado y no es reproducible.
+
 
 ### Análisis de complejidad
 Pendiente — completar en reunión
@@ -297,9 +311,12 @@ Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 tests/modelo/test_servicio_partida.py reproduce la bitácora de una partida en una partida nueva con la semilla del encabezado y compara el estado guardado, la vista y el puntaje: son iguales.
 
+tests/modelo/test_servicio_partida_guardado.py guarda una partida, sigue jugando, carga el guardado y comprueba que la bitácora restaurada contiene solo las acciones hasta el guardado; después reproduce esa bitácora desde cero y obtiene el mismo estado que la partida cargada.
+
 
 ### Límites conocidos
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 Los mensajes de una acción rechazada quedan en la bitácora en pantalla pero no en el log, por lo que una partida reproducida puede diferir de la original solo en esos mensajes; el estado, la vista y el puntaje coinciden.
 
+Solo se comprueba que el encabezado de la copia coincida con el del guardado; no se puede verificar que la copia tenga exactamente las acciones que llevaron a ese estado. Una bitácora parcial no se puede reproducir.

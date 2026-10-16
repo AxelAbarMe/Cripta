@@ -144,6 +144,8 @@ redactar el texto de las decisiones de diseño del guardado y de la evidencia de
 
 
 ### 2026-10-11 — Claude (claude-sonnet-5-5)
-**Prompt (resumido):** Se compartió el proyecto actualizado (versión 4) con el contrato de la partida y se pidió empezar el servicio que arma la partida: construcción, bitácora de acciones y reporte final, y revisar el contrato. También se preguntó qué necesita la parte de la interfaz para empezar los controladores.
+**Prompt (resumido):** Se compartió el proyecto actualizado (versión 4) con el contrato de la partida y se pidió empezar el servicio que arma la partida: construcción, bitácora de acciones y reporte final, y revisar el contrato. También se preguntó qué necesita la parte de la interfaz para empezar los controladores. Adicional a eso, 
+se compartió el proyecto actualizado (versión 5) junto con lo hecho por otro compañero en la tabla de puntajes, y se pidió revisar si eso cambia el trabajo pendiente y continuar con la segunda parte del servicio de partida: guardar y cargar, puntaje final y ranking, decidiendo qué hacer con la bitácora al cargar.
 
-**Para qué se usó:** Escribir ServicioPartida y Partida.fichas_en_uso con sus tests, corregir la reversión de una acción que falla a mitad de camino y redactar las decisiones de diseño y la actualización del contrato.
+**Para qué se usó:** Escribir ServicioPartida y Partida.fichas_en_uso con sus tests, corregir la reversión de una acción que falla a mitad de camino y redactar las decisiones de diseño y la actualización del contrato. Adicionalmente, se usó para revisar la tabla de puntajes y su repositorio, decidir cómo se restaura la bitácora al cargar, escribir guardar, cargar, puntaje y ranking con sus tests y redactar las decisiones de diseño.
+

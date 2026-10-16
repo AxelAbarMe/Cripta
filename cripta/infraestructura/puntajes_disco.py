@@ -11,10 +11,11 @@ from cripta.excepciones import CriptaPuntajesError
 from cripta.modelo.puntajes import Puntaje, TablaPuntajes
 
 CLAVE_PUNTAJES = "puntajes.json"
-FORMATO_PUNTAJES = 1  # cambiarlo si cambian los campos de Puntaje
+FORMATO_PUNTAJES = 2  # cambiarlo si cambian los campos de Puntaje (2: se agregó "victoria")
 
 _CAMPOS_TEXTO = ("nombre_jugador", "cripta_id", "cripta_version")
 _CAMPOS_ENTEROS = ("acciones_jugador", "enemigos_derrotados", "tiempo_final")
+_CAMPOS_BOOLEANOS = ("victoria",)   
 
 
 class RepositorioPuntajes:
@@ -63,7 +64,7 @@ class RepositorioPuntajes:
     def _puntaje_a_dict(puntaje: Puntaje) -> dict:
         # Solo para escribir JSON (§7 permite dict en el borde con JSON)
         resultado = {}
-        for campo in _CAMPOS_TEXTO + _CAMPOS_ENTEROS:
+        for campo in _CAMPOS_TEXTO + _CAMPOS_ENTEROS + _CAMPOS_BOOLEANOS:
             resultado[campo] = getattr(puntaje, campo)
         return resultado
 
@@ -81,6 +82,10 @@ class RepositorioPuntajes:
             # bool es subclase de int en Python: True pasaría como 1 si no se excluye
             if not isinstance(valor, int) or isinstance(valor, bool) or valor < 0:
                 raise CriptaPuntajesError(f"el puntaje {numero} no tiene un entero válido en «{campo}»")
+        for campo in _CAMPOS_BOOLEANOS:
+            if not isinstance(fila.get(campo), bool):
+                raise CriptaPuntajesError(f"el puntaje {numero} no tiene un valor verdadero/falso en «{campo}»")
+            
         return Puntaje(
             nombre_jugador=fila["nombre_jugador"],
             cripta_id=fila["cripta_id"],
@@ -88,4 +93,5 @@ class RepositorioPuntajes:
             acciones_jugador=fila["acciones_jugador"],
             enemigos_derrotados=fila["enemigos_derrotados"],
             tiempo_final=fila["tiempo_final"],
+            victoria=fila["victoria"],
         )

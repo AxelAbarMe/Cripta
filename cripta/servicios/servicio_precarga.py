@@ -293,9 +293,9 @@ class ServicioPrecarga:
         creados = []
         for e in pendiente.enemigos:
             creados.append((e.instancia, Enemigo(e.instancia, indice.buscar(e.tipo), sala_id, e.vida)))
-            # Orden ascendente por id de instancia (§2.4). El algoritmo lo elige ordenar_auto según
-            # el tamaño y el desorden de la lista (§4.9), igual que en el resto del programa
-            ordenar_auto(creados)
+        # Orden ascendente por id de instancia (§2.4). El algoritmo lo elige ordenar_auto según
+        # el tamaño y el desorden de la lista (§4.9), igual que en el resto del programa
+        ordenar_auto(creados)
         sala.enemigos_dormidos.extend(enemigo for _id, enemigo in creados)
         self._enemigos_por_crear.eliminar(sala_id)
         self._pobladas.insertar(sala_id)

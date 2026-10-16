@@ -524,6 +524,49 @@ def bench_partida_real(escala: float = 1.0, corridas: int = 3):
     return resultados
 
 
+# =========================================== 9. SOLICITUDES DE RED (§4.2 y §4.3)
+def bench_solicitudes(escala: float = 1.0):
+    """Cuántas solicitudes de red cuesta recorrer una cripta con lotes (precarga de contenido y
+    catálogo, lo elegido) contra pedir cada cosa por separado (lo descartado). No mide tiempo:
+    cuenta las llamadas que registra ClienteFalso. Lo descartado se calcula a partir de lo que
+    realmente se necesitó: una solicitud por cada sala visitada y una por cada ficha distinta."""
+    # Imports locales: tests/ no es parte del paquete cripta; si fallaran, solo fallaría esta carga
+    from tests.cliente_falso import ClienteFalso
+    from tests.cripta_artificial import construir
+
+    resultados = []
+    for lado in (10, max(15, int(20 * escala))):
+        datos = construir(lado, lado)
+        cliente = ClienteFalso(datos["fichas"], datos["contenido"], datos["paginas"], datos["general"])
+        servicio = ServicioPartida(ClienteGeneral(cliente), ContadorSolicitudes(), asincrono=False)
+        servicio.iniciar_nueva(datos["general"]["id"], semilla=SEMILLA_BENCH)
+        jugador = servicio.partida._jugador
+        jugador.vida_max = jugador.vida = 10 ** 9      # que los enemigos no terminen la partida antes de tiempo
+        pasos = _recorrido_en_zigzag(lado, lado)
+        for direccion in pasos:
+            servicio.ejecutar(Accion("mover", direccion))
+        servicio.cerrar()
+
+        salas_visitadas = len(pasos) + 1                # la sala inicial más una por cada movimiento
+        lotes_contenido = cliente.contar("obtener_contenido")
+        lotes_catalogo = cliente.contar("obtener_catalogo")
+        fichas = VectorOrdenado()                       # fichas distintas que se llegaron a pedir
+        for metodo, ids in cliente.llamadas:
+            if metodo == "obtener_catalogo":
+                for ficha_id in ids:
+                    if not fichas.contiene(ficha_id):
+                        fichas.insertar(ficha_id)
+
+        resultados.append(Resultado(
+            "solicitudes", f"{lado * lado} salas, {salas_visitadas} visitadas: contenido", 0.0, 1,
+            f"con precarga en lotes: {lotes_contenido} solicitudes; una por sala visitada (descartada): "
+            f"{salas_visitadas} solicitudes"))
+        resultados.append(Resultado(
+            "solicitudes", f"{lado * lado} salas, {salas_visitadas} visitadas: catálogo", 0.0, 1,
+            f"por lotes: {lotes_catalogo} solicitudes; una por ficha (descartada): {len(fichas)} solicitudes"))
+    return resultados
+
+
 CARGAS = (
     ("agenda", bench_agenda),
     ("cache", bench_cache),
@@ -534,4 +577,5 @@ CARGAS = (
     ("guardado", bench_guardado),
     ("ciclo", bench_ciclo_eventos),
     ("partida", bench_partida_real),
+    ("solicitudes", bench_solicitudes),
 )

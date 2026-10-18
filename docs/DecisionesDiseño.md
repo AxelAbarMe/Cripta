@@ -52,57 +52,147 @@ La medición del ciclo tiene picos aislados: desactivar el recolector de basura 
 
 ## 4.2 Traer el contenido antes de que haga falta (precarga)
 ### Problema
-Pendiente — completar en reunión
+Para que el jugador entre a una sala, el programa necesita su contenido (enemigos, objetos, trampas) **antes** de confirmar el movimiento: nunca puede quedar en una sala cuyo contenido no conoce. El esqueleto de la cripta (qué salas hay y cómo se conectan) se descarga completo al iniciar, pero el contenido se pide aparte: cada solicitud tarda unos 400 ms, cuesta lo mismo con 1 sala que con 10 y cuenta contra el presupuesto. Si se pidiera al cruzar cada puerta, el jugador esperaría 400 ms en cada movimiento.
+
+La operación que el programa ejecuta en cada movimiento es **revisar si conviene anticipar** contenido desde la sala nueva; pedir un lote ocurre mucho menos. En un recorrido de 89 movimientos por una cripta de 100 salas se revisó 89 veces y se pidieron 10 lotes. Además, puede haber una respuesta todavía en camino cuando el jugador se mueve: el programa debe esperarla sin caerse y sin que el tiempo real de red afecte el reloj virtual del juego, y las respuestas deben incorporarse siempre en el mismo orden para que la partida sea reproducible.
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+1. **Pedir el contenido de cada sala al entrar** (una solicitud por sala, sin anticipar). Es lo más simple, pero gasta una solicitud por sala visitada y hace esperar ~400 ms en cada puerta. Se descartó; su costo en solicitudes se midió contra lo elegido (ver Evidencia).
+2. **Pedir todo el contenido al empezar la partida.** Usa la misma cantidad de solicitudes que lo elegido (una cada 10 salas), pero obliga a esperarlas todas antes de jugar (con 1000 salas serían unos 40 s) y gasta presupuesto en salas que el jugador quizá nunca visite. Se descartó.
+3. **Esperar la respuesta en el mismo hilo del juego** contra **pedirla en un hilo de red aparte** (un hilo es una tarea que el programa ejecuta en paralelo). En el mismo hilo, cada lote detiene el juego 400 ms aunque todavía no haga falta. En un hilo aparte, el lote viaja mientras el jugador piensa su siguiente acción. Se eligió el hilo aparte, pero el juego sigue siendo determinista (ver Decisión).
+
 ### Decisión
-Pendiente — completar en reunión
+- **Anticipar por cercanía:** al entrar a una sala se recorre el esqueleto en anchura desde ella (primero las salas a 1 paso, después las de 2, y así), en orden N, S, E, O. Si alguna sala a 2 pasos o menos todavía no se pidió, se pide **un lote** con las 10 salas no pedidas más cercanas. Si todo lo cercano ya se pidió, no se hace nada.
+- **Nunca pedir dos veces:** cada sala pedida, recibida o leída del disco se anota en un `VectorOrdenado` (arreglo ordenado por id) en el momento de **pedirla**, no al recibirla. Así lo que se decide no depende de cuándo llegue una respuesta. Una sala guardada en disco con la versión vigente de la cripta se carga sin red y no ocupa lugar en el lote.
+- **Hilo de red:** los lotes se ponen en una cola y un solo hilo de red los envía en el orden en que se pidieron (primero en entrar, primero en salir). La cola está protegida para que el juego y el hilo no la usen al mismo tiempo.
+- **Determinismo:** lo que llega por red no entra al juego en cuanto llega. Solo se incorpora cuando el jugador necesita una sala y siempre en el orden en que se pidieron los lotes. Si la respuesta todavía no llegó, se espera en tiempo real, sin tocar el reloj virtual del juego. Así, aunque la red tarde distinto en cada partida, el juego ve lo mismo y en el mismo orden.
+- **Fallos:** si un lote falla, sus salas vuelven a quedar "sin pedir" y el error llega solo a quien necesitaba esa sala; la partida sigue y puede reintentar. Un lote se espera como mucho 60 s (`ESPERA_MAXIMA_LOTE_SEGUNDOS`): si no llega se da por fallido, y si la respuesta llega después se ignora. Después de cerrar la precarga no se pide nada más: pedir una sala nueva falla de inmediato en lugar de esperar a un hilo que ya terminó.
+
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Letras usadas: **S** = salas de la cripta; **a** = salas a 2 pasos o menos de la sala actual (con 4 salidas por sala, unas pocas decenas como mucho).
+- **Revisar si conviene anticipar** (en cada movimiento): si ya se pidieron todas las salas, O(1), una sola comparación. Si no, se recorren solo las salas cercanas, O(a log S), porque cada una se busca con búsqueda binaria entre las ya pedidas.
+- **Armar un lote:** recorre en anchura hasta encontrar 10 salas sin pedir; en el peor caso (todo lo cercano ya pedido) puede recorrer casi toda la cripta, O(S log S). Solo pasa cuando de verdad se pide un lote.
+- **Asegurar el contenido de una sala al entrar:** buscar en qué lote viene, O(log S), más esperar ese lote si todavía no llegó.
+- **Solicitudes de red:** como cada lote lleva 10 salas que nunca se pidieron, el total de solicitudes de contenido nunca pasa de ⌈S/10⌉ (S dividido entre 10, redondeado hacia arriba).
+
 ### Evidencia empírica
-Pendiente — completar en reunión
+- `--bench --solo solicitudes` (cripta artificial, recorrido en zigzag; cuenta las solicitudes, no depende de la máquina):
+
+  | Cripta | Salas visitadas | Precarga por lotes (elegida) | Una solicitud por sala (descartada) |
+  |---|---|---|---|
+  | 100 salas | 90 | 10 | 90 |
+  | 400 salas | 380 | 40 | 380 |
+
+  En los dos casos el total es exactamente ⌈S/10⌉, el mínimo posible.
+- Espera del jugador (medición aparte, con un script de prueba: cripta artificial de 100 salas, cliente falso con 400 ms de latencia por solicitud, hilo de red activo; Intel Core Ultra 7, 16 GB, Python 3.14.6):
+  - Jugador que se mueve sin pausa (89 movimientos seguidos, el peor caso): solo 8 movimientos tuvieron que esperar, 4.48 s en total. Pidiendo cada sala al entrar habrían sido unos 89 × 0.4 = 36 s.
+  - Jugador que piensa 1 s entre acciones (30 movimientos): solo 2 movimientos esperaron, 0.87 s en total. El resto del contenido llegó mientras el jugador pensaba.
+- Tests (`tests/servicios/test_servicio_precarga.py`): recorrer las 25 salas de una cripta artificial usa exactamente 3 lotes; si una respuesta no llega a tiempo hay un error en lugar de una espera eterna; una respuesta que llega tarde se ignora y la sala se puede volver a pedir; después de cerrar, pedir una sala falla de inmediato.
+
 ### Límites conocidos
-Pendiente — completar en reunión
+- La anticipación mira 2 pasos a la redonda. Si el jugador se mueve sin pausa y la red es lenta, alcanza al hilo de red y espera (7 de 89 movimientos en la medición). Con una red mucho más lenta que 400 ms convendría mirar más lejos.
+- El recorrido en anchura no distingue puertas cerradas: puede anticipar salas detrás de una puerta que el jugador nunca abra. No supera el máximo de ⌈S/10⌉ solicitudes, pero puede gastar algunas en salas que no se visitan.
+- Hay un solo hilo de red y los lotes salen de uno en uno. Si el API permitiera solicitudes simultáneas, varios hilos acortarían la espera, pero complicarían el orden determinista.
+- La espera máxima de 60 s es larga para un jugador; se eligió así para no dar por fallida una respuesta lenta pero válida.
+- La medición de espera usa un cliente falso con latencia fija; no se midió contra el API real.
 
 ## 4.3 Resolución de referencias del catálogo
 ### Problema
-Pendiente — completar en reunión
+El contenido de una sala no trae las entidades completas: trae ids de tipo (`ent_rata_gigante`, `itm_antorcha`, `trp_dardos`) que hay que convertir en fichas de catálogo antes de mostrar o simular la sala. Los ids aparecen en un orden que el programa no controla (según por dónde camine el jugador y qué contenido llegue en cada lote), se repiten mucho entre salas y algunos solo se descubren de forma indirecta: la ficha de un enemigo dice qué objetos suelta. Cada solicitud cuenta contra el presupuesto, y el catálogo acepta hasta 10 ids por solicitud.
+
+Las operaciones que el programa ejecuta de verdad son dos. La primera es **consultar una ficha** (`obtener`), en cada vista de la sala, al preparar una sala y al revisar el inventario. Es muy frecuente: en un recorrido de 89 movimientos por una cripta de 100 salas hubo 185 consultas resueltas en memoria, unas 2 por movimiento. La segunda es **descubrir ids** (`solicitar`), cada vez que se incorpora el contenido de una sala o se descarga la ficha de un enemigo. Es mucho menos frecuente y casi siempre trae ids repetidos.
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+1. **Pedir cada id en el momento en que hace falta** (una solicitud por ficha). Es lo más simple, pero gasta una solicitud por cada tipo distinto, aunque el lote admitiría 10 por el mismo costo. Se descartó por presupuesto; se midió contra lo elegido (ver Evidencia).
+2. **Esperar a juntar 10 ids antes de pedir.** Aprovecha cada lote al máximo, pero no sirve cuando una ficha hace falta ya (el jugador entra a una sala y hay que mostrarla): no se puede esperar a que aparezcan más ids. Se descartó.
+3. **Descargar todo el catálogo al empezar.** El API solo entrega fichas por id y los ids solo se conocen al descubrirlos, así que no hay forma de pedir "todo"; además se gastarían solicitudes en tipos que el jugador nunca ve. Se descartó.
+
 ### Decisión
-Pendiente — completar en reunión
+Lo elegido combina "pedir cuando hace falta" con "aprovechar el lote" (un lote es una sola solicitud al catálogo con hasta 10 ids):
+- Cada id descubierto se anota como **pendiente**: todavía no se pide, queda en espera para viajar en el próximo lote. Los pendientes se guardan en un `VectorOrdenado` (un arreglo ordenado por id, ver §4.4), así no hay repetidos y cada lote se arma siempre en el mismo orden. Se anotan al incorporar el contenido de una sala y al descargar la ficha de un enemigo, porque esa ficha dice qué objetos suelta: así esos objetos se conocen antes de que el enemigo muera.
+- Al **consultar** una ficha se busca primero en memoria, después en el disco (con la versión del catálogo dentro del nombre del archivo, ver §4.4) y solo al final en la red. Si hay que ir a la red, la ficha que hace falta viaja junto con hasta 9 pendientes en **una sola solicitud**.
+- Para preparar una sala se piden todas sus fichas de una vez, así las que faltan viajan juntas.
+- Antes de armar un lote se quitan de los pendientes los ids que ya están en memoria o en el disco con la versión vigente: **un id vigente nunca se pide dos veces**.
+- La versión del catálogo se consulta una sola vez por partida. Como el catálogo es global y el nombre del archivo en disco no incluye la cripta, una ficha descargada jugando una cripta sirve para las demás.
+
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Letras usadas: **n** = fichas guardadas en memoria (como mucho `--cache-size`, 25 por defecto); **p** = ids pendientes, es decir, descubiertos pero todavía no pedidos; **k** = fichas distintas que necesita la partida completa.
+- **Consultar una ficha en memoria** (la operación más frecuente): O(log n), porque el índice es un `VectorOrdenado` y se busca con búsqueda binaria (con 25 fichas son unas 5 comparaciones). Además, mover la ficha al frente de la lista de uso cuesta O(1): no depende de cuántas fichas haya (ver §4.4).
+- **Anotar un id descubierto:** comprobar si ya está en memoria o en los pendientes es O(log n + log p), con búsqueda binaria. Si es nuevo, insertarlo en su lugar cuesta O(p), porque al meterlo en el arreglo ordenado hay que correr una posición a los que van detrás. Es poco: en las partidas medidas p se queda en unos pocos ids.
+- **Armar un lote:** recorrer como mucho 10 pendientes, un costo fijo.
+- **Solicitudes de red:** en el mejor caso, ⌈k/10⌉ lotes (todas las fichas agrupadas de 10 en 10). En el peor caso, una solicitud por ficha: pasaría si cada id se descubriera justo en el momento en que ya hace falta, y sería igual que la alternativa descartada.
+
 ### Evidencia empírica
-Pendiente — completar en reunión
+- `--bench --solo solicitudes` (cripta artificial, recorrido en zigzag, conteo de llamadas del cliente; los conteos no dependen de la máquina):
+
+  | Cripta | Lotes de catálogo (elegido) | Una solicitud por ficha (descartada) |
+  |---|---|---|
+  | 100 salas, 90 visitadas | 4 | 7 |
+  | 400 salas, 380 visitadas | 4 | 7 |
+
+  En las dos partidas se enviaron 7 ids en total y los 7 eran distintos: ninguno se pidió dos veces. El primer lote llevó 4 fichas juntas; los otros 3 llevaron una ficha que apareció más tarde (lo que suelta la rata y tipos de salas lejanas).
+- `cripta-01` sin nada en la caché de disco (todo se descarga): 2 lotes de catálogo en total al iniciar la partida (ver §4.4).
+- Tests (`tests/servicios/test_servicio_catalogo.py`): tres ids descubiertos viajan en un solo lote; lo que ya está en memoria no genera solicitudes; contar aciertos y fallos da lo mismo pidiendo de a uno o todos juntos. En `tests/infraestructura/test_cache_disco.py`: una ficha dañada en disco se vuelve a pedir **en el mismo lote** que las que faltan.
+
 ### Límites conocidos
-Pendiente — completar en reunión
+- La cripta artificial tiene solo 7 tipos de ficha, así que la ganancia medida es pequeña (4 lotes contra 7 solicitudes). Con muchos tipos distintos la diferencia puede llegar a 10 a 1, pero no se ha medido con una cripta de catálogo grande.
+- Si los ids se descubrieran uno por uno justo cuando hacen falta, cada uno costaría un lote propio y la estrategia se acercaría a la alternativa descartada. Anotar lo que suelta cada enemigo al descargar su ficha reduce ese caso, pero no lo elimina.
+- Insertar un id pendiente obliga a correr los que van detrás en el arreglo ordenado. Si una sola sala trajera cientos de ids nuevos, ese costo empezaría a notarse y convendría otra estructura; con las criptas probadas los pendientes son pocos y no pesa.
+- La versión del catálogo cuesta una solicitud por partida, aunque todas las fichas estén en disco.
 
 ## 4.4 Reutilización y caché persistente
 ### Problema
-Pendiente — completar en reunión
+Las fichas de catálogo se consultan todo el tiempo: al mostrar la sala, al preparar una sala nueva y al revisar el inventario. En un recorrido de 89 movimientos por una cripta de 100 salas hubo 185 consultas resueltas en memoria, unas 2 por movimiento (ver §4.3). Por eso **averiguar si una ficha está en memoria es la operación más frecuente** y su costo importa. En memoria solo caben `--cache-size` fichas (25 por defecto): al llegar a ese tope hay que liberar alguna, pero nunca una que esté en uso (un enemigo vivo, un objeto del inventario, un objeto o una trampa de la sala actual). Una ficha liberada no debe volver a costar una solicitud de red: tiene que poder recuperarse del disco. Además, la caché debe sobrevivir al cierre del programa y validarse con la versión del catálogo y de la cripta sin descargar todo otra vez.
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+1. **Para encontrar una ficha: recorrer una lista sin orden** contra **un arreglo ordenado por id con búsqueda binaria** (`VectorOrdenado`). Una tabla hash (el `dict` de Python, que encuentra un elemento sin recorrer nada) no es opción, porque §7 prohíbe usar `dict` como índice o caché. Se midieron las dos (ver Evidencia): con 25 fichas el recorrido es un poco más rápido, pero con 1000 es 8.5 veces más lento. Se descartó el recorrido porque su costo crece con la cantidad de fichas, y esa cantidad la elige el usuario con `--cache-size`.
+2. **Para llevar el orden de uso: una lista de Python** (quitar la ficha con `list.remove` y volver a meterla al frente con `insert`) contra **una lista doblemente enlazada**, en la que cada elemento (nodo) apunta al anterior y al siguiente. Con la lista de Python hay que buscar la ficha y correr todos los elementos de lugar; con la lista doble basta desconectar el nodo y conectarlo al frente. Se midieron las dos: con 25 fichas la lista de Python es un poco más rápida, con 1000 es 19 veces más lenta. Se descartó por la misma razón.
+3. **Qué ficha liberar: FIFO** (*first in, first out*: se libera la que entró primero) contra **LRU** (*least recently used*: se libera la que lleva más tiempo sin usarse). FIFO es más simple, pero puede liberar una ficha que se usa todo el tiempo (por ejemplo la de la rata, que aparece en muchas salas) solo porque llegó temprano. Se eligió LRU porque el jugador vuelve a salas cercanas y los mismos tipos se repiten. Esta comparación no se midió (ver Límites).
+4. **Para guardar en disco: un solo archivo con todo el catálogo** contra **un archivo por ficha con la versión en el nombre**. El archivo único obliga a leerlo y reescribirlo completo para recuperar o agregar una ficha, y al cambiar la versión habría que invalidarlo entero. Se eligió un archivo por ficha.
 
 ### Decisión
-Pendiente — completar en reunión (revisar para eliminar esta linea)
+La caché en memoria usa dos estructuras, cada una con un trabajo:
+- **Índice (para encontrar una ficha):** las fichas en memoria se guardan en un `VectorOrdenado` ordenado por id. Saber si una ficha está en memoria es una búsqueda binaria en ese arreglo, como buscar en el índice de un libro en lugar de recorrer todas las páginas.
+- **Orden de uso (para saber cuál liberar):** una `ListaDobleEnlazada` con las fichas de la más usada recientemente (al frente) a la menos usada (al final). Cada entrada del índice guarda su nodo de esta lista, así que al consultar una ficha se la pasa al frente sin buscarla otra vez.
 
-Las fichas en uso se obtienen del estado de la partida: `Partida.fichas_en_uso()` junta los ids del inventario, del suelo y las trampas de la sala actual y de los enemigos vivos, y `ServicioPartida` se la entrega al catálogo como una función que solo se consulta al desalojar, no en cada acceso. El catálogo se crea antes que la partida, por eso recibe la función y no la partida. La versión del catálogo se consulta una sola vez al iniciar (hace falta para el encabezado de la bitácora y para validar el disco) y se entrega ya conocida al catálogo.
-
+Las reglas:
+- **Cuál se libera (LRU):** cuando hay más fichas que el tope, se revisa la lista desde el final (la que lleva más tiempo sin usarse) y se libera la primera que no esté en uso. La ficha que acaba de entrar nunca se libera. Si todas están en uso, la caché se queda temporalmente con más fichas que el tope, porque el enunciado prohíbe soltar una ficha en uso.
+- **Fichas en uso:** se obtienen del estado de la partida. `Partida.fichas_en_uso()` junta los ids del inventario, del suelo y las trampas de la sala actual y de los enemigos vivos, y `ServicioPartida` se la entrega al catálogo como una función que solo se consulta al liberar, no en cada acceso. El catálogo se crea antes que la partida, por eso recibe la función y no la partida. Al liberar, cada ficha en uso se marca, se elige cuál sale y las marcas se quitan enseguida.
+- **Disco (`CacheDisco`):** un archivo por ficha, con la versión del catálogo dentro del nombre (`catalogo.<versión>.<id>.json`). El esqueleto y el contenido de las salas se guardan igual, con la versión de la cripta. Si la versión del servidor cambió, el archivo con el nombre nuevo simplemente no existe y la ficha se pide a la red; los archivos viejos no molestan y no hace falta recorrer el disco para invalidar nada. Un archivo dañado (que ya no es JSON válido) cuenta como "no está": se vuelve a pedir en lugar de detener la partida.
+- La versión del catálogo se consulta una sola vez al iniciar (hace falta para el encabezado de la bitácora y para validar el disco) y se entrega ya conocida al catálogo.
 
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Letras usadas: **n** = fichas en memoria (como mucho `--cache-size`, salvo cuando todas están en uso); **u** = fichas en uso en el momento de liberar; **s** = salas de la cripta.
+- **Consultar una ficha que está en memoria** (la operación más frecuente): O(log n) por la búsqueda binaria en el índice (con 25 fichas, unas 5 comparaciones), más O(1) para pasarla al frente de la lista de uso. O(1) significa que cuesta lo mismo sin importar cuántas fichas haya.
+- **Agregar una ficha nueva** (solo después de que no estaba): O(n), porque al meterla en su lugar del arreglo ordenado hay que correr una posición a las que van detrás. Pasa una vez por ficha descargada o recuperada, no en cada consulta.
+- **Liberar una ficha:** marcar las fichas en uso cuesta O(u log n) (una búsqueda binaria por cada una), y buscar cuál liberar desde el final de la lista cuesta O(n) en el peor caso (si casi todas están en uso). Obtener la lista de fichas en uso cuesta O(s), porque recorre las salas buscando enemigos vivos. Todo esto solo ocurre cuando se supera el tope.
+- **Recuperar una ficha liberada:** leer un archivo pequeño y convertirlo desde JSON. No depende de cuántas fichas haya en disco.
 
 ### Evidencia empírica
-Pendiente — completar en reunión (revisar para eliminar esta linea)
+- `--bench --solo cache disco` (Intel Core Ultra 7, 16 GB, Python 3.14.6; 20 000 operaciones por caso; µs = microsegundos, millonésimas de segundo):
 
-Solicitudes de red al iniciar una partida en la cripta de pruebas (6 salas, presupuesto 9), contando cada llamada del cliente de archivos como una solicitud. En frío: 6 (datos generales, versión del catálogo, una página de esqueleto, un lote de contenido y dos lotes de catálogo). Con la caché de disco caliente: 2 (datos generales y versión del catálogo), y todo lo demás sale del disco. Con un tope de 3 fichas en memoria y disco, una partida de 7 acciones desalojó 11 fichas, recuperó 3 del disco y no hizo ninguna solicitud extra; sin disco, con ese mismo tope, se agotó el presupuesto de 9 al volver a descargar fichas desalojadas (tests/servicios/test_servicio_partida.py).
+  | Operación | Fichas | Elegida | Descartada | Resultado |
+  |---|---|---|---|---|
+  | Buscar una ficha | 25 | `VectorOrdenado`: 0.86 µs | recorrido lineal: 0.53 µs | el recorrido es 1.6 veces más rápido |
+  | Buscar una ficha | 1000 | `VectorOrdenado`: 1.24 µs | recorrido lineal: 10.57 µs | el recorrido es 8.5 veces más lento |
+  | Pasar una ficha al frente (LRU) | 25 | lista doble: 0.25 µs | `list.remove` + `insert`: 0.16 µs | la lista de Python es 1.5 veces más rápida |
+  | Pasar una ficha al frente (LRU) | 1000 | lista doble: 0.15 µs | `list.remove` + `insert`: 2.86 µs | la lista de Python es 19 veces más lenta |
 
+  Recuperar una ficha liberada desde disco (leer el archivo y convertirlo desde JSON): **50.68 µs**, contra ~400 ms (400 000 µs) de una solicitud de red: unas 8000 veces menos.
+- Cómo leer la tabla: con el tope por defecto, las alternativas simples son algo más rápidas, pero la diferencia es de fracciones de microsegundo por consulta, nada frente al límite de 20 ms por ciclo (§5.2). Con 1000 fichas, lo elegido es entre 8 y 19 veces más rápido. Con la lista doble, pasar una ficha al frente cuesta lo mismo con 25 que con 1000 fichas (0.25 y 0.15 µs).
+- Solicitudes de red al iniciar una partida en la cripta de pruebas (6 salas, presupuesto 9), contando cada llamada del cliente de archivos como una solicitud. Sin nada en la caché de disco: 6 (datos generales, versión del catálogo, una página de esqueleto, un lote de contenido y dos lotes de catálogo). Con la caché de disco llena: 2 (datos generales y versión del catálogo), y todo lo demás sale del disco. Con un tope de 3 fichas en memoria y disco, una partida de 7 acciones liberó 11 fichas, recuperó 3 del disco y no hizo ninguna solicitud extra; sin disco, con ese mismo tope, se agotó el presupuesto de 9 al volver a descargar fichas liberadas (`tests/servicios/test_servicio_partida.py`).
+- Tests de la política y del disco:
+  - `tests/servicios/test_servicio_catalogo.py`: sale la que lleva más tiempo sin usarse; usar una ficha la salva; una ficha en uso no sale; si todas están en uso se supera el tope; la marca de "en uso" no queda puesta después de liberar.
+  - `tests/infraestructura/test_cache_disco.py`: otra versión del catálogo no ve lo guardado; un archivo dañado cuenta como ausente.
 
 ### Límites conocidos
-Pendiente — completar en reunión (revisar para eliminar esta linea)
-
-Sin caché en disco, un tope menor que las fichas distintas que necesita la partida hace que cada ficha desalojada que se vuelve a necesitar cueste una solicitud: la caché en disco es lo que hace viable un tope pequeño. Un enemigo cuya ficha se desalojó mientras dormía conserva su propia referencia y no la necesita de la caché. `fichas_en_uso` recorre las salas para encontrar enemigos vivos, así que cada desalojo cuesta O(salas); es aceptable porque solo ocurre al superar el tope, y lo primero a mejorar sería llevar una lista de enemigos activos si la cripta tuviera miles de salas.
+- Con el tope por defecto (25), un recorrido lineal y una lista de Python serían algo más rápidos que lo elegido. Se mantiene lo elegido porque el tope lo decide el usuario con `--cache-size` y su costo casi no crece; si el tope fuera siempre pequeño, la alternativa simple bastaría.
+- Sin caché en disco, un tope menor que las fichas distintas que necesita la partida hace que cada ficha liberada que se vuelve a necesitar cueste una solicitud: la caché en disco es lo que hace viable un tope pequeño.
+- Un enemigo cuya ficha se liberó mientras dormía conserva su propia referencia y no la necesita de la caché.
+- `fichas_en_uso` recorre las salas para encontrar enemigos vivos, así que cada liberación cuesta O(s). Es aceptable porque solo ocurre al superar el tope; si la cripta tuviera miles de salas, lo primero a mejorar sería llevar una lista de enemigos activos.
+- No se midió cuántas veces más encuentra la ficha en memoria LRU frente a FIFO: la elección se apoya en que el jugador se mueve entre salas cercanas y los tipos se repiten, no en una medición.
+- Si todas las fichas en memoria están en uso, la caché se queda por encima del tope hasta que alguna deja de estarlo.
+- Los archivos de versiones viejas del catálogo no se borran: no estorban, pero ocupan disco.
 
 
 ## 4.5 Inventario

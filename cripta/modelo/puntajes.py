@@ -36,15 +36,14 @@ class TablaPuntajes:
         return tuple(p for _, _, p in copia)
 
     def ranking(self, cripta_id: str, cripta_version: str) -> tuple[Puntaje, ...]:
-        """Los puntajes de una cripta (su id y su versión): primero las victorias y después las derrotas;
-        dentro de cada grupo, menor tiempo primero y, en un empate, el que se registró antes."""
-        copia = [
-            (0 if p.victoria else 1, p.tiempo_final, i, p)
-            for i, p in enumerate(self._registros)
-            if p.cripta_id == cripta_id and p.cripta_version == cripta_version
-        ]
-        ordenar_auto(copia)
-        return tuple(p for _grupo, _tiempo, _i, p in copia)
+        """Los puntajes de una cripta (su id y su versión), con el orden de `_ordenar_por_resultado`."""
+        return _ordenar_por_resultado(
+            p for p in self._registros if p.cripta_id == cripta_id and p.cripta_version == cripta_version
+        )
+
+    def globales(self) -> tuple[Puntaje, ...]:
+        """Todos los puntajes guardados (de todas las criptas y versiones), con el mismo orden que `ranking`."""
+        return _ordenar_por_resultado(self._registros)
 
     def __len__(self) -> int:
         return len(self._registros)

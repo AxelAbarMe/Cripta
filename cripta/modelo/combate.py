@@ -1,6 +1,6 @@
 import random
 
-from cripta.constantes import RAND_MAX, RAND_MIN, DANO_MIN;
+from cripta.constantes import RAND_MAX, RAND_MIN, DANO_MIN
 
 def calcular_daño(atacante, defensor, azar: random.Random) -> int:
     """daño = max(1, ataque + azar.randint(0,4) - defensa). `azar` debe ser la

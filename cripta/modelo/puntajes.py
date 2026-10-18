@@ -48,3 +48,14 @@ class TablaPuntajes:
 
     def __len__(self) -> int:
         return len(self._registros)
+
+
+def _ordenar_por_resultado(puntajes) -> tuple[Puntaje, ...]:
+    """Primero las victorias, de menor a mayor tiempo. Después las derrotas: más enemigos derrotados primero y,
+    en un empate, más tiempo vivo primero. Un empate total conserva el orden de registro."""
+    copia = [
+        (0, p.tiempo_final, 0, i, p) if p.victoria else (1, -p.enemigos_derrotados, -p.tiempo_final, i, p)
+        for i, p in enumerate(puntajes)
+    ]
+    ordenar_auto(copia)  # el índice `i` es único: la comparación nunca llega hasta el Puntaje
+    return tuple(fila[-1] for fila in copia)

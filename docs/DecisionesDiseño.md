@@ -1,10 +1,19 @@
 # Documento de Decisiones de Diseño — CRIPTA
 
 ## 4.1 Qué ocurre a continuación (agenda de eventos)
+
 ### Problema
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+El juego avanza ejecutando siempre el evento pendiente con menor `(tiempo, secuencia)`, y esa operación se repite decenas de miles de veces por partida, con varios cientos de eventos simultáneos. Además hay que poder cancelar eventos (muerte de un actor, antídoto, fin de efecto) y reprogramarlos (cambio de velocidad) sin recorrer la agenda y sin perder el orden determinista.
+
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+1. **Lista lineal desordenada**: programar es O(1), pero extraer el siguiente exige recorrerla entera. Se descartó porque la extracción es la operación más frecuente; en la medición con `--bench` es 1.5x, 5.7x y 15.6x más lenta que el montículo con 100, 500 y 2000 eventos.
+2. **Lista ordenada (inserción ordenada)**: extraer es O(1), pero cada inserción desplaza elementos, O(n), y hay una inserción por cada acción de cada actor. Se descartó por el mismo motivo, con la peor relación en las operaciones que más se repiten. No se midió por separado.
+3. **Cancelación activa** (sacar el evento del montículo al cancelar): exigiría localizarlo dentro del montículo, lo que obliga a guardar posiciones. Se descartó por la cancelación perezosa (marcar y descartar al salir), que cuesta O(1) y no necesita ese índice; el precio es que los cancelados ocupan espacio hasta salir (ver Límites).
 
 
 ### Decisión
@@ -196,10 +205,19 @@ Letras usadas: **n** = fichas en memoria (como mucho `--cache-size`, salvo cuand
 
 
 ## 4.5 Inventario
+
 ### Problema
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+El jugador recorre el inventario hacia adelante y hacia atrás desde la posición actual, suelta el objeto que está viendo en cualquier posición, equipa moviendo un objeto al frente y pide vistas ordenadas sin alterar el orden real. Además `inventario_max` limita cuántos objetos caben. La pregunta es qué estructura hace barato soltar y equipar sin depender de la posición del objeto.
+
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+1. **Lista contigua (`list`)**: es la opción más simple y rápida con pocos objetos, pero soltar o mover al frente desplaza los elementos posteriores, O(n). Se descartó porque la posición del objeto no debería importar para el costo; con inventarios típicos la diferencia es despreciable (ver Evidencia), así que es una decisión de escalabilidad y no de velocidad actual.
+2. **Lista enlazada simple**: soltar el objeto actual obligaría a conocer el nodo anterior, lo que cuesta un recorrido. Se descartó porque no permite recorrer hacia atrás ni soltar en O(1).
+3. **Arreglo con marcas de borrado**: soltar sería O(1), pero el orden real se llenaría de huecos y equipar (mover al frente) exigiría reordenar. Se descartó por la complejidad extra.
 
 
 ### Decisión
@@ -219,23 +237,34 @@ Recorrer, recoger, soltar el objeto actual y equipar cuestan O(1). Ir a una posi
 
 
 ### Evidencia empírica
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Medición con `--bench --solo inventario` (soltar el objeto del medio y volver a agregar, sin contar la construcción de la lista; Linux, Python 3.12, mediana de 5 corridas): con n=10, la lista doble cuesta 0.34 µs por operación y `list.pop(i)` 0.06 µs (6x más rápida); con n=10 000, 0.42 µs y 0.31 µs (1.4x más rápida). Es decir, la alternativa descartada es más rápida a los tamaños con los que se juega. Una medición manual anterior con n=100 000 dio 0.52 µs para la lista doble y 7.73 µs para `list.pop`, que es donde la lista doble empieza a ganar; ese caso no está en el bench.
+
 
 
 ### Límites conocidos
 Pendiente — completar en reunión
 
-Con un inventario pequeño (`inventario_max` típico de unas decenas) una lista contigua (`list`) competiría con la lista doble: en el bench, soltar en el medio con n=10 cuesta 0.40 µs con la lista doble y 0.08 µs con `list.pop`. La ventaja de la lista doble solo aparece con inventarios muy grandes, donde `list.pop` mueve muchos elementos; una medición propia sin contar la construcción dio, soltando en el medio, 0.50 µs (lista doble) contra 0.39 µs (`list.pop`) con n=10 000, y 0.52 contra 7.73 µs con n=100 000. Esa medición habrá que repetirla con el bench corregido, porque el actual incluye la construcción de la lista dentro del tiempo medido (por eso con n=10 000 el bench actual muestra a la lista doble como más lenta).
+Con un `inventario_max` típico (unas decenas) la lista doble no es más rápida que una lista contigua: según la medición, `list.pop` es entre 1.4x y 6x más rápida con n entre 10 y 10 000. La lista doble solo gana con inventarios muy grandes (del orden de 100 000 objetos, medición manual), así que esta decisión se justifica por el costo que no depende de la posición y no por velocidad con los datos reales de las criptas.
 
 Las operaciones por posición y por clase recorren la lista; si `inventario_max` creciera mucho, convendría un índice auxiliar.
 
 
 
 ## 4.6 Pergaminos de retroceso e historial reversible
+
 ### Problema
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+El pergamino de retroceso devuelve el estado de la partida al punto anterior a la última acción del jugador, incluidos todos los eventos que ocurrieron antes de su siguiente decisión, hasta 5 acciones hacia atrás. Hay que hacerlo sin guardar copias completas del estado, y los pergaminos y la caché quedan fuera de lo que se revierte.
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+1. **Copia completa del estado por acción**: es la más simple, pero §4.6 la prohíbe. Se midió igualmente como alternativa descartada: registrar una acción cuesta 1199 µs con copia completa (200 salas y 60 actores) frente a 2.17 µs con operaciones inversas, 553 veces más lenta, además de guardar 5 estados enteros.
+2. **Reconstruir desde el inicio reproduciendo la bitácora**: no guarda estado extra, pero deshacer costaría reproducir toda la partida menos una acción, proporcional a su duración. Se descartó sin medir porque su costo crece con la partida y no con el tamaño del cambio.
+3. **Registrar el cambio de cada atributo en un solo mecanismo para todo el modelo**: es lo que hace la base `Reversible`, y se adoptó para los actores y las salas. Para el reloj de eventos, la parte más caliente, se descartó y se registran inversas explícitas con un solo `if` (ver Evidencia).
 
 
 ### Decisión
@@ -283,6 +312,7 @@ Los mensajes de la bitácora en pantalla no forman parte del estado reversible: 
 
 
 ## 4.7 El rastro del jugador
+
 ### Problema
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
@@ -292,9 +322,17 @@ En su turno, un rastreador mira únicamente las salas vecinas conectadas por sal
 
 
 ### Alternativas consideradas
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+1. **Eliminar los rastros viejos activamente** (un evento de borrado por sala visitada): obliga a programar un evento por cada visita y a cancelarlo al volver a visitarla, lo que añade carga a la agenda. Se descartó porque detectar la caducidad al consultar es O(1) y no necesita eventos.
+2. **Guardar el recorrido del jugador como lista y recorrerla**: la decisión costaría lo que mida el recorrido. Se descartó porque §4.7 lo prohíbe expresamente.
+3. **Buscar la ruta hasta el jugador** (como una búsqueda en el mapa): descartada por §2.9, que dice que el rastreador no conoce el mapa completo ni busca rutas.
+4. **Referencias directas a las salas vecinas** (en vez de localizar cada vecina con `mapa.obtener`): quitaría el factor logarítmico, pero toca el mapa, el guardado y el retroceso. Se descartó con la medición de Evidencia, porque no es el cuello de botella.
+
+
 ### Decisión
 Pendiente — completar en reunión
+
 ### Análisis de complejidad
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
@@ -302,29 +340,65 @@ Una decisión del rastreador examina como mucho 4 salidas, así que su costo no 
 
 
 ### Evidencia empírica
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Se midió la decisión de un rastreador completa (vecinos, puertas, rastro y elección) con el mapa real, un enemigo en el centro de una cripta cuadrada con los rastros de sus vecinas frescos, mediana de 7 series de 20 000 decisiones (Linux, Python 3.12): 4.6 µs con 100 salas, 10.7 µs con 1600 y 11.6 µs con 6400. Con 64 veces más salas el costo se multiplica por 2.5, que es el factor logarítmico de la búsqueda binaria. La alternativa de referencias directas, simulada sin la consulta de puertas (por eso es una cota inferior), costó entre 0.41 y 0.49 µs y no creció con las salas.
+
+Con un perfilador sobre una partida de 225 salas y 140 enemigos activos, la búsqueda binaria en el mapa ocupó cerca del 8 % del tiempo total. El resto está repartido entre el registro de cambios reversibles, la agenda y el montículo, así que quitar ese factor no cambiaría de forma apreciable el cumplimiento de §5.2.
+
+
 ### Límites conocidos
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
 Estrictamente, §4.7 pide costo proporcional al número de salidas; localizar cada vecino con búsqueda binaria agrega un factor O(log n) en el tamaño de la cripta. Si esto pesara con criptas muy grandes, la mejora es que cada sala guarde referencias directas a sus salas vecinas. Un comportamiento de enemigo desconocido se trata como guardián (espera), para que un valor nuevo del API no detenga la partida. El errante consume el generador aleatorio solo cuando tiene al menos una salida abierta, y una sola vez, para que el replay sea idéntico.
 
+La decisión del rastreador cuesta O(salidas · log n), no O(salidas) como pide el enunciado en sentido estricto: con 64 veces más salas cuesta 2.5 veces más. Se aceptó por la medición anterior; si una cripta de revisión tuviera un orden de magnitud más salas, la mejora sería guardar referencias a las salas vecinas, a costa de mantenerlas en el guardado y el retroceso.
+
 
 
 ## 4.8 Bitácora en pantalla
+
 ### Problema
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+La interfaz muestra solo los últimos 20 mensajes del juego. El consumo de memoria de esa bitácora debe ser constante durante toda la partida, y agregar un mensaje no puede implicar desplazar físicamente los 19 anteriores.
+
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+1. **Lista que crece** y mostrar los últimos 20 con un recorte: la memoria crece con la partida. Se descartó por el requisito de memoria constante; con 300 000 mensajes retuvo unos 2.5 MB.
+2. **Lista de tamaño fijo que borra el primero al pasar de 20** (`del lista[0]`): memoria constante, pero cada mensaje desplaza físicamente los demás, que es lo que §4.8 prohíbe. Se descartó por el requisito, aunque con solo 20 elementos el desplazamiento es barato (ver Evidencia).
+3. **Cola circular de capacidad fija** (elegida).
+
+
 ### Decisión
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Una cola circular de capacidad fija (`ColaCircular`, 20 posiciones, implementación propia) con un índice al frente y otro al final. Al agregar con la cola llena se sobrescribe el mensaje más antiguo y el frente avanza una posición; no se mueve ningún otro mensaje. `BitacoraMensajes` envuelve la cola y entrega los mensajes del más antiguo al más reciente.
+
+
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Agregar un mensaje es O(1), sin desplazar elementos. Leer los mensajes es O(k) con k ≤ 20, y se hace una vez por pantalla. La memoria es O(20): una lista fija de 20 posiciones.
+
+
 ### Evidencia empírica
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Medición propia (Linux, Python 3.12, mediana de 5 corridas de 300 000 mensajes): agregar a la cola circular cuesta 0.116 µs por mensaje; la lista de 20 que borra el primero, 0.046 µs; la lista que crece, 0.018 µs. La memoria pico fue de 0.8 KB con la cola circular, 0.3 KB con la lista de 20 y 2540 KB con la lista que crece. Tras 1000 y tras 100 000 mensajes la cola retiene la misma memoria (1.7 KB), que es el requisito. La cola circular no es la más rápida (con solo 20 elementos desplazar es barato), pero 0.12 µs por mensaje es despreciable frente a los 20 ms por ciclo.
+
+
 ### Límites conocidos
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+La decisión se justifica por el requisito de §4.8 más que por velocidad: con 20 mensajes, desplazar sería igual de válido en tiempo. Si el tope creciera a miles de mensajes, el desplazamiento dejaría de ser despreciable y la cola circular sería claramente mejor. Sobrescribir el más antiguo descarta mensajes sin avisar; no hay historial completo en pantalla (la bitácora de partida en disco sí lo guarda). Los mensajes no forman parte del estado reversible (ver 4.6).
+
+
 
 ## 4.9 Ordenamiento
+
 ### Problema
 El juego ordena en varios lugares, y cada uno tiene tamaños y datos distintos:
 - **Enemigos de una sala**, al poblarla (§2.4 pide activarlos en orden de id): una vez por cada sala nueva con enemigos; casi siempre son pocos (2 o 3).
@@ -334,12 +408,14 @@ El juego ordena en varios lugares, y cada uno tiene tamaños y datos distintos:
 
 Es decir, casi siempre se ordenan listas pequeñas o casi ordenadas, pero a veces una grande. El enunciado pide al menos dos algoritmos con características distintas, que el programa elija automáticamente cuál usar según propiedades medibles de los datos, y no usar `list.sort()` ni `sorted()`.
 
+
 ### Alternativas consideradas
 Se implementaron seis algoritmos (`estructuras/ordenamientos.py`) y se compararon:
 1. **Usar siempre mergesort.** Mergesort divide la lista en mitades, ordena cada una y las mezcla; siempre cuesta lo mismo, sin importar cómo vengan los datos. Pero con listas pequeñas o casi ordenadas pierde frente a inserción, porque copia las mitades en listas nuevas en cada paso. Con 50 elementos casi ordenados fue 9 veces más lento que inserción. Se descartó como única opción.
 2. **Usar siempre inserción.** Inserción recorre la lista y mete cada elemento en su lugar entre los anteriores; si la lista ya está casi ordenada, casi no mueve nada. Pero si está muy desordenada, su costo crece con el cuadrado del tamaño: con 1000 elementos en orden inverso fue 29 veces más lenta que mergesort. Se descartó como única opción.
 3. **Burbuja.** Es la más simple, pero fue más lenta que la mejor de las otras dos en todos los casos medidos (por ejemplo, con 200 elementos aleatorios 6 veces más lenta que mergesort). Se descartó, y se midió en el bench como alternativa descartada.
 4. **Quicksort y heapsort** (también implementados). Quicksort, tal como está (toma el último elemento como pivote), cae en su peor caso con listas ya ordenadas, que aquí son frecuentes. Heapsort no aprovecha que los datos estén casi ordenados. Ninguno aporta algo que no cubra la combinación elegida.
+
 
 ### Decisión
 Se combinan **inserción** y **mergesort**, y un selector (`ordenar_auto` en `estructuras/ordenamiento_selector.py`) elige uno en cada llamada midiendo dos propiedades de la lista:
@@ -356,12 +432,14 @@ El ranking de la tabla de puntajes ordena con el selector automático una tupla 
 
 El selector también tiene un modo para **comparaciones costosas**, para cuando comparar dos elementos es lento (por ejemplo, si cada comparación tuviera que calcular algo). En ese caso importa cuántas comparaciones hace cada algoritmo, no el tiempo de copiar: con 8 elementos o menos usa inserción directamente, y con más elige el que, según el desorden medido, haría menos comparaciones.
 
+
 ### Análisis de complejidad
 Letras usadas: **n** = elementos a ordenar; **I** = inversiones, es decir, cuántos pares de elementos están en el orden contrario al correcto (0 si ya está ordenada, cerca de n²/2 si está al revés).
 - **Medir el desorden:** una pasada, O(n). Es lo que cuesta decidir.
 - **Inserción:** O(n + I). Con una lista casi ordenada I es pequeño y el costo queda cerca de O(n); con una lista al revés llega a O(n²). No usa memoria extra.
 - **Mergesort:** O(n log n) siempre, sin importar el orden de entrada; usa memoria extra del tamaño de la lista para las copias de las mitades.
 - La regla busca usar inserción justo cuando I es pequeño (lista corta o casi ordenada) y mergesort cuando no.
+
 
 ### Evidencia empírica
 - `--bench --solo ordenamiento` (Intel Core Ultra 7, 16 GB, Python 3.14.6). "Casi ordenado" significa una lista ordenada en la que se intercambiaron al azar n/50 pares de elementos (al menos uno). Tiempos en milisegundos por ordenamiento:
@@ -397,6 +475,7 @@ Letras usadas: **n** = elementos a ordenar; **I** = inversiones, es decir, cuán
 - Tests (`tests/estructuras/test_ordenamientos.py`): cada algoritmo ordena bien listas vacías, de un elemento, ordenadas, inversas, con repetidos, con todos los elementos iguales y aleatorias; inserción y mergesort son estables; la medida de desorden da 0 y 1 en los extremos; el selector elige inserción con listas pequeñas o grandes casi ordenadas y mergesort con listas grandes aleatorias o inversas.
 - `tests/modelo/test_puntajes.py` comprueba el orden de victorias y derrotas, el desempate por tiempo vivo, el empate total, el filtro por cripta y versión, la tabla vacía y 160 filas (más de 32, así que ahí el selector ya decide según el desorden). Dos de esos tests fallan si se rompe la regla de las derrotas.
 
+
 ### Límites conocidos
 - **Listas pequeñas.** Lo primero que mira el selector es el tamaño: si la lista tiene 32 elementos o menos, usa inserción sin revisar nada más. El bench mide listas de 10 y de 50 elementos: con 10, inserción ganó en los tres casos; con 50, ganó inserción con datos aleatorios y casi ordenados, y mergesort con datos en orden inverso. Eso indica que el tamaño donde conviene empezar a mirar el desorden está entre 10 y 50. Como el bench no mide tamaños intermedios, no confirma que 32 sea exactamente el mejor valor.
 - **Listas grandes casi ordenadas.** Si la lista tiene más de 32 elementos, el selector estima cuántos elementos están fuera de su lugar (tamaño × desorden). Si son 30 o menos, usa inserción; si son más, mergesort. Con 1000 elementos casi ordenados la estimación dio cerca de 40, así que eligió mergesort, que tardó un 15 % más que inserción (3.098 contra 2.686 ms). En listas grandes, inserción todavía conviene con algo más de 30 elementos fuera de lugar.
@@ -405,16 +484,19 @@ Letras usadas: **n** = elementos a ordenar; **I** = inversiones, es decir, cuán
 - Mergesort usa memoria extra del tamaño de la lista. Con los tamaños del juego no importa, pero con listas muy grandes sí pesaría.
 - Los puntajes globales mezclan criptas distintas, así que comparan tiempos y enemigos derrotados de criptas con distinta dificultad. Esa comparación no es justa entre criptas; solo el ranking por cripta y versión lo es.
 
+
 ## 4.10 Guardado binario de la partida
 ### Problema
 El jugador puede guardar la partida y cargarla después, y el enunciado pide que el archivo sea **binario con un formato propio**: los datos se escriben como bytes con un tamaño fijo para cada campo (por ejemplo, 4 bytes para un entero), no como texto. Además pide tres cosas concretas: poder **recuperar una sala específica sin leer el archivo completo**, **detectar un archivo de otra versión del formato** en lugar de leerlo mal, y **comparar tamaño en disco y tiempo de carga contra JSON** (texto).
 
 Guardar y cargar ocurren pocas veces por partida (cuando el jugador lo pide), así que no compiten con el límite de 20 ms por acción. Lo que importa es que el archivo sea correcto, compacto y que se pueda leer por partes.
 
+
 ### Alternativas consideradas
 1. **JSON** (texto con la estructura de los datos). Es fácil de leer y depurar, pero ocupa más y, para obtener una sala, hay que leer y convertir todo el archivo. Se midió contra el binario (ver Evidencia).
 2. **`pickle`** (el formato de Python para guardar objetos tal cual). No es un formato propio y amarra el archivo a cómo están escritas las clases del programa: si una clase cambia, un archivo viejo puede fallar de formas difíciles de explicar. Se descartó.
 3. **Binario sin índice** (todas las salas una tras otra). Es más simple, pero para encontrar una sala hay que leer todas las anteriores. Se descartó porque no cumple "recuperar una sala sin leer el archivo completo".
+
 
 ### Decisión
 **Formato del archivo** (`infraestructura/guardado_binario.py`, escrito con el módulo `struct`, que convierte números a bytes de tamaño fijo). El archivo tiene cuatro partes, en este orden:
@@ -438,12 +520,14 @@ Cargar una partida reconstruye el modelo a partir del `EstadoPartida`. Se piden 
 
 Guardar y cargar pasan por el servicio de partida. Cargar valida primero el archivo, la versión de la cripta y la del catálogo con que se guardó, y solo entonces reemplaza la partida en curso, así un fallo de validación no destruye la partida actual. Las salas visitadas se piden de nuevo a la precarga (del disco si la caché ya las tiene) y después se pisan con el estado guardado. Las salas que solo se precargaron no se guardan como cargadas, porque son estado de la caché.
 
+
 ### Análisis de complejidad
 Letras usadas: **S** = salas guardadas en el archivo; **B** = tamaño total del archivo en bytes.
 - **Guardar:** O(B) para escribir todo, más ordenar el índice de S registros con el selector de §4.9 (suele llegar casi ordenado, así que normalmente es inserción, cerca de O(S)).
 - **Cargar todo:** O(B): se lee y se convierte cada campo una vez.
 - **Cargar una sala:** O(log S) lecturas de 16 bytes para la búsqueda binaria en el índice, más la lectura de ese único bloque. No depende del tamaño total del archivo.
 - **Detectar otra versión:** leer los 24 bytes del encabezado, O(1), antes de cualquier otra cosa.
+
 
 ### Evidencia empírica
 - `--bench --solo guardado` (Intel Core Ultra 7, 16 GB, Python 3.14.6). El estado de prueba lo genera el bench: n salas con objetos, enemigos y algunas trampas, un jugador con 8 objetos y hasta 300 eventos pendientes. Tiempos en milisegundos:
@@ -462,6 +546,7 @@ Letras usadas: **S** = salas guardadas en el archivo; **B** = tamaño total del 
 - La prueba de ida y vuelta (`tests/modelo/test_guardado_vuelta.py`) compara una partida que se guardó y se cargó contra otra que nunca se guardó: tras las mismas acciones tienen el mismo estado completo, la misma vista y los mismos mensajes. Cubre trampas, antorcha, puerta con cierre automático, veneno, cambio de velocidad, un enemigo en una sala sin visitar y el paso por el archivo binario.
 - Cargar un guardado sin nada en la caché de disco, con 3 salas visitadas en la cripta de pruebas (presupuesto 9), costó 6 solicitudes (datos generales, versión del catálogo, esqueleto, un lote de contenido y dos de catálogo), igual que iniciar una partida nueva. La partida cargada y la que nunca se guardó dan el mismo estado antes y después de seguir jugando (`tests/servicios/test_servicio_partida_guardado.py`).
 - Tests del formato (`tests/infraestructura/test_guardado_binario.py`): el índice queda ordenado aunque las salas se guarden desordenadas; se recupera bien la primera, una del medio y la última sala del índice, y una que no existe da `None`; un valor que no cabe da error sin tocar el guardado anterior; un archivo con otra marca, otra versión, una cantidad de salas imposible o cortado a la mitad se rechaza: el JSON reconstruye exactamente el mismo estado, así que la comparación de tiempos es justa.
+
 
 ### Límites conocidos
 - **El juego no usa todavía la carga de una sola sala.** `cargar_sala` cumple el requisito, está medida y probada, pero al cargar una partida el juego lee el archivo completo, porque necesita todo el estado para continuar. Sería útil si en el futuro se cargaran las salas a medida que el jugador las visita.
@@ -506,6 +591,7 @@ El guardado lleva consigo una copia de la bitácora hasta el instante de guardar
 5. Si una acción no se acepta o no es válida, se detiene e informa **la línea del log y el motivo** (una divergencia: la partida reproducida se separó de la original).
 6. Al final muestra el desenlace, el puntaje y el reporte de solicitudes y caché. Termina con código 0 si la reproducción fue fiel, 1 si no lo fue y 2 si no se pudo leer el log o falló la red.
 
+
 ### Análisis de complejidad
 Letra usada: **A** = acciones anotadas en el log.
 - **Anotar una acción:** O(1). Se agrega una línea corta al final (unos 35 bytes para un movimiento) sin leer ni reescribir lo anterior. Abrir y cerrar el archivo en cada acción cuesta un poco más que dejarlo abierto, pero garantiza que cada línea quede completa en disco.
@@ -513,12 +599,14 @@ Letra usada: **A** = acciones anotadas en el log.
 - **Reproducir:** A acciones, cada una con el mismo costo que tuvo en el juego (§5.2), más mostrar cada paso.
 - **Comparar versiones:** O(1), dos comparaciones de texto.
 
+
 ### Evidencia empírica
 - Reproducción real (`py -m cripta --offline --replay datos/partida.log`, sobre una partida jugada en la consola con `cripta-01`, semilla 2734113286): el log tenía 5 acciones (recoger la antorcha, esperar, encenderla, entrar a la sala de las ratas y atacar) y el replay reprodujo las 5 sin divergencias, sin abrir la vista y sin intervención. Mostró cada paso con sus mensajes, incluidos el daño de la trampa y los ataques de las ratas, que dependen del azar, y terminó igual que la partida jugada: derrota en el tiempo 373, con 5 acciones del jugador. Un comando escrito después de morir no quedó en el log, porque solo se anotan las acciones aceptadas.
 - Formato del log (`tests/infraestructura/test_partida_log.py`): lo escrito se lee igual; una partida nueva en la misma ruta reemplaza la anterior; la última línea cortada se ignora y se avisa, y un archivo sano no avisa nada; una línea rota en medio, un archivo vacío o uno sin encabezado son errores; un encabezado incompleto se rechaza al escribir; `diferencias_de_version` informa cada versión distinta.
 - Reproducción (`tests/servicios/test_servicio_replay.py`): reproducir da la misma partida; se muestra un paso por acción con sus mensajes; reproducir no modifica el log; con otra versión o con un log parcial no se reproduce; una acción que no se acepta o que no es válida informa su línea; la última línea cortada se avisa y lo demás se reproduce; un log que no existe es un error.
 - `tests/servicios/test_servicio_partida.py` reproduce la bitácora de una partida en una partida nueva con la semilla del encabezado y compara el estado guardado, la vista y el puntaje: son iguales.
 - `tests/servicios/test_servicio_partida_guardado.py` guarda una partida, sigue jugando, carga el guardado y comprueba que la bitácora restaurada contiene solo las acciones hasta el guardado; después reproduce esa bitácora desde cero y obtiene el mismo estado que la partida cargada.
+
 
 ### Límites conocidos
 - Los mensajes de una acción rechazada quedan en la bitácora en pantalla pero no en el log, por lo que una partida reproducida puede diferir de la original solo en esos mensajes; el estado, la vista y el puntaje coinciden.

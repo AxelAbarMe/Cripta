@@ -243,15 +243,24 @@ Pendiente — completar en reunión
 ### Decisión
 Pendiente — completar en reunión (revisar para eliminar esta linea)
 
-El ranking de la tabla de puntajes ordena con el selector automático una tupla (grupo, tiempo, orden de registro): primero las victorias y luego las derrotas, menor tiempo primero, y el orden de registro desempata para que el resultado sea estable. Solo incluye los puntajes de la cripta y la versión jugadas.
+El ranking de la tabla de puntajes ordena con el selector automático una tupla de cuatro valores. Las victorias van primero, de menor a mayor tiempo final. Las derrotas van después: más enemigos derrotados primero y, en un empate, más tiempo vivo primero. El orden de registro desempata y mantiene estable el resultado; como es único, la comparación nunca llega hasta el puntaje. `ranking(cripta_id, version)` incluye solo los puntajes de la cripta y la versión jugadas. `globales()` ordena con la misma regla todos los puntajes guardados, de todas las criptas y versiones, y el menú los obtiene con `ServicioPartida.puntajes_globales()`, que no necesita una partida en curso.
 
 
 ### Análisis de complejidad
 Pendiente — completar en reunión
+
 ### Evidencia empírica
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+tests/modelo/test_puntajes.py comprueba el orden de victorias y derrotas, el desempate por tiempo vivo, el empate total, el filtro por cripta y versión, la tabla vacía y 160 filas (más del umbral con el que el selector cambia de algoritmo). Dos de esos tests fallan si se rompe la regla de las derrotas.
+
+
 ### Límites conocidos
-Pendiente — completar en reunión
+Pendiente — completar en reunión (revisar para eliminar esta linea)
+
+Los puntajes globales mezclan criptas distintas, así que comparan tiempos y enemigos derrotados de criptas con distinta dificultad. Esa comparación no es justa entre criptas; solo el ranking por cripta y versión lo es.
+
+
 
 ## 4.10 Guardado binario de la partida
 ### Problema

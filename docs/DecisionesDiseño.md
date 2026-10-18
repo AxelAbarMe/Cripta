@@ -48,6 +48,8 @@ Medición con `--bench` (escala 0.3), heap contra lista lineal (alternativa desc
 
 Rendimiento del ciclo (§5.2), medido con `--bench --solo ciclo` (escala 0.3, Python 3.12.10, Ryzen 5 5600GT con 32 GB de RAM), con 600 actores activos y 1200 eventos por ciclo. Se reporta el peor de 20 ciclos en cada corrida. Primera serie de 5 corridas: 15.9, 7.1, 6.9, 23.3 y 7.1 ms (mediana 7.1 ms). Segunda serie de 5 corridas, con el recolector de basura desactivado: 6.9, 11.9, 7.5, 13.3 y 7.0 ms (mediana 7.5 ms). De las 10 corridas, 9 quedaron por debajo del límite de 20 ms y una (23.3 ms) lo superó.
 
+Rendimiento con la partida real (§5.2), medido con `--bench --solo partida --escala 0.5` (cripta artificial cuadrada recorrida en zigzag, Windows, Python 3.12.10, equipo en reposo, mediana de 5 ejecuciones de 3 corridas cada una): con 25 salas y 12 enemigos activos, la acción típica toma 0.23 ms y el peor caso 0.48 ms; con 100 salas y 60 enemigos, 1.35 ms y 9.19 ms; con 225 salas y 140 enemigos, 3.23 ms y 14.81 ms. Las tres cumplen el límite de 20 ms, y de las 15 corridas con 225 salas la peor tomó 19.02 ms.
+
 
 ### Límites conocidos
 Pendiente — completar en reunión (revisar para eliminar esta linea)
@@ -57,6 +59,8 @@ La cancelación es perezosa: los eventos cancelados siguen ocupando espacio en e
 No se puede programar un evento en un tiempo anterior al del reloj (se lanza `ValueError`). El retroceso del pergamino restaura el reloj con un método propio (`restaurar`) en vez de programar hacia atrás.
 
 La medición del ciclo tiene picos aislados: desactivar el recolector de basura no los eliminó, por lo que no se deben a él, y no se determinó su causa (puede ser ruido del sistema, pues el equipo de medición no estaba dedicado a la prueba). Como el bench reporta el peor de 20 ciclos, un solo ciclo lento basta para que la corrida supere el límite; por eso la conclusión se apoya en la mediana de varias corridas y no en una sola, y conviene medir con el equipo en reposo y reportar también un percentil.
+
+El límite de 20 ms se cumple hasta 225 salas con 140 enemigos activos, pero el peor caso crece con el tamaño de la cripta (0.48, 9.19 y 14.81 ms con 25, 100 y 225 salas). En otro equipo (Core Ultra 7, Python 3.14) con 400 salas el peor caso fue de 36 a 48 ms, que no cumple. Como el enunciado mide el ciclo de cada sala con la cripta de referencia, se documenta como límite conocido y no como defecto. La causa del crecimiento no se aisló; un perfil sobre 225 salas mostró el costo repartido entre el registro de cambios reversibles, la agenda y el montículo, sin un único responsable.
 
 
 ## 4.2 Traer el contenido antes de que haga falta (precarga)

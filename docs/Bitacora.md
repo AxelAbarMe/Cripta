@@ -190,8 +190,9 @@ Se corrigió el orden de las derrotas en la tabla de puntajes: ahora gana la que
 
 Una revisión posterior encontró que el método de puntajes globales y el nuevo orden del ranking no habían quedado en la tabla de puntajes, y que faltaba el archivo de tests de ese orden. Se completaron ambos y la suite volvió a pasar completa (180 tests).
 
+Se integró el trabajo de la interfaz y la red: el inventario pasó a ser circular, la victoria exige abrir con la llave de salida la puerta cruzada, el contador de solicitudes se reinicia en cada partida nueva y el programa principal ya admite `--offline`, `--cache-size`, `--bench` y `--replay` sin crear la vista. Se completaron en el documento de decisiones las secciones de agenda de eventos, inventario, retroceso, rastro y bitácora en pantalla, con la medición del rastreador y de la cola circular contra sus alternativas. El rendimiento del ciclo con la partida real, medido con el equipo en reposo (mediana de 5 ejecuciones), cumple el límite de 20 ms con 25, 100 y 225 salas; el caso de 400 salas queda documentado como límite conocido.
+
 Lo siguiente que hay que realizar:
-* Medir el ciclo real de una acción con el equipo en reposo (mediana de varias corridas) y documentarlo.
 * Medir el costo de guardar los contadores del azar en cada acción.
 * Completar las decisiones de diseño pendientes y los textos de límites.
 * Revisión final de todo el proyecto.

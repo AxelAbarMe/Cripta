@@ -3,8 +3,9 @@
 TablaPuntajes vive en el modelo y no sabe nada de archivos. Esta clase la convierte
 a JSON y la guarda a través de AlmacenDiscoPuerto, igual que hace CacheDisco con la caché.
 
-Formato: {"formato": 1, "puntajes": [{...}, {...}]}, en el orden en que se registraron.
-"""
+Formato: {"formato": 2, "puntajes": [{...}, {...}]}, en el orden en que se registraron (2: se agregó "victoria").Formato: {"formato": 2, "puntajes": [{...}, {...}]}, en el orden en que se registraron.
+Cada puntaje lleva nombre, cripta, versión, acciones, enemigos derrotados, tiempo final y si fue
+victoria (cuando se agregó el campo "victoria" se cambió del formato 1 al 2)."""
 import json
 
 from cripta.excepciones import CriptaPuntajesError

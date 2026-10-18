@@ -39,7 +39,7 @@ RETROCESO_MAX_ACCIONES = 5
 # Bitácora en pantalla: solo se muestran los últimos N mensajes (4.8)
 BITACORA_MAX_MENSAJES = 20
 
-# === RED / DISCO / BENCH (Saul) ===
+# === RED / DISCO / BENCH ===
 # Caché de catálogo en memoria: tope por defecto, configurable con --cache-size (4.4)
 CACHE_TAMANO_DEFAULT = 25
 
@@ -68,5 +68,5 @@ def direccion_opuesta(direccion: str) -> str:
         return "E"
     raise ValueError(f"Dirección inválida: {direccion}")
 
-# === MODELO (Isaac) ===
+# === MODELO ===
 VELOCIDAD_MINIMA = 1   # ninguna velocidad (por efectos) puede bajar de este valor

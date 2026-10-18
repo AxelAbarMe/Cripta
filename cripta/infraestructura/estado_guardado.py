@@ -15,7 +15,7 @@ from dataclasses import dataclass
 EV_TURNO_ACTOR = 0        # sujeto = "jugador" o instancia del enemigo
 EV_VENENO_PULSO = 1       # sujeto = víctima; a = daño por pulso; b = pulsos restantes
 EV_REGENERACION = 2       # sujeto = enemigo; a = cantidad
-EV_FIN_VELOCIDAD = 3      # sujeto = actor; a = velocidad original
+EV_FIN_VELOCIDAD = 3      # sujeto = actor; a = cuánto sumó el efecto a la velocidad
 EV_ANTORCHA_APAGAR = 4    # sujeto = instancia/objeto
 EV_REARME_TRAMPA = 5      # sujeto = instancia de la trampa
 EV_CIERRE_PUERTA = 6      # sujeto = id de sala como texto; a = índice de dirección (N,S,E,O = 0..3)

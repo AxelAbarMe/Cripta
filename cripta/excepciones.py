@@ -2,7 +2,7 @@ class CriptaError(Exception):
     """Clase base para todas las excepciones de Cripta."""
     pass
 
-# === RED / DISCO (Saul) ===
+# === RED / DISCO ===
 class CriptaApiError(CriptaError):
     """Excepción para errores de la API de Cripta."""
     def __init__(self, operacion: str, codigo: int | None, mensaje: str):
@@ -56,6 +56,6 @@ class CriptaPuntajesError(CriptaError):
         self.motivo = motivo
         super().__init__(f"Tabla de puntajes inválida: {motivo}")
         
-# === MODELO (Isaac) ===
+# === MODELO ===
 class CriptaHistorialError(CriptaError):
     """Uso incorrecto del historial de retroceso (registrar sin intervalo abierto, o abrir uno encima de otro)."""

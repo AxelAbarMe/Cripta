@@ -95,6 +95,7 @@ Lo siguiente que hay que realizar:
 * Sincronizar las dos caras de una puerta y validar el reloj y la velocidad de los efectos.
 * Escribir el motor del juego, el retroceso completo, el puente con el guardado y el replay.
 
+Más tarde se empezó con la parte de red. El cliente HTTP ahora convierte cada error de red (sin conexión o tiempo agotado) en un error propio del juego que dice qué operación falló, y ante un 429 (el servidor pide esperar porque llegaron demasiadas solicitudes) espera y reintenta como máximo un número fijo de veces; cada reintento cuenta como una solicitud del presupuesto, como lo pide el enunciado. La validación de los lotes (que una solicitud no pida más elementos de los permitidos) quedó en un solo lugar, compartida por el cliente de red y el de archivos, y ClienteGeneral ya no revisa el presupuesto dos veces.
 
 # 07/10/2026
 
@@ -114,6 +115,7 @@ Lo siguiente que hay que realizar:
 * Motor Partida: acciones del jugador con sus costos, activación de enemigos, movimiento que espera contenido, trampas, muerte de actores, victoria y derrota.
 * Retroceso completo, puente entre el modelo y el guardado, y replay.
 
+En la parte de red, los errores de formato (una respuesta que no tiene la forma esperada) ahora dicen en qué operación ocurrieron, tanto en el cliente de red como en el de archivos, y el mensaje de CriptaApiError ya no muestra un código vacío cuando no hubo respuesta del servidor. El cliente falso de los tests (un cliente que responde sin red, con datos inventados) pasó a usar la misma validación de lotes y a reportar bien el total de salas, y la cripta artificial de los tests ganó una llave de salida para poder probar la victoria. Se escribió el script scripts/generar_fixtures.py, que descarga del API todas las respuestas de una cripta y del catálogo y las guarda en fixtures/ para jugar con --offline; se generaron las de cripta-01 y se documentó el formato en docs/FORMATO_OFFLINE.md.
 
 # 08/10/2026
 
@@ -133,7 +135,7 @@ Lo siguiente que hay que realizar:
 * Retroceso completo y puente entre el modelo y el guardado.
 * Replay.
 
-
+El profesor confirmó que para --offline se guardan los JSON que devuelve el API y que la organización de los archivos queda a criterio del grupo; se anotó en el documento del formato. Se corrigieron detalles de los DTO: el campo cerrada de una salida es siempre booleano (un null del JSON queda como falso), el campo abre de una llave acepta texto o número, el rearme de una trampa puede faltar y entonces se usa el valor por defecto, y el archivo de ContenidoSalaRespuestaDTO se renombró para que tenga el mismo nombre que la clase. Se rehízo la bitácora de la partida para que el replay la pueda leer: un archivo por partida, una primera línea con la cripta, las versiones y la semilla, y luego una línea por acción; si la última línea quedó cortada (por ejemplo, porque el programa se cerró mientras escribía) se ignora con un aviso, y si el encabezado no es válido o las versiones no coinciden, se informa.
 
 # 09/10/2026
 
@@ -156,7 +158,7 @@ Lo siguiente que hay que realizar:
 * Servicio que arma la partida y coordina la bitácora, el puntaje y el reporte final.
 * Replay, y decidir qué hacer con la bitácora de la partida al cargar una partida guardada.
 
-
+Se revisó el guardado binario: los formatos de struct (el módulo de Python que convierte números a bytes) se preparan una sola vez y los campos de cada registro se escriben juntos, antes de escribir se valida que cada valor quepa en su campo y al leer se valida la estructura del archivo, para detectar un archivo dañado en vez de cargar datos incorrectos. En la caché en disco, un archivo dañado ahora cuenta como ausente, así la ficha o la sala se vuelve a pedir una sola vez en lugar de gastar solicitudes de más. En el servicio del catálogo, pedir varias fichas con un id repetido cuenta aciertos y fallos igual que pedirlas una por una.
 
 # 10/10/2026
 
@@ -170,7 +172,7 @@ Lo siguiente que hay que realizar:
 * Servicio que arma la partida y coordina la bitácora, el puntaje, el guardado y el reporte final.
 * Decidir qué hacer con la bitácora de la partida al cargar una partida guardada, y el replay.
 
-
+En la precarga (el servicio que pide en segundo plano el contenido de las salas antes de que el jugador llegue), la espera por un lote quedó limitada a ESPERA_MAXIMA_LOTE_SEGUNDOS y, una vez cerrado el servicio, ya no acepta pedidos nuevos. Al poblar una sala, los enemigos se ordenan con ordenar_auto, el selector de algoritmo de ordenamiento, como lo pide el enunciado. ColaCircular lanza su propio error, ColaCircularVaciaError, en vez de una Exception genérica, y rechaza una capacidad inválida.
 
 # 11/10/2026
 
@@ -182,6 +184,30 @@ Lo siguiente que hay que realizar:
 * Replay (--replay), con revisión de las versiones y rechazo de las bitácoras parciales.
 * Medir el ciclo real de una acción contra el límite de 20 ms.
 * Controlador y vista, y el programa principal con sus banderas.
+
+La tabla de puntajes se guarda en disco con RepositorioPuntajes, en datos/puntajes, y se ordena con ordenar_auto. En el bench se agregó la carga partida, que mide el ciclo de eventos con el motor real del juego sobre criptas artificiales de varios tamaños, con tres corridas, su tiempo típico y su peor caso, para compararlo con el límite de 20 ms. El bench del inventario dejó de cronometrar la construcción de la lista, para medir solo la operación que compara, y su texto dice explícitamente qué compara.
+
+# 16/10/2026
+
+Se hizo pull de lo último de main y se terminó el bench de solicitudes de red. Esta carga compara, sobre criptas artificiales de 100 y 400 salas, cuántas solicitudes gasta la precarga pidiendo el contenido de las salas por lotes (varias salas en una sola solicitud) contra pedir una sala por solicitud, y lo mismo con las fichas del catálogo. Con lotes se gastan 10 solicitudes contra 90 en 100 salas y 40 contra 380 en 400 salas; en el catálogo, 4 lotes contra 7. Se limpió el código del bench que ya no se usaba y los textos de cada comparación ahora dicen cuál alternativa es más rápida y cuántas veces.
+
+Se reorganizaron las pruebas para que corran todas juntas con `py -m unittest discover -s tests -t .`: cada carpeta de tests lleva un archivo `__init__.py` vacío, que es lo que le indica a Python que esa carpeta es un paquete y que discover debe entrar en ella. Los tests de ServicioPartida pasaron a tests/servicios, para que tests/ tenga la misma estructura que cripta/.
+
+Se agregaron pruebas unitarias de la parte de infraestructura y servicios que aún no tenía:
+* ColaCircular: orden de salida, capacidad, vuelta del índice al llegar al final y error al sacar de una cola vacía.
+* Bitácora de partida: escribir y leer, una línea final cortada a la mitad, encabezados inválidos y diferencias de versión.
+* Guardado binario: ida y vuelta por el archivo, leer una sola sala con el índice, valores que no caben en su campo y archivos dañados.
+* Caché en disco: la versión forma parte de la clave, un archivo dañado se trata como ausente y una ficha dañada se vuelve a pedir en el mismo lote que las demás.
+* Archivo de puntajes: formato 2, un archivo dañado no se sobrescribe y las filas inválidas se rechazan.
+* ServicioCatalogo: estadísticas de aciertos y fallos, pedidos por lotes, desalojo de la ficha usada hace más tiempo y fichas en uso que no se desalojan.
+* ServicioPrecarga: mínimo de lotes, espera máxima por un lote, respuesta que llega tarde, cierre del servicio y enemigos ordenados.
+
+Al escribir los tests de la precarga se vio que los enemigos de una sala se ordenaban en cada vuelta del ciclo que los crea; se corrigió para ordenarlos una sola vez al terminar de poblar la sala.
+
+Lo siguiente que hay que realizar:
+* Escribir en el Documento de Decisiones las secciones de precarga, catálogo, caché, ordenamiento, guardado binario y bitácora con replay, con sus mediciones.
+* README con la instalación, las banderas y los comandos.
+* Bitácora y prompts de la parte de red, disco y servicios.
 
 
 # 17/10/2026
@@ -196,3 +222,24 @@ Lo siguiente que hay que realizar:
 * Medir el costo de guardar los contadores del azar en cada acción.
 * Completar las decisiones de diseño pendientes y los textos de límites.
 * Revisión final de todo el proyecto.
+
+En la noche se empezaron a escribir en el Documento de Decisiones las secciones de la parte de red y disco: 4.3 (cómo se piden por lotes y se guardan en memoria las fichas del catálogo), 4.4 (la caché, con su regla de desalojo y su copia en disco) y 4.2 (la precarga de salas). Para la evidencia se corrieron las cargas del bench y una prueba de la precarga con 400 ms de latencia simulada (el retraso que se agrega a cada respuesta del servidor): con el jugador moviéndose sin pausas, solo 8 de 89 movimientos tuvieron que esperar el contenido de la sala, 4.48 s en total. Las tres secciones se terminaron pasada la medianoche.
+
+# 18/10/2026
+
+Se hizo pull de lo último de main, con las banderas del programa principal y el replay, y se hicieron arreglos pequeños: el cliente HTTP tenía un import repetido, el número máximo de reintentos ante un 429 pasó a constantes.py junto a los demás valores del juego, se actualizaron comentarios que habían quedado viejos (el formato 2 del archivo de puntajes y lo que guarda el fin de un cambio de velocidad), se quitaron los nombres de personas de los encabezados de los archivos, la carpeta datos/ quedó fuera de git y el script de la primera prueba del API (prueba_api.py) pasó a scripts/, sin el código viejo que tenía comentado. Se quitó de requirements.txt la dependencia pytest, que no se usaba: las pruebas usan unittest, que viene con Python.
+
+Se completaron en el Documento de Decisiones las secciones 4.9, 4.10 y 4.11:
+* 4.9 (ordenamiento): cómo ordenar_auto elige el algoritmo según la cantidad de elementos y si ya vienen casi ordenados, con la tabla de tiempos de los algoritmos en 12 casos medidos con el bench, el caso de comparaciones costosas y la regla de orden del ranking de puntajes con sus tests.
+* 4.10 (guardado binario): el formato del archivo, con un índice que permite leer una sola sala sin leer el archivo completo (0.048 ms por sala) y un tamaño entre 2.5 y 2.8 veces menor que el mismo estado guardado en JSON.
+* 4.11 (bitácora y replay): el formato de la bitácora y cómo el replay la verifica. Como evidencia se reprodujo una partida real con la semilla 2734113286: las 5 acciones se reprodujeron igual y terminó en la misma derrota, en el tiempo 373.
+
+Se escribió el README con la instalación, cómo ejecutar el juego y sus banderas (--offline, --cache-size, --replay y --bench), los comandos de la consola, los archivos que genera el juego en datos/ y cómo correr las pruebas.
+
+Al revisar las pruebas se vio que las carpetas tests/vista y tests/controlador no tenían su archivo __init__.py, así que discover no entraba en ellas y sus 33 tests nunca se ejecutaban. Se agregaron los dos archivos y la suite completa pasó con 213 tests.
+
+Se completó la bitácora de la parte de red, disco y servicios de los días 6 al 17 de octubre, que no se había registrado.
+
+Lo siguiente que hay que realizar:
+* Completar PROMPTS_LLM.md con los prompts de la parte de red, disco y servicios.
+* Revisión final del proyecto antes de la entrega.

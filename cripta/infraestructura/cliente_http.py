@@ -2,21 +2,20 @@ import time
 import uuid
  
 import requests
- 
+
+from cripta.constantes import MAX_REINTENTOS_429
 from cripta.dto.contenido_sala_respuesta_dto import ContenidoSalaRespuestaDTO
 from cripta.dto.cripta_general_dto import CriptaGeneralDTO
 from cripta.dto.cripta_resumen_dto import CriptaResumenDTO
 from cripta.dto.catalogo_dto import CatalogoDTO
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.version_dto import VersionCatalogoDTO, VersionCriptaDTO
-from cripta.excepciones import CriptaApiError
 from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
 from cripta.excepciones import CriptaApiError, CriptaLimiteError
 from cripta.infraestructura.lotes import validar_lote
 
 BASE_URL = "https://cripta-api.kad06a0zhgs84.us-east-2.cs.amazonlightsail.com/v1"
 TIEMPO_ESPERA_SEGUNDOS = 10
-MAX_REINTENTOS_429 = 5 #MOVER A CONSTANTES.PY LUEGO
 
 class ClienteHttp:
     def __init__(self, contador: ContadorSolicitudes, base_url: str = BASE_URL):

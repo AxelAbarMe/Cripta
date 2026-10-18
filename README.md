@@ -154,7 +154,7 @@ cripta/
 ├── bench/             cargas sintéticas de --bench
 └── assets/            imágenes para la vista gráfica
 fixtures/              respuestas del API guardadas para --offline
-scripts/               generar_fixtures.py
+scripts/               generar_fixtures.py y prueba_api.py (prueba rápida del API)
 tests/                 pruebas, por capa
 docs/                  Documento de Decisiones, bitácora, contrato de la partida, formato offline
 PROMPTS_LLM.md         prompts usados con asistentes de IA

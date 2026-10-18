@@ -184,6 +184,7 @@ Cualquier error de infraestructura hereda de `CriptaError` y puede salir de `eje
 | `guardar(ruta)` | Guarda la partida y una copia de la bitácora en `ruta.log`. `RuntimeError` si la partida terminó |
 | `cargar(ruta, ruta_bitacora=None)` | Reemplaza la partida en curso. `FileNotFoundError` o `CriptaFormatoIncompatibleError` si el archivo falta o no es compatible, y entonces la partida en curso no se toca |
 | `registrar_puntaje(nombre)` | Solo con la partida terminada y una vez por partida. Devuelve el ranking de la cripta |
-| `ranking()` | Puntajes de la cripta y versión de la partida en curso |
+| `ranking()` | Puntajes de la cripta y versión de la partida en curso. Victorias primero (menor tiempo); luego derrotas (más enemigos derrotados y, en empate, más tiempo vivo) |
+| `puntajes_globales()` | Todos los puntajes guardados (todas las criptas y versiones), con el mismo orden. No necesita una partida en curso: la usa el menú. `RuntimeError` si no hay tabla de puntajes configurada |
 | `bitacora_completa` | `False` si se cargó un guardado sin su copia de la bitácora |
 

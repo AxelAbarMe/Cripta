@@ -80,7 +80,7 @@ def main(argv=None) -> int:
         servicio, VistaConsola(),
         ruta_guardado=str(DIRECTORIO_DATOS / "partida.sav"),
         ruta_bitacora=str(DIRECTORIO_DATOS / "partida.log"),
-        leer_puntajes=lambda: repositorio_puntajes.cargar().ordenados_por_tiempo(),
+        leer_puntajes=servicio.puntajes_globales,
     ).ejecutar()
     print("\n" + servicio.reporte_final())
     return 0

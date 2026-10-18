@@ -26,7 +26,7 @@ class ResultadoReplay:
 
     def informe(self) -> str:
         # Texto plano para mostrar en consola
-        lineas = ["--replay", self.cabecera]
+        lineas = [self.cabecera]
         lineas += [f"Aviso: {aviso}" for aviso in self.avisos]
         lineas += self.pasos
         lineas.append(f"Acciones reproducidas: {self.acciones_reproducidas} de {self.acciones_en_log}")

@@ -266,5 +266,17 @@ class PruebaPuntajes(unittest.TestCase):
         ganada.cerrar()
 
 
+    def test_los_puntajes_globales_mezclan_criptas_con_las_victorias_primero(self):
+        self.repositorio.registrar(Puntaje("Derrota", "cripta-99", "v9", 5, 3, 100, False))
+        self.repositorio.registrar(Puntaje("Victoria", CRIPTA, "otra", 5, 0, 900, True))
+        s = armar(ClienteContado, self.repositorio)
+        self.assertEqual([p.nombre_jugador for p in s.puntajes_globales()], ["Victoria", "Derrota"])
+        s.cerrar()
+
+    def test_puntajes_globales_sin_tabla_configurada(self):
+        with self.assertRaises(RuntimeError):
+            armar(ClienteContado).puntajes_globales()
+
+
 if __name__ == "__main__":
     unittest.main()

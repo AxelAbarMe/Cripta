@@ -211,7 +211,14 @@ class ServicioPartida:
         if self._repositorio_puntajes is None:
             raise RuntimeError("Este servicio no tiene una tabla de puntajes configurada.")
         tabla = self._repositorio_puntajes.cargar()
-        return tabla.ranking(self.datos_generales.id, self.datos_generales.version) 
+        return tabla.ranking(self.datos_generales.id, self.datos_generales.version)
+
+    def puntajes_globales(self) -> tuple[Puntaje, ...]:
+        """Todos los puntajes guardados (todas las criptas y versiones): victorias primero, luego derrotas.
+        No necesita una partida en curso: la usa el menú."""
+        if self._repositorio_puntajes is None:
+            raise RuntimeError("Este servicio no tiene una tabla de puntajes configurada.")
+        return self._repositorio_puntajes.cargar().globales()
 
 
 def _bitacora_del_guardado(ruta_guardado) -> Path:

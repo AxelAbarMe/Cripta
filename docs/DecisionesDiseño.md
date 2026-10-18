@@ -352,7 +352,7 @@ La regla:
 
 Todos los usos del juego pasan por `ordenar_auto`. Mergesort es **estable**: dos elementos iguales quedan en el mismo orden en que venían. De todos modos, cada uso del juego ordena tuplas que llevan un desempate (un índice o un id único), así que el resultado no depende de eso.
 
-El ranking de la tabla de puntajes ordena con el selector automático una tupla (grupo, tiempo, orden de registro): primero las victorias y luego las derrotas, menor tiempo primero, y el orden de registro desempata para que el resultado sea estable. Solo incluye los puntajes de la cripta y la versión jugadas.
+El ranking de la tabla de puntajes ordena con el selector automático una tupla de cuatro valores. Las victorias van primero, de menor a mayor tiempo final. Las derrotas van después: más enemigos derrotados primero y, en un empate, más tiempo vivo primero. El orden de registro desempata y mantiene estable el resultado; como es único, la comparación nunca llega hasta el puntaje. `ranking(cripta_id, version)` incluye solo los puntajes de la cripta y la versión jugadas. `globales()` ordena con la misma regla todos los puntajes guardados, de todas las criptas y versiones, y el menú los obtiene con `ServicioPartida.puntajes_globales()`, que no necesita una partida en curso.
 
 El selector también tiene un modo para **comparaciones costosas**, para cuando comparar dos elementos es lento (por ejemplo, si cada comparación tuviera que calcular algo). En ese caso importa cuántas comparaciones hace cada algoritmo, no el tiempo de copiar: con 8 elementos o menos usa inserción directamente, y con más elige el que, según el desorden medido, haría menos comparaciones.
 

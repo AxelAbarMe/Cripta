@@ -134,9 +134,21 @@ class ControladorCripta:
             self._guardar()
         elif orden.tipo == "cargar":
             self._cargar()
+        elif orden.tipo == "pergamino":
+            return self._retroceder(orden.argumento or 1, vista)
         else:
             accion = self._traducir(orden, vista)
             return accion is not None and self._ejecutar_accion(accion)
+        return False
+
+    def _retroceder(self, cantidad: int, vista) -> bool:
+        # Cada pergamino deshace una acción; se limita a lo que la vista dice que es posible.
+        cantidad = min(cantidad, vista.retrocesos_posibles)
+        if cantidad <= 0:
+            self._vista.mostrar_aviso("No hay ninguna acción que se pueda deshacer.")
+            return False
+        for _ in range(cantidad):
+            self._ejecutar_accion(Accion("pergamino"))
         return False
 
     # ------------------------------------------------- orden -> acción

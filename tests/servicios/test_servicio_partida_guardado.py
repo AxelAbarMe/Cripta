@@ -206,6 +206,17 @@ class PruebaPuntajes(unittest.TestCase):
         self.assertEqual(s.partida.desenlace(), "victoria")
         return s
 
+    def test_entrar_a_la_salida_sin_la_llave_de_salida_no_gana(self):
+        s = armar(ClienteSalaCuatro, self.repositorio)
+        iniciar(s)
+        llave = s._catalogo.obtener("itm_llave_negra")
+        s.partida._jugador.inventario.recoger(ObjetoInventario("k2", llave))
+        s.partida._datos = dataclasses.replace(s.partida._datos, llave_salida="itm_otra_llave")   # §2.12
+        s.ejecutar(A("abrir", "E"))
+        s.ejecutar(A("mover", "E"))
+        self.assertEqual(s.partida.desenlace(), "en_curso")
+        self.assertEqual(s.partida.vista().sala_id, s.partida._datos.sala_salida)
+
     def _perder(self):
         s = armar(ClienteContado, self.repositorio)
         s.iniciar_nueva(CRIPTA, 5)

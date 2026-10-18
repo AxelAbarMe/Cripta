@@ -24,6 +24,9 @@ class ContadorSolicitudes:
  
     def registrar_solicitud(self) -> None:
         self._realizadas += 1
+
+    def reiniciar(self) -> None:
+        self._realizadas = 0
  
     def reporte(self) -> str:
         return (f"Solicitudes realizadas: {self._realizadas}, Presupuesto máximo: {self._presupuesto_maximo}, Restantes: {self.restantes}")

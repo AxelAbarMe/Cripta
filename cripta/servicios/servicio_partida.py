@@ -56,6 +56,7 @@ class ServicioPartida:
         """Descarga lo básico de la cripta, arma el modelo y deja a la partida lista para la primera acción.
         Sin `ruta_bitacora` no se escribe bitácora (replay y bench)."""
         self.cerrar()
+        self._contador.reiniciar()
         general, version_catalogo = self._datos_basicos(cripta_id)
         if semilla is None:
             semilla = random.SystemRandom().randrange(2 ** 32)   # la semilla queda en la bitácora y en el guardado

@@ -33,6 +33,19 @@ def _caja(titulo: str, lineas: list[str], ancho: int, borde: str = "-", lado: st
     cuerpo = [f"{lado} {linea[:interior].ljust(interior)} {lado}" for linea in lineas]
     return [arriba] + cuerpo + [esquina + borde * (ancho - 2) + esquina]
 
+def _caja_mensajes(mensajes) -> list[str]:
+    # Dos columnas: cada mensaje se ajusta a la columna y no se parte entre ellas.
+    ancho = (ANCHO - 4 - 3) // 2
+    bloques = [textwrap.wrap(f"{i}. {m}", ancho, subsequent_indent=" " * len(f"{i}. ")) for i, m in enumerate(mensajes, start=1)]
+    total, usadas, izq, der = sum(len(b) for b in bloques), 0, [], []
+    for b in bloques:
+        (izq if usadas < total / 2 else der).extend(b)
+        usadas += len(b)
+    filas = max(len(izq), len(der))
+    izq += [""] * (filas - len(izq))
+    der += [""] * (filas - len(der))
+    cuerpo = [f"{a.ljust(ancho)} | {b.ljust(ancho)}" for a, b in zip(izq, der)]
+    return _caja("MENSAJES (ultimos 20)", cuerpo or ["(sin mensajes)"], ANCHO)
 
 def _tabla(titulo: str, encabezados: tuple, filas: list[tuple]) -> list[str]:
     # Tabla con título; cada columna toma el ancho de su contenido más largo.
@@ -171,8 +184,12 @@ class VistaConsola(VistaBase):
             return None
         if comando == "ordenar":
             return Orden("ordenar", argumento) if argumento in CRITERIOS_ORDEN else None
-        if comando in ("esperar", "usar", "equipar", "soltar", "pergamino", "guardar", "cargar", "salir"):
+        if comando in ("esperar", "usar", "equipar", "soltar", "guardar", "cargar", "salir"):
             return Orden(comando)
+        if comando == "pergamino":
+            if argumento is None:
+                return Orden("pergamino", 1)
+            return Orden("pergamino", int(argumento)) if argumento.isdigit() and 1 <= int(argumento) <= 5 else None
         if comando in ("sig", "ant"):
             return Orden("siguiente" if comando == "sig" else "anterior")
         return None
@@ -196,7 +213,7 @@ class VistaConsola(VistaBase):
             escribir(linea)
         for linea in _unir_columnas(self._paneles_izquierdos(vista), self._paneles_derechos(vista)):
             escribir(linea)
-        for linea in _caja("MENSAJES (ultimos 20)", [f"  {m}" for m in mensajes] or ["(sin mensajes)"], ANCHO):
+        for linea in _caja_mensajes(mensajes):
             escribir(linea)
         self._volcar_pendientes(True)
 

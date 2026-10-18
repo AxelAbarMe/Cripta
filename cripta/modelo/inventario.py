@@ -58,14 +58,14 @@ class Inventario(Reversible):
         return self._cursor.data if self._cursor else None
 
     # --- recorrido ---
-    def siguiente(self) -> ObjetoInventario | None:
-        if self._cursor and self._cursor.next:
-            self._cursor = self._cursor.next
+    def siguiente(self):
+        if self._cursor:
+            self._cursor = self._cursor.next or self._lista.head   # del último pasa al primero
         return self.objeto_actual()
 
-    def anterior(self) -> ObjetoInventario | None:
-        if self._cursor and self._cursor.prev:
-            self._cursor = self._cursor.prev
+    def anterior(self):
+        if self._cursor:
+            self._cursor = self._cursor.prev or self._lista.tail   # del primero pasa al último
         return self.objeto_actual()
     
     def ir_a_posicion(self, indice: int) -> ObjetoInventario | None:

@@ -9,6 +9,15 @@
       "enemigos_derrotados": 0,
       "tiempo_final": 223,
       "victoria": false
+    },
+    {
+      "nombre_jugador": "Ax",
+      "cripta_id": "cripta-04",
+      "cripta_version": "d6727c7f4950",
+      "acciones_jugador": 57,
+      "enemigos_derrotados": 1,
+      "tiempo_final": 4321,
+      "victoria": false
     }
   ]
 }

@@ -387,11 +387,16 @@ class Partida:
         with self._historial.sin_registrar():
             self._precarga.precargar_desde(destino.id)
         self._activar_trampas_de(destino)   # antes de procesar el siguiente evento del reloj (§2.10)
-        if self._jugador.esta_vivo() and destino.id == self._datos.sala_salida:
+        if (self._jugador.esta_vivo() and destino.id == self._datos.sala_salida and self._puerta_exige_llave_de_salida(sala.id, direccion)):
             self._desenlace = VICTORIA
             self._decir("¡Has llegado a la salida! Ganas la partida.")
         self._terminar_accion_jugador(accion.costo_base)
         return self._aceptar()
+
+    def _puerta_exige_llave_de_salida(self, origen_id: int, direccion: str) -> bool:
+        # 2.12: la puerta cruzada exige llave_salida; solo se cruza abierta y abrirla requirió esa llave
+        llave, _cierre = self._mapa.datos_de_puerta(origen_id, direccion)
+        return llave is not None and llave == self._datos.llave_salida
 
     def _activar_trampas_de(self, sala) -> None:
         for trampa in sala.trampas:

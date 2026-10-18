@@ -395,6 +395,7 @@ Letras usadas: **n** = elementos a ordenar; **I** = inversiones, es decir, cuán
 
   En los cuatro casos eligió el que hace menos comparaciones.
 - Tests (`tests/estructuras/test_ordenamientos.py`): cada algoritmo ordena bien listas vacías, de un elemento, ordenadas, inversas, con repetidos, con todos los elementos iguales y aleatorias; inserción y mergesort son estables; la medida de desorden da 0 y 1 en los extremos; el selector elige inserción con listas pequeñas o grandes casi ordenadas y mergesort con listas grandes aleatorias o inversas.
+- `tests/modelo/test_puntajes.py` comprueba el orden de victorias y derrotas, el desempate por tiempo vivo, el empate total, el filtro por cripta y versión, la tabla vacía y 160 filas (más de 32, así que ahí el selector ya decide según el desorden). Dos de esos tests fallan si se rompe la regla de las derrotas.
 
 ### Límites conocidos
 - **Listas pequeñas.** Lo primero que mira el selector es el tamaño: si la lista tiene 32 elementos o menos, usa inserción sin revisar nada más. El bench mide listas de 10 y de 50 elementos: con 10, inserción ganó en los tres casos; con 50, ganó inserción con datos aleatorios y casi ordenados, y mergesort con datos en orden inverso. Eso indica que el tamaño donde conviene empezar a mirar el desorden está entre 10 y 50. Como el bench no mide tamaños intermedios, no confirma que 32 sea exactamente el mejor valor.
@@ -402,6 +403,7 @@ Letras usadas: **n** = elementos a ordenar; **I** = inversiones, es decir, cuán
 - **Desorden que no se ve entre vecinos.** La medida de desorden solo compara cada elemento con el siguiente. Una lista hecha de dos mitades ordenadas pero intercambiadas (por ejemplo, 51…100 seguido de 1…50) tiene un solo par de vecinos al revés: el selector la vería casi ordenada y elegiría inserción, aunque tiene muchísimas inversiones y la inserción tardaría como en su peor caso. No se comprobó si algún uso del juego produce listas así.
 - El modo de comparaciones costosas está implementado y medido, pero ninguna parte del juego lo usa: en todos los usos se comparan tuplas de números o textos, que es barato.
 - Mergesort usa memoria extra del tamaño de la lista. Con los tamaños del juego no importa, pero con listas muy grandes sí pesaría.
+- Los puntajes globales mezclan criptas distintas, así que comparan tiempos y enemigos derrotados de criptas con distinta dificultad. Esa comparación no es justa entre criptas; solo el ranking por cripta y versión lo es.
 
 ## 4.10 Guardado binario de la partida
 ### Problema

@@ -90,7 +90,7 @@ Letras usadas: **S** = salas de la cripta; **a** = salas a 2 pasos o menos de la
 - Tests (`tests/servicios/test_servicio_precarga.py`): recorrer las 25 salas de una cripta artificial usa exactamente 3 lotes; si una respuesta no llega a tiempo hay un error en lugar de una espera eterna; una respuesta que llega tarde se ignora y la sala se puede volver a pedir; después de cerrar, pedir una sala falla de inmediato.
 
 ### Límites conocidos
-- La anticipación mira 2 pasos a la redonda. Si el jugador se mueve sin pausa y la red es lenta, alcanza al hilo de red y espera (7 de 89 movimientos en la medición). Con una red mucho más lenta que 400 ms convendría mirar más lejos.
+- La anticipación mira 2 pasos a la redonda. Si el jugador se mueve sin pausa y la red es lenta, alcanza al hilo de red y espera (8 de 89 movimientos en la medición). Con una red mucho más lenta que 400 ms convendría mirar más lejos.
 - El recorrido en anchura no distingue puertas cerradas: puede anticipar salas detrás de una puerta que el jugador nunca abra. No supera el máximo de ⌈S/10⌉ solicitudes, pero puede gastar algunas en salas que no se visitan.
 - Hay un solo hilo de red y los lotes salen de uno en uno. Si el API permitiera solicitudes simultáneas, varios hilos acortarían la espera, pero complicarían el orden determinista.
 - La espera máxima de 60 s es larga para un jugador; se eligió así para no dar por fallida una respuesta lenta pero válida.
@@ -249,7 +249,7 @@ Para que el reloj pueda revertirse, expone `restaurar` (tiempo y contador de sec
 
 Cada objeto del modelo que cambia durante la partida sabe deshacer sus propios cambios. Una base común (`Reversible`) intercepta la asignación de atributos y, si el objeto tiene un registrador, guarda solo el valor que pisa; los cambios que no son asignaciones (agregar o quitar de una lista, mover un nodo del inventario, programar o ejecutar un evento) registran su inversa explícita. El historial entrega un gancho (`registrar_cambio`) que ignora los cambios fuera de un intervalo, mientras se revierte y dentro de un bloque `sin_registrar()`, pensado para no deshacer la carga de contenido ni las operaciones con pergaminos. Las inversas del inventario buscan el nodo por su objeto y no por el nodo guardado, porque reponer un objeto crea un nodo nuevo.
 
-El motor abre un intervalo por cada acción del jugador aceptada y lo cierra cuando le vuelve a tocar decidir; una acción rechazada descarta su intervalo, porque no cambia nada. Todo lo que cambia durante el intervalo (reloj, agenda, vida, posición, rastro, puertas, trampas, suelo, inventario, enemigos y los contadores de la partida) registra su inversa; el estado del generador aleatorio también se restaura, de modo que repetir una acción tras retroceder da el mismo resultado y el pergamino no sirve para volver a tirar los dados. La carga de contenido de una sala y las operaciones con pergaminos se hacen dentro de `sin_registrar()`: cargar contenido es infraestructura y no estado del juego, y recoger o soltar un pergamino no se deshace (§2.11). Usar un pergamino primero revierte el último intervalo y después descuenta el pergamino, fuera del historial; no consume tiempo ni cuenta como acción. Sin pergamino, o sin intervalos que deshacer, se rechaza sin consumir nada; el historial guarda como máximo 5 intervalos.  
+El motor abre un intervalo por cada acción del jugador aceptada y lo cierra cuando le vuelve a tocar decidir; una acción rechazada descarta su intervalo, porque no cambia nada. Todo lo que cambia durante el intervalo (reloj, agenda, vida, posición, rastro, puertas, trampas, suelo, inventario, enemigos y los contadores de la partida) registra su inversa; el estado del generador aleatorio también se restaura, de modo que repetir una acción tras retroceder da el mismo resultado y el pergamino no sirve para volver a tirar los dados. La carga de contenido de una sala y las operaciones con pergaminos se hacen dentro de `sin_registrar()`: cargar contenido es infraestructura y no estado del juego, y recoger o soltar un pergamino no se deshace (§2.11). Usar un pergamino primero revierte el último intervalo y después descuenta el pergamino, fuera del historial; no consume tiempo ni cuenta como acción. Sin pergamino, o sin intervalos que deshacer, se rechaza sin consumir nada: el historial guarda como máximo 5 intervalos.  
 
 Si la infraestructura falla a mitad de una acción (por ejemplo, se agota el presupuesto al pedir una ficha cuando el jugador ya entró a la sala), el intervalo abierto se revierte con las mismas inversas del retroceso en lugar de descartarse, de modo que la acción no deja cambios a medias y se puede reintentar. Una acción rechazada no cambió nada y su intervalo solo se descarta.
 
@@ -326,87 +326,201 @@ Pendiente — completar en reunión
 
 ## 4.9 Ordenamiento
 ### Problema
-Pendiente — completar en reunión
+El juego ordena en varios lugares, y cada uno tiene tamaños y datos distintos:
+- **Enemigos de una sala**, al poblarla (§2.4 pide activarlos en orden de id): una vez por cada sala nueva con enemigos; casi siempre son pocos (2 o 3).
+- **Vistas ordenadas del inventario** (por peso, valor o nombre): cuando el jugador las pide; como mucho la capacidad del inventario.
+- **Tabla de puntajes** (ranking de la cripta y tabla general): al terminar una partida o al abrir los puntajes; tantos elementos como partidas registradas.
+- **Al guardar la partida**: el índice de salas del archivo binario (una entrada por sala de la cripta, cientos si la cripta es grande) y los eventos pendientes de la agenda (decenas). Estos datos suelen llegar **casi ordenados**, porque salen de estructuras que ya guardan un orden parecido.
+
+Es decir, casi siempre se ordenan listas pequeñas o casi ordenadas, pero a veces una grande. El enunciado pide al menos dos algoritmos con características distintas, que el programa elija automáticamente cuál usar según propiedades medibles de los datos, y no usar `list.sort()` ni `sorted()`.
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+Se implementaron seis algoritmos (`estructuras/ordenamientos.py`) y se compararon:
+1. **Usar siempre mergesort.** Mergesort divide la lista en mitades, ordena cada una y las mezcla; siempre cuesta lo mismo, sin importar cómo vengan los datos. Pero con listas pequeñas o casi ordenadas pierde frente a inserción, porque copia las mitades en listas nuevas en cada paso. Con 50 elementos casi ordenados fue 9 veces más lento que inserción. Se descartó como única opción.
+2. **Usar siempre inserción.** Inserción recorre la lista y mete cada elemento en su lugar entre los anteriores; si la lista ya está casi ordenada, casi no mueve nada. Pero si está muy desordenada, su costo crece con el cuadrado del tamaño: con 1000 elementos en orden inverso fue 29 veces más lenta que mergesort. Se descartó como única opción.
+3. **Burbuja.** Es la más simple, pero fue más lenta que la mejor de las otras dos en todos los casos medidos (por ejemplo, con 200 elementos aleatorios 6 veces más lenta que mergesort). Se descartó, y se midió en el bench como alternativa descartada.
+4. **Quicksort y heapsort** (también implementados). Quicksort, tal como está (toma el último elemento como pivote), cae en su peor caso con listas ya ordenadas, que aquí son frecuentes. Heapsort no aprovecha que los datos estén casi ordenados. Ninguno aporta algo que no cubra la combinación elegida.
 
 ### Decisión
-Pendiente — completar en reunión (revisar para eliminar esta linea)
+Se combinan **inserción** y **mergesort**, y un selector (`ordenar_auto` en `estructuras/ordenamiento_selector.py`) elige uno en cada llamada midiendo dos propiedades de la lista:
+- **n**, el tamaño;
+- **el desorden**: la fracción de pares de elementos vecinos que están al revés. Vale 0 si la lista ya está ordenada, alrededor de 0.5 si es aleatoria y 1 si está en orden inverso. Se mide con una sola pasada por la lista.
+
+La regla:
+- Si n ≤ 32, inserción (en listas pequeñas, mergesort pierde por lo que gasta en copiar).
+- Si n > 32, se calcula n × desorden, que aproxima cuántos elementos están fuera de lugar. Si es 30 o menos (casi ordenada), inserción; si es más, mergesort.
+
+Todos los usos del juego pasan por `ordenar_auto`. Mergesort es **estable**: dos elementos iguales quedan en el mismo orden en que venían. De todos modos, cada uso del juego ordena tuplas que llevan un desempate (un índice o un id único), así que el resultado no depende de eso.
 
 El ranking de la tabla de puntajes ordena con el selector automático una tupla (grupo, tiempo, orden de registro): primero las victorias y luego las derrotas, menor tiempo primero, y el orden de registro desempata para que el resultado sea estable. Solo incluye los puntajes de la cripta y la versión jugadas.
 
+El selector también tiene un modo para **comparaciones costosas**, para cuando comparar dos elementos es lento (por ejemplo, si cada comparación tuviera que calcular algo). En ese caso importa cuántas comparaciones hace cada algoritmo, no el tiempo de copiar: con 8 elementos o menos usa inserción directamente, y con más elige el que, según el desorden medido, haría menos comparaciones.
 
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Letras usadas: **n** = elementos a ordenar; **I** = inversiones, es decir, cuántos pares de elementos están en el orden contrario al correcto (0 si ya está ordenada, cerca de n²/2 si está al revés).
+- **Medir el desorden:** una pasada, O(n). Es lo que cuesta decidir.
+- **Inserción:** O(n + I). Con una lista casi ordenada I es pequeño y el costo queda cerca de O(n); con una lista al revés llega a O(n²). No usa memoria extra.
+- **Mergesort:** O(n log n) siempre, sin importar el orden de entrada; usa memoria extra del tamaño de la lista para las copias de las mitades.
+- La regla busca usar inserción justo cuando I es pequeño (lista corta o casi ordenada) y mergesort cuando no.
+
 ### Evidencia empírica
-Pendiente — completar en reunión
+- `--bench --solo ordenamiento` (Intel Core Ultra 7, 16 GB, Python 3.14.6). "Casi ordenado" significa una lista ordenada en la que se intercambiaron al azar n/50 pares de elementos (al menos uno). Tiempos en milisegundos por ordenamiento:
+
+  | n | Datos | Inserción | Mergesort | Burbuja (descartada) | Elige el selector |
+  |---|---|---|---|---|---|
+  | 10 | aleatorio | 0.004 | 0.010 | 0.006 | inserción |
+  | 10 | casi ordenado | 0.002 | 0.009 | 0.004 | inserción |
+  | 10 | inverso | 0.004 | 0.009 | 0.007 | inserción |
+  | 50 | aleatorio | 0.057 | 0.062 | 0.116 | inserción |
+  | 50 | casi ordenado | 0.006 | 0.054 | 0.060 | inserción |
+  | 50 | inverso | 0.092 | 0.054 | 0.130 | mergesort |
+  | 200 | aleatorio | 0.849 | 0.282 | 1.758 | mergesort |
+  | 200 | casi ordenado | 0.054 | 0.249 | 0.865 | inserción |
+  | 200 | inverso | 1.431 | 0.249 | 1.984 | mergesort |
+  | 1000 | aleatorio | 33.084 | 2.415 | — | mergesort |
+  | 1000 | casi ordenado | 2.686 | 3.098 | — | mergesort |
+  | 1000 | inverso | 62.604 | 2.161 | — | mergesort |
+
+  (Con 1000 elementos el bench no incluye burbuja: con 200 ya era la más lenta en todos los casos.)
+- Lectura: el selector eligió el algoritmo más rápido en 11 de los 12 casos. El tiempo del selector, que incluye medir el desorden, quedó entre 0.92 y 1.28 veces el del mejor de los dos. Con tiempos tan pequeños esa diferencia es en parte ruido de la medición, por eso hay valores por debajo de 1. El único error fue con 1000 elementos casi ordenados: eligió mergesort (3.1 ms) cuando inserción tardó 2.7 ms.
+- Comparado con usar un solo algoritmo: "siempre mergesort" habría sido 9 veces más lento con 50 elementos casi ordenados (0.054 contra 0.006 ms) y 4.6 veces con 200 (0.249 contra 0.054 ms). "Siempre inserción" habría sido 14 veces más lento con 1000 aleatorios (33.1 contra 2.4 ms) y 29 veces con 1000 en orden inverso (62.6 contra 2.2 ms).
+- Comparaciones costosas (se cuenta cuántas comparaciones hace cada algoritmo, no el tiempo):
+
+  | n | Datos | Inserción | Mergesort | Elige |
+  |---|---|---|---|---|
+  | 50 | aleatorio | 679 | 222 | mergesort |
+  | 50 | casi ordenado | 108 | 161 | inserción |
+  | 200 | aleatorio | 9920 | 1267 | mergesort |
+  | 200 | casi ordenado | 877 | 947 | inserción |
+
+  En los cuatro casos eligió el que hace menos comparaciones.
+- Tests (`tests/estructuras/test_ordenamientos.py`): cada algoritmo ordena bien listas vacías, de un elemento, ordenadas, inversas, con repetidos, con todos los elementos iguales y aleatorias; inserción y mergesort son estables; la medida de desorden da 0 y 1 en los extremos; el selector elige inserción con listas pequeñas o grandes casi ordenadas y mergesort con listas grandes aleatorias o inversas.
+
 ### Límites conocidos
-Pendiente — completar en reunión
+- **Listas pequeñas.** Lo primero que mira el selector es el tamaño: si la lista tiene 32 elementos o menos, usa inserción sin revisar nada más. El bench mide listas de 10 y de 50 elementos: con 10, inserción ganó en los tres casos; con 50, ganó inserción con datos aleatorios y casi ordenados, y mergesort con datos en orden inverso. Eso indica que el tamaño donde conviene empezar a mirar el desorden está entre 10 y 50. Como el bench no mide tamaños intermedios, no confirma que 32 sea exactamente el mejor valor.
+- **Listas grandes casi ordenadas.** Si la lista tiene más de 32 elementos, el selector estima cuántos elementos están fuera de su lugar (tamaño × desorden). Si son 30 o menos, usa inserción; si son más, mergesort. Con 1000 elementos casi ordenados la estimación dio cerca de 40, así que eligió mergesort, que tardó un 15 % más que inserción (3.098 contra 2.686 ms). En listas grandes, inserción todavía conviene con algo más de 30 elementos fuera de lugar.
+- **Desorden que no se ve entre vecinos.** La medida de desorden solo compara cada elemento con el siguiente. Una lista hecha de dos mitades ordenadas pero intercambiadas (por ejemplo, 51…100 seguido de 1…50) tiene un solo par de vecinos al revés: el selector la vería casi ordenada y elegiría inserción, aunque tiene muchísimas inversiones y la inserción tardaría como en su peor caso. No se comprobó si algún uso del juego produce listas así.
+- El modo de comparaciones costosas está implementado y medido, pero ninguna parte del juego lo usa: en todos los usos se comparan tuplas de números o textos, que es barato.
+- Mergesort usa memoria extra del tamaño de la lista. Con los tamaños del juego no importa, pero con listas muy grandes sí pesaría.
 
 ## 4.10 Guardado binario de la partida
 ### Problema
-Pendiente — completar en reunión
+El jugador puede guardar la partida y cargarla después, y el enunciado pide que el archivo sea **binario con un formato propio**: los datos se escriben como bytes con un tamaño fijo para cada campo (por ejemplo, 4 bytes para un entero), no como texto. Además pide tres cosas concretas: poder **recuperar una sala específica sin leer el archivo completo**, **detectar un archivo de otra versión del formato** en lugar de leerlo mal, y **comparar tamaño en disco y tiempo de carga contra JSON** (texto).
+
+Guardar y cargar ocurren pocas veces por partida (cuando el jugador lo pide), así que no compiten con el límite de 20 ms por acción. Lo que importa es que el archivo sea correcto, compacto y que se pueda leer por partes.
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+1. **JSON** (texto con la estructura de los datos). Es fácil de leer y depurar, pero ocupa más y, para obtener una sala, hay que leer y convertir todo el archivo. Se midió contra el binario (ver Evidencia).
+2. **`pickle`** (el formato de Python para guardar objetos tal cual). No es un formato propio y amarra el archivo a cómo están escritas las clases del programa: si una clase cambia, un archivo viejo puede fallar de formas difíciles de explicar. Se descartó.
+3. **Binario sin índice** (todas las salas una tras otra). Es más simple, pero para encontrar una sala hay que leer todas las anteriores. Se descartó porque no cumple "recuperar una sala sin leer el archivo completo".
+
 ### Decisión
-Pendiente — completar en reunión (revisar para eliminar esta linea)
+**Formato del archivo** (`infraestructura/guardado_binario.py`, escrito con el módulo `struct`, que convierte números a bytes de tamaño fijo). El archivo tiene cuatro partes, en este orden:
+
+| Parte | Tamaño | Contenido |
+|---|---|---|
+| Encabezado | 24 bytes | la marca `CRPT` (para reconocer que es un archivo de Cripta), la versión del formato, la cantidad de salas y dónde empieza y cuánto mide el bloque global |
+| Índice | 16 bytes por sala | para cada sala: su id, en qué byte del archivo empieza su bloque y cuánto mide; **ordenado por id de sala** (con el selector de §4.9) |
+| Bloque global | variable | cripta y versiones, semilla y estado del azar, reloj, jugador e inventario, eventos pendientes de la agenda y mensajes |
+| Bloques de sala | variable, uno por sala | puertas, rastro, objetos del suelo, trampas y enemigos de esa sala |
+
+- **Recuperar una sala sin leer todo** (`cargar_sala`): como cada registro del índice mide lo mismo (16 bytes) y están ordenados por id, se hace búsqueda binaria **directamente sobre el archivo**: se salta a la posición del registro del medio, se leen sus 16 bytes, se decide si seguir a la izquierda o a la derecha, y así hasta encontrar la sala. Después se salta a su bloque y se lee solo ese. Nunca se leen las demás salas ni el índice completo.
+- **Detectar otra versión:** al abrir el archivo se revisa primero el encabezado. Si no empieza con `CRPT` ("no es un archivo de Cripta") o la versión del formato no es la que el programa entiende, se lanza `CriptaFormatoIncompatibleError` sin leer nada más. También se rechaza un archivo cuyo encabezado indica más salas de las que caben en su tamaño real, o que está cortado.
+- **Guardado seguro:** el archivo se arma completo en memoria y se escribe primero con otro nombre (`.tmp`), que después reemplaza al anterior. Si el programa se cierra a la mitad, el guardado anterior queda intacto. Si un valor no cabe en su campo (por ejemplo, un número demasiado grande para 4 bytes), se lanza un error antes de tocar el disco.
+
+**Qué se guarda y cómo se carga:**
 
 La partida viva se convierte a datos planos (`EstadoPartida`) en un módulo del modelo (`persistencia_modelo.py`), que no escribe archivos: eso lo hace `GuardadoBinario`. La agenda del reloj contiene funciones, que no se pueden escribir en disco, así que cada evento declara al programarse un descriptor (tipo, sujeto y dos números) y la agenda se guarda como esos descriptores; un evento sin descriptor produce un error en lugar de perderse en silencio. Solo se guardan como cargadas las salas a las que el jugador llegó: el contenido que solo se precargó es estado de la caché y se vuelve a pedir al cargar. No se guarda el historial de retroceso, de modo que tras cargar el pergamino no deshace acciones anteriores al guardado. Solo se puede guardar con la partida en curso y cuando al jugador le toca decidir, por lo que no hay un evento de turno del jugador pendiente.
 
 Cargar una partida reconstruye el modelo a partir del `EstadoPartida`. Se piden de nuevo el contenido y las fichas de las salas visitadas y el estado guardado manda sobre lo recién creado: suelo, trampas, enemigos (dormidos y activos), puertas, rastro, inventario con su equipo y su cursor, y estadísticas del jugador. Las acciones de la agenda, que son funciones, se recrean a partir de su descriptor con la misma pareja (tiempo, secuencia) con que se guardaron, y el estado del generador aleatorio se repone para que la partida continúe con la misma secuencia de azar. La carga se hace sin registrar inversas, de modo que no hay nada que el pergamino pueda deshacer de ella. Si el id o la versión de la cripta no coinciden con los guardados, se informa la incompatibilidad en lugar de cargar. Un enemigo activo que llegó caminando a una sala que el jugador nunca visitó se guarda con esa sala, porque es estado del juego y no de la caché.
 
-Guardar y cargar pasan por el servicio de partida. Cargar valida primero el archivo, la versión de la cripta y la del catálogo con que se guardó, y solo entonces reemplaza la partida en curso, así un fallo de validación no destruye la partida actual. Las salas visitadas se piden de nuevo a la precarga (de disco si la caché está caliente) y después se pisan con el estado guardado. Las salas que solo se precargaron no se guardan como cargadas, porque son estado de la caché.
-
+Guardar y cargar pasan por el servicio de partida. Cargar valida primero el archivo, la versión de la cripta y la del catálogo con que se guardó, y solo entonces reemplaza la partida en curso, así un fallo de validación no destruye la partida actual. Las salas visitadas se piden de nuevo a la precarga (del disco si la caché ya las tiene) y después se pisan con el estado guardado. Las salas que solo se precargaron no se guardan como cargadas, porque son estado de la caché.
 
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Letras usadas: **S** = salas guardadas en el archivo; **B** = tamaño total del archivo en bytes.
+- **Guardar:** O(B) para escribir todo, más ordenar el índice de S registros con el selector de §4.9 (suele llegar casi ordenado, así que normalmente es inserción, cerca de O(S)).
+- **Cargar todo:** O(B): se lee y se convierte cada campo una vez.
+- **Cargar una sala:** O(log S) lecturas de 16 bytes para la búsqueda binaria en el índice, más la lectura de ese único bloque. No depende del tamaño total del archivo.
+- **Detectar otra versión:** leer los 24 bytes del encabezado, O(1), antes de cualquier otra cosa.
 
 ### Evidencia empírica
-Pendiente — completar en reunión (revisar para eliminar esta linea)
+- `--bench --solo guardado` (Intel Core Ultra 7, 16 GB, Python 3.14.6). El estado de prueba lo genera el bench: n salas con objetos, enemigos y algunas trampas, un jugador con 8 objetos y hasta 300 eventos pendientes. Tiempos en milisegundos:
 
-La prueba de ida y vuelta (tests/modelo/test_guardado_vuelta.py) compara una partida que se guardó y se cargó contra otra que nunca se guardó: tras las mismas acciones tienen el mismo estado completo, la misma vista y los mismos mensajes. Cubre trampas, antorcha, puerta con cierre automático, veneno, cambio de velocidad, un enemigo en una sala sin visitar y el paso por el archivo binario.
+  | Salas | Tamaño binario | Tamaño JSON | Guardar binario | Guardar JSON | Cargar todo binario | Cargar todo JSON | Cargar UNA sala (binario) |
+  |---|---|---|---|---|---|---|---|
+  | 50 | 14 066 B | 34 902 B (2.5×) | 0.884 | 0.909 | 0.637 | 0.418 | 0.048 |
+  | 500 | 86 510 B | 231 764 B (2.7×) | 3.812 | 4.892 | 3.380 | 3.178 | 0.049 |
+  | 5000 | 738 814 B | 2 084 958 B (2.8×) | 31.604 | 46.032 | 33.340 | 34.816 | 0.049 |
 
-Cargar un guardado en frío, sin caché de disco, con 3 salas visitadas en la cripta de pruebas (presupuesto 9), costó 6 solicitudes (datos generales, versión del catálogo, esqueleto, un lote de contenido y dos de catálogo), igual que iniciar una partida nueva. La partida cargada y la que nunca se guardó dan el mismo estado antes y después de seguir jugando (tests/servicios/test_servicio_partida_guardado.py).
-
+- Lectura:
+  - **Tamaño:** el binario ocupa entre 2.5 y 2.8 veces menos que el JSON.
+  - **Cargar una sala:** tarda lo mismo con 50 que con 5000 salas (unos 0.05 ms), porque solo lee el encabezado, unos pocos registros del índice y el bloque de esa sala. Es 13 veces más rápido que cargar todo con 50 salas, 69 veces con 500 y 676 veces con 5000.
+  - **Guardar:** el binario es más rápido, sobre todo con muchas salas (31.6 contra 46.0 ms con 5000).
+  - **Cargar todo:** el JSON es igual o un poco más rápido (1.5 veces con 50 salas, 1.1 veces con 500 y prácticamente igual con 5000). El módulo `json` de Python está escrito en C, mientras que el lector binario convierte cada campo con una llamada desde Python. El binario no gana aquí, y no hace falta que gane: lo que pide el enunciado que JSON no puede dar es recuperar una sala sin leer todo y detectar la versión del formato.
+- La prueba de ida y vuelta (`tests/modelo/test_guardado_vuelta.py`) compara una partida que se guardó y se cargó contra otra que nunca se guardó: tras las mismas acciones tienen el mismo estado completo, la misma vista y los mismos mensajes. Cubre trampas, antorcha, puerta con cierre automático, veneno, cambio de velocidad, un enemigo en una sala sin visitar y el paso por el archivo binario.
+- Cargar un guardado sin nada en la caché de disco, con 3 salas visitadas en la cripta de pruebas (presupuesto 9), costó 6 solicitudes (datos generales, versión del catálogo, esqueleto, un lote de contenido y dos de catálogo), igual que iniciar una partida nueva. La partida cargada y la que nunca se guardó dan el mismo estado antes y después de seguir jugando (`tests/servicios/test_servicio_partida_guardado.py`).
+- Tests del formato (`tests/infraestructura/test_guardado_binario.py`): el índice queda ordenado aunque las salas se guarden desordenadas; se recupera bien la primera, una del medio y la última sala del índice, y una que no existe da `None`; un valor que no cabe da error sin tocar el guardado anterior; un archivo con otra marca, otra versión, una cantidad de salas imposible o cortado a la mitad se rechaza: el JSON reconstruye exactamente el mismo estado, así que la comparación de tiempos es justa.
 
 ### Límites conocidos
-Pendiente — completar en reunión (revisar para eliminar esta linea)
-
-El pergamino de retroceso no puede deshacer acciones anteriores a una partida cargada, porque el historial (solo inversas, nunca copias del estado) no se guarda. Guardar solo es posible con la partida en curso.
-
-El contador de ids de los objetos recogidos no forma parte del archivo de guardado: al cargar se retoma después del mayor id que queda en el inventario, de modo que nunca se repite un id existente, pero puede diferir del que habría tenido una partida que nunca se guardó. Cargar vuelve a pedir el contenido de las salas visitadas, lo que consume solicitudes si no están en el disco. Los efectos del veneno y del cambio de velocidad se probaron con efectos creados a mano, porque la cripta publicada no trae nada que los origine.
-
-Al cargar se vuelve a pedir el contenido de las salas visitadas: con la caché de disco vacía cuesta hasta un lote por cada diez salas visitadas, más los lotes de fichas, y no se midió en una cripta grande. Los identificadores de instancia de los objetos recogidos después de cargar pueden diferir de los de una partida continua; no se muestran ni intervienen en ninguna acción.
+- **El juego no usa todavía la carga de una sola sala.** `cargar_sala` cumple el requisito, está medida y probada, pero al cargar una partida el juego lee el archivo completo, porque necesita todo el estado para continuar. Sería útil si en el futuro se cargaran las salas a medida que el jugador las visita.
+- **Cargar todo no es más rápido que JSON**, y con archivos pequeños es más lento (1.5 veces con 50 salas). Si solo importara la carga completa, JSON bastaría.
+- El pergamino de retroceso no puede deshacer acciones anteriores a una partida cargada, porque el historial (solo inversas, nunca copias del estado) no se guarda. Guardar solo es posible con la partida en curso.
+- Cargar vuelve a pedir el contenido de las salas visitadas: si no están en la caché de disco, cuesta hasta un lote por cada diez salas visitadas, más los lotes de fichas. No se midió en una cripta grande.
+- El contador de ids de los objetos recogidos no forma parte del archivo: al cargar se retoma después del mayor id que queda en el inventario, de modo que nunca se repite un id existente, pero puede diferir del que habría tenido una partida que nunca se guardó. Esos ids no se muestran ni intervienen en ninguna acción.
+- Los efectos del veneno y del cambio de velocidad se probaron con efectos creados a mano, porque la cripta publicada no trae nada que los origine.
+- Cada campo tiene un tamaño fijo (por ejemplo, las cantidades de objetos o mensajes caben en 2 bytes, hasta 65 535). Un valor más grande no se puede guardar: da error en lugar de corromper el archivo.
 
 
 ## 4.11 Bitácora de partida y reproducción
 ### Problema
-Pendiente — completar en reunión
+Cada acción del jugador debe quedar registrada en un archivo de texto al que solo se le agregan líneas al final, nunca se reescribe. El archivo empieza con un encabezado con, como mínimo, el id y la versión de la cripta, la versión del catálogo y la semilla del azar. Con `--replay partida.log` el programa debe repetir la partida completa sin que nadie la juegue. Si la versión que dice el log ya no está disponible, debe decir que no puede garantizar una reproducción fiel, en lugar de reproducir en silencio contra datos distintos. El profesor usará esta función para reportar y repetir errores durante la evaluación.
+
+Escribir en el log pasa en **cada acción aceptada**, así que tiene que ser barato. Leerlo pasa solo al reproducir.
+
 ### Alternativas consideradas
-Pendiente — completar en reunión
+1. **Guardar el estado completo después de cada acción** en lugar de la acción. No hace falta: el juego es determinista (la misma semilla y las mismas acciones dan la misma partida, ver §4.2 y §4.6), así que basta con las acciones, que ocupan muchísimo menos. Se descartó.
+2. **Un solo documento JSON con la lista de todas las acciones.** Para agregar una acción habría que reescribir el archivo completo, y si el programa se cierra a la mitad el archivo queda inválido entero. Se descartó.
+3. **Un archivo binario.** Ocuparía algo menos, pero no se podría leer ni revisar a mano, y para reportar un error es útil poder abrir el log y ver qué hizo el jugador. Se descartó.
+4. **Lo elegido: una línea JSON por registro** (el formato llamado "JSON Lines"). Cada línea es un objeto JSON completo e independiente; agregar una acción es escribir una línea más al final, y si el programa se cierra a la mitad, como mucho se pierde la última línea.
 
 ### Decisión
-Pendiente — completar en reunión (revisar para eliminar esta linea)
+**Formato del archivo** (`infraestructura/partida_log.py`):
+- **Línea 1, el encabezado:** `{"tipo": "encabezado", "id_cripta": ..., "version_cripta": ..., "version_catalogo": ..., "semilla": ...}`. Puede llevar además `"parcial": true` (ver más abajo).
+- **Una línea por acción aceptada**, tal como la da `Accion.a_dict()`. Por ejemplo `{"tipo": "mover", "direccion": "N"}` o `{"tipo": "atacar", "instancia": "e-201"}`.
+- **Escribir:** cada acción abre el archivo en modo "agregar al final", escribe la línea completa y lo cierra. Lo ya escrito nunca se toca. Una partida nueva en la misma ruta empieza un archivo nuevo en lugar de mezclarse con la anterior. Un encabezado sin alguno de los cuatro campos obligatorios es un error de programación y se rechaza al crear el escritor.
+- **Leer:** se revisa que la primera línea sea un encabezado con los cuatro campos y que cada acción tenga su `tipo`. Solo la **última** línea puede venir cortada (el programa se cerró mientras la escribía): se ignora y se avisa. Una línea inválida en medio del archivo es un error (`CriptaBitacoraError`), porque significa que el archivo se dañó.
+
+**Quién escribe y qué pasa al guardar:**
 
 `ServicioPartida` escribe la bitácora: tras ejecutar una acción, si el modelo la acepta, la anota (incluido el pergamino, que cambia el estado y debe repetirse en el replay); las rechazadas no cambian el estado y no se anotan. El encabezado se escribe cuando la partida ya inició sin errores, con el id y la versión de la cripta, la versión del catálogo y la semilla; si no se da semilla se genera con un generador del sistema y queda en el encabezado. Sin ruta de bitácora (replay y bench) no se escribe nada.
 
 El guardado lleva consigo una copia de la bitácora hasta el instante de guardar (archivo del guardado más `.log`). Cargar la restaura como bitácora activa y la partida sigue anexando en ella. Se descartó recortar la bitácora original por el número de acciones del jugador, porque el log también anota el pergamino y las acciones que luego se deshicieron, así que no coincide con ese contador; guardar el número de líneas habría exigido cambiar el formato del guardado, y poner marcas dentro del log habría obligado al lector a distinguirlas de las acciones. Con la copia, la bitácora de una partida cargada es exactamente la historia que llevó a ese estado y se puede reproducir desde cero. Si la copia no existe, la bitácora nueva lleva `"parcial": true` en el encabezado y no es reproducible.
 
+**Reproducción** (`servicios/servicio_replay.py`, con `--replay`, sin crear la vista):
+1. Lee el log. Si es parcial, informa que no se puede garantizar una reproducción fiel y no reproduce.
+2. Inicia la partida con la cripta y la **semilla del encabezado**, sin escribir una bitácora nueva ni registrar puntaje.
+3. Compara la versión de la cripta y la del catálogo del log con las disponibles (`diferencias_de_version`). Si alguna no coincide, dice cuál y **no reproduce**.
+4. Repite cada acción por el mismo camino que usa el juego (`ServicioPartida.ejecutar`) y muestra cada paso: la acción, la sala, la vida, el tiempo y los mensajes.
+5. Si una acción no se acepta o no es válida, se detiene e informa **la línea del log y el motivo** (una divergencia: la partida reproducida se separó de la original).
+6. Al final muestra el desenlace, el puntaje y el reporte de solicitudes y caché. Termina con código 0 si la reproducción fue fiel, 1 si no lo fue y 2 si no se pudo leer el log o falló la red.
 
 ### Análisis de complejidad
-Pendiente — completar en reunión
+Letra usada: **A** = acciones anotadas en el log.
+- **Anotar una acción:** O(1). Se agrega una línea corta al final (unos 35 bytes para un movimiento) sin leer ni reescribir lo anterior. Abrir y cerrar el archivo en cada acción cuesta un poco más que dejarlo abierto, pero garantiza que cada línea quede completa en disco.
+- **Leer el log:** O(A), una pasada.
+- **Reproducir:** A acciones, cada una con el mismo costo que tuvo en el juego (§5.2), más mostrar cada paso.
+- **Comparar versiones:** O(1), dos comparaciones de texto.
 
 ### Evidencia empírica
-Pendiente — completar en reunión (revisar para eliminar esta linea)
-
-tests/servicios/test_servicio_partida.py reproduce la bitácora de una partida en una partida nueva con la semilla del encabezado y compara el estado guardado, la vista y el puntaje: son iguales.
-
-tests/servicios/test_servicio_partida_guardado.py guarda una partida, sigue jugando, carga el guardado y comprueba que la bitácora restaurada contiene solo las acciones hasta el guardado; después reproduce esa bitácora desde cero y obtiene el mismo estado que la partida cargada.
-
+- Reproducción real (`py -m cripta --offline --replay datos/partida.log`, sobre una partida jugada en la consola con `cripta-01`, semilla 2734113286): el log tenía 5 acciones (recoger la antorcha, esperar, encenderla, entrar a la sala de las ratas y atacar) y el replay reprodujo las 5 sin divergencias, sin abrir la vista y sin intervención. Mostró cada paso con sus mensajes, incluidos el daño de la trampa y los ataques de las ratas, que dependen del azar, y terminó igual que la partida jugada: derrota en el tiempo 373, con 5 acciones del jugador. Un comando escrito después de morir no quedó en el log, porque solo se anotan las acciones aceptadas.
+- Formato del log (`tests/infraestructura/test_partida_log.py`): lo escrito se lee igual; una partida nueva en la misma ruta reemplaza la anterior; la última línea cortada se ignora y se avisa, y un archivo sano no avisa nada; una línea rota en medio, un archivo vacío o uno sin encabezado son errores; un encabezado incompleto se rechaza al escribir; `diferencias_de_version` informa cada versión distinta.
+- Reproducción (`tests/servicios/test_servicio_replay.py`): reproducir da la misma partida; se muestra un paso por acción con sus mensajes; reproducir no modifica el log; con otra versión o con un log parcial no se reproduce; una acción que no se acepta o que no es válida informa su línea; la última línea cortada se avisa y lo demás se reproduce; un log que no existe es un error.
+- `tests/servicios/test_servicio_partida.py` reproduce la bitácora de una partida en una partida nueva con la semilla del encabezado y compara el estado guardado, la vista y el puntaje: son iguales.
+- `tests/servicios/test_servicio_partida_guardado.py` guarda una partida, sigue jugando, carga el guardado y comprueba que la bitácora restaurada contiene solo las acciones hasta el guardado; después reproduce esa bitácora desde cero y obtiene el mismo estado que la partida cargada.
 
 ### Límites conocidos
-Pendiente — completar en reunión (revisar para eliminar esta linea)
-
-Los mensajes de una acción rechazada quedan en la bitácora en pantalla pero no en el log, por lo que una partida reproducida puede diferir de la original solo en esos mensajes; el estado, la vista y el puntaje coinciden.
-
-Solo se comprueba que el encabezado de la copia coincida con el del guardado; no se puede verificar que la copia tenga exactamente las acciones que llevaron a ese estado. Una bitácora parcial no se puede reproducir.
+- Los mensajes de una acción rechazada quedan en la bitácora en pantalla pero no en el log, por lo que una partida reproducida puede diferir de la original solo en esos mensajes; el estado, la vista y el puntaje coinciden.
+- Solo se comprueba que el encabezado de la copia coincida con el del guardado; no se puede verificar que la copia tenga exactamente las acciones que llevaron a ese estado. Una bitácora parcial no se puede reproducir.
+- Si la versión del log ya no es la que entrega el servidor, el replay no reproduce, aunque el contenido de esa versión vieja siga en la caché de disco. Es la opción más segura, pero también la más estricta: el enunciado permitiría usar una copia local compatible. Para reproducir sin red, el log tiene que ser de la misma versión que los datos de `--offline`.
+- Para comparar las versiones, primero hay que iniciar la partida, lo que gasta las solicitudes del arranque aunque al final no se reproduzca.
+- El costo de escribir el log en cada acción no está separado en el bench: la medición de la partida real (§5.2) se hace sin bitácora.

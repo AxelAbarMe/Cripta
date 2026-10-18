@@ -188,6 +188,8 @@ Lo siguiente que hay que realizar:
 
 Se corrigió el orden de las derrotas en la tabla de puntajes: ahora gana la que derrotó más enemigos y, en un empate, la que sobrevivió más tiempo. Las victorias siguen yendo primero, de menor a mayor tiempo. La tabla ganó un método de puntajes globales (todas las criptas y versiones, con la misma regla) y el servicio de partida lo expone sin necesitar una partida en curso, de modo que el menú ya no usa el orden antiguo por tiempo. Se quitó un punto y coma sobrante en el módulo de combate y se eliminó del informe del replay una línea suelta que no era parte del informe. La carpeta de datos generados al jugar (caché, puntajes y partidas) salió del seguimiento de git y quedó en el archivo de exclusiones. Se comprobó que el replay reproduce bien una partida jugada sin conexión; sin esa opción usa la red y falla con un mensaje claro. Se agregaron tests del orden de los puntajes (incluida una tabla de 160 filas, sobre el umbral del selector de algoritmo) y de los puntajes globales del servicio; la suite completa pasó con 180 tests.
 
+Una revisión posterior encontró que el método de puntajes globales y el nuevo orden del ranking no habían quedado en la tabla de puntajes, y que faltaba el archivo de tests de ese orden. Se completaron ambos y la suite volvió a pasar completa (180 tests).
+
 Lo siguiente que hay que realizar:
 * Medir el ciclo real de una acción con el equipo en reposo (mediana de varias corridas) y documentarlo.
 * Medir el costo de guardar los contadores del azar en cada acción.

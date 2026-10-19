@@ -14,7 +14,7 @@
 | B | Intel Core Ultra 7, 16 GB, Windows | 3.14.6 | 4.1, 4.2, 4.4, 4.9, 4.10 |
 | C | Linux | 3.12 | 4.5, 4.6, 4.7, 4.8 |
 
-Las mediciones del Equipo C que no salen de `--bench` se hicieron con un script propio y se indican como tales en su sección.
+Cada sección indica en qué equipo se midió, y las cifras de equipos distintos no se comparan entre sí. Las mediciones del Equipo C que no salen de `--bench` se hicieron con un script propio y se indican como tales en su sección. Los conteos de operaciones por acción ("frecuencia medida") salen de un script que cuenta llamadas sobre la partida real y no dependen del equipo.
 
 
 ## 4.1 Qué ocurre a continuación (agenda de eventos)
@@ -38,7 +38,7 @@ El juego avanza ejecutando siempre el evento pendiente con menor `(tiempo, secue
 
 La agenda es un montículo mínimo (`HeapMinimo`, implementación propia) ordenado por la pareja `(tiempo, secuencia)`. El número de secuencia lo asigna el reloj al programar cada evento, así que el orden es total y determinista aunque haya empates, cancelaciones o reprogramaciones.
 
-Cancelar un evento solo marca `cancelado = True`; el evento se descarta cuando sale del montículo. Reprogramar cancela el evento viejo y agenda uno nuevo con secuencia nueva (2.3). La muerte de un actor no cancela sus eventos uno por uno: el turno comprueba `esta_vivo()` y no hace nada si ya murió. El reloj lleva un contador de eventos vigentes, de modo que `esta_vacia()` no tiene que recorrer la agenda.
+Cancelar un evento solo marca `cancelado = True`; el evento se descarta cuando sale del montículo. Reprogramar cancela el evento viejo y agenda uno nuevo con secuencia nueva (2.3). Cuando un enemigo muere, el motor cancela su evento pendiente (ver "Muerte de enemigos y velocidad del jugador" más abajo), así que no hace falta recorrer la agenda; como segunda defensa, el turno de un enemigo comprueba `esta_vivo()` y no hace nada si ya murió. El reloj lleva un contador de eventos vigentes, de modo que `esta_vacia()` no tiene que recorrer la agenda.
 
 #### Efectos
 
@@ -119,7 +119,7 @@ Letras usadas: **S** = salas de la cripta; **a** = salas a 2 pasos o menos de la
 - **Solicitudes de red:** como cada lote lleva 10 salas que nunca se pidieron, el total de solicitudes de contenido nunca pasa de ⌈S/10⌉ (S dividido entre 10, redondeado hacia arriba).
 
 ### Evidencia empírica
-- `--bench --solo solicitudes, y scripts aparte (cripta artificial, recorrido en zigzag; cuenta las solicitudes, no depende de la máquina):
+- `--bench --solo solicitudes` y scripts aparte (cripta artificial, recorrido en zigzag; cuenta las solicitudes, no depende de la máquina):
 
   | Cripta | Salas visitadas | Precarga por lotes (elegida) | Una solicitud por sala (descartada) |
   |---|---|---|---|
@@ -188,7 +188,7 @@ Letras usadas: **n** = fichas guardadas en memoria (como mucho `--cache-size`, 2
 Las fichas de catálogo se consultan todo el tiempo: al mostrar la sala, al preparar una sala nueva y al revisar el inventario. En un recorrido de 89 movimientos por una cripta de 100 salas hubo 185 consultas resueltas en memoria, unas 2 por movimiento (ver 4.3). Por eso **averiguar si una ficha está en memoria es la operación más frecuente** y su costo importa. En memoria solo caben `--cache-size` fichas (25 por defecto): al llegar a ese tope hay que liberar alguna, pero nunca una que esté en uso (un enemigo vivo, un objeto del inventario, un objeto o una trampa de la sala actual). Una ficha liberada no debe volver a costar una solicitud de red: tiene que poder recuperarse del disco. Además, la caché debe sobrevivir al cierre del programa y validarse con la versión del catálogo y de la cripta sin descargar todo otra vez.
 
 ### Alternativas consideradas
-1. **Para encontrar una ficha: recorrer una lista sin orden** contra **un arreglo ordenado por id con búsqueda binaria** (`VectorOrdenado`). Una tabla hash (el `dict` de Python, que encuentra un elemento sin recorrer nada) no es opción, porque 7 prohíbe usar `dict` como índice o caché. Se midieron las dos (ver Evidencia): con 25 fichas el recorrido es un poco más rápido, pero con 1000 es 8.5 veces más lento. Se descartó el recorrido porque su costo crece con la cantidad de fichas, y esa cantidad la elige el usuario con `--cache-size`.
+1. **Para encontrar una ficha: recorrer una lista sin orden** contra **un arreglo ordenado por id con búsqueda binaria** (`VectorOrdenado`). Una tabla hash (el `dict` de Python, que encuentra un elemento sin recorrer nada) no es opción: el enunciado (7) prohíbe usar `dict` como índice o caché, y una tabla hash propia no forma parte de las estructuras vistas en el curso hasta el momento del proyecto. Se midieron las dos (ver Evidencia): con 25 fichas el recorrido es un poco más rápido, pero con 1000 es 8.5 veces más lento. Se descartó el recorrido porque su costo crece con la cantidad de fichas, y esa cantidad la elige el usuario con `--cache-size`.
 2. **Para llevar el orden de uso: una lista de Python** (quitar la ficha con `list.remove` y volver a meterla al frente con `insert`) contra **una lista doblemente enlazada**, en la que cada elemento (nodo) apunta al anterior y al siguiente. Con la lista de Python hay que buscar la ficha y correr todos los elementos de lugar; con la lista doble basta desconectar el nodo y conectarlo al frente. Se midieron las dos: con 25 fichas la lista de Python es un poco más rápida, con 1000 es 19 veces más lenta. Se descartó por la misma razón.
 3. **Qué ficha liberar: FIFO** (*first in, first out*: se libera la que entró primero) contra **LRU** (*least recently used*: se libera la que lleva más tiempo sin usarse). FIFO es más simple, pero puede liberar una ficha que se usa todo el tiempo (por ejemplo la de la rata, que aparece en muchas salas) solo porque llegó temprano. Se eligió LRU porque el jugador vuelve a salas cercanas y los mismos tipos se repiten. Esta comparación no se midió (ver Límites).
 4. **Para guardar en disco: un solo archivo con todo el catálogo** contra **un archivo por ficha con la versión en el nombre**. El archivo único obliga a leerlo y reescribirlo completo para recuperar o agregar una ficha, y al cambiar la versión habría que invalidarlo entero. Se eligió un archivo por ficha.
@@ -260,7 +260,7 @@ El jugador recorre el inventario hacia adelante y hacia atrás desde la posició
 
 El inventario usa una lista doble enlazada con un nodo por objeto. Para soltar el objeto que se está viendo en O(1), el inventario conserva el nodo que devuelve `agregar`, y la lista mantiene su tamaño para aplicar el límite `inventario_max` sin recorrerla.
 
-El jugador recorre el inventario con un cursor sobre los nodos (O(1) por paso). Para acciones sobre un objeto concreto (usar, equipar, soltar por posición) existe `ir_a_posicion`, que recorre la lista desde el principio: cuesta O(n), pero n está acotado por `inventario_max`, que es pequeño. Los pergaminos se cuentan y se consumen por clase (`cantidad_pergaminos`, `quitar_primero_de_clase`), sin tocar el historial de retroceso (2.11). Las vistas ordenadas trabajan sobre una copia con el selector automático de ordenamiento; el orden por nombre ignora mayúsculas y tildes para que el resultado sea el que espera una persona. `fichas_en_uso` expone los ids de catálogo que el inventario mantiene referenciados, para que la caché no los libere (4.4).
+El jugador recorre el inventario con un cursor sobre los nodos (O(1) por paso), de forma circular: después del último objeto `sig` vuelve al primero y `ant` desde el primero va al último. Para acciones sobre un objeto concreto (usar, equipar, soltar por posición) existe `ir_a_posicion`, que recorre la lista desde el principio: cuesta O(n), pero n está acotado por `inventario_max`, que es pequeño. Los pergaminos se cuentan y se consumen por clase (`cantidad_pergaminos`, `quitar_primero_de_clase`), sin tocar el historial de retroceso (2.11). Las vistas ordenadas trabajan sobre una copia con el selector automático de ordenamiento; el orden por nombre ignora mayúsculas y tildes para que el resultado sea el que espera una persona. `fichas_en_uso` expone los ids de catálogo que el inventario mantiene referenciados, para que la caché no los libere (4.4).
 
 Usar un objeto consumible (poción, antídoto, antorcha) lo saca del inventario sin dejarlo en el suelo. Un antídoto sin veneno activo se rechaza sin consumir tiempo ni el objeto; una segunda antorcha no se puede encender mientras hay una encendida. Los objetos recogidos reciben un id de instancia determinista (un contador de la partida). Las acciones por posición (usar, equipar, soltar) llevan el índice del objeto en el orden real, para que la acción sea reproducible en el replay.
 
@@ -329,7 +329,7 @@ Registrar un cambio es O(1) (apilar una operación inversa). Deshacer un interva
 ### Evidencia empírica
  
 
-Medición con `--bench` (escala 0.3), contra la alternativa descartada y prohibida por4.6 (guardar una copia completa del estado, aquí con 200 salas y 60 actores): registrar una acción con operaciones inversas cuesta 2.17 µs, y con copia completa 1199 µs, o sea 553 veces más lenta, además de guardar 5 estados enteros. Deshacer 5 acciones (30 operaciones inversas) cuesta 3.34 µs por deshacer.
+Medición con `--bench` (escala 0.3), contra la alternativa descartada y prohibida por 4.6 (guardar una copia completa del estado, aquí con 200 salas y 60 actores): registrar una acción con operaciones inversas cuesta 2.17 µs, y con copia completa 1199 µs, o sea 553 veces más lenta, además de guardar 5 estados enteros. Deshacer 5 acciones (30 operaciones inversas) cuesta 3.34 µs por deshacer.
 
 Alternativa descartada, medida con `--bench`: usar la base `Reversible` (que intercepta cada asignación) también en el reloj de eventos subió el ciclo con 600 actores activos de unos 7 ms a 17 ms, cerca del límite de 20 ms de 5.2. Por eso el reloj, que es la parte más caliente, registra sus inversas de forma explícita con un solo `if` por operación, y la mediana del ciclo volvió a 7.5 a 8.7 ms.
 
@@ -341,7 +341,7 @@ Costo de los ganchos medido con `--bench` (600 actores activos, mediana de 6 cor
 
 Si una operación inversa falla a mitad de un deshacer, la excepción no se captura: el intervalo ya salió de la pila y el estado puede quedar a medias. Se considera un error de programación, no una condición normal del juego. Una solución más robusta sería aplicar las inversas sobre una copia del estado o poder reanudar el deshacer.
 
-La medición compara el costo de registrar, no un retroceso completo del juego: esta evidencia habrá que repetirla cuando el motor registre inversas reales de reloj, vida, puertas y trampas.
+La medición de 2.17 µs contra 1199 µs usa una carga sintética que solo compara el costo de registrar. El costo con las inversas reales del motor (reloj, vida, puertas, trampas, inventario y azar) está incluido en las mediciones del ciclo con la partida real de 4.1, donde cada acción registra entre 108 y 859 inversas y el peor caso cumple los 20 ms hasta 225 salas. Lo que no se midió por separado es el tiempo de ejecutar un pergamino completo sobre la partida real; los tests comprueban que revierte bien, no cuánto tarda.
 
 Cada acción del jugador guarda el estado del generador aleatorio (unos 625 enteros) además de las inversas; con un historial de 5 intervalos es poca memoria, pero sería lo primero a revisar si el límite de retroceso creciera mucho. Los efectos que no existen en los datos del API (el veneno, que ningún objeto ni trampa origina) están preparados para retroceder, pero solo se probaron de forma unitaria.
 
@@ -381,7 +381,7 @@ Una decisión del rastreador examina como mucho 4 salidas, así que su costo no 
 ### Evidencia empírica
  
 
-Se midió la decisión de un rastreador completa (vecinos, puertas, rastro y elección) con el mapa real, un enemigo en el centro de una cripta cuadrada con los rastros de sus vecinas frescos, mediana de 7 series de 20 000 decisiones (Linux, Python 3.12): 4.6 µs con 100 salas, 10.7 µs con 1600 y 11.6 µs con 6400. Con 64 veces más salas el costo se multiplica por 2.5, que es el factor logarítmico de la búsqueda binaria. La alternativa de referencias directas, simulada sin la consulta de puertas (por eso es una cota inferior), costó entre 0.41 y 0.49 µs y no creció con las salas.
+Se midió la decisión de un rastreador completa (vecinos, puertas, rastro y elección) con el mapa real, un enemigo en el centro de una cripta cuadrada con los rastros de sus vecinas frescos, mediana de 7 series de 20 000 decisiones (Linux, Python 3.12, con un script propio que no forma parte de `--bench`): 4.6 µs con 100 salas, 10.7 µs con 1600 y 11.6 µs con 6400. Con 64 veces más salas el costo se multiplica por 2.5, que es el factor logarítmico de la búsqueda binaria. La alternativa de referencias directas, simulada sin la consulta de puertas (por eso es una cota inferior), costó entre 0.41 y 0.49 µs y no creció con las salas.
 
 Con un perfilador sobre una partida de 225 salas y 140 enemigos activos, la búsqueda binaria en el mapa ocupó cerca del 8 % del tiempo total. El resto está repartido entre el registro de cambios reversibles, la agenda y el montículo, así que quitar ese factor no cambiaría de forma apreciable el cumplimiento de 5.2.
 
@@ -389,7 +389,7 @@ Con un perfilador sobre una partida de 225 salas y 140 enemigos activos, la bús
 ### Límites conocidos
  
 
-Estrictamente, 4.7 pide costo proporcional al número de salidas; localizar cada vecino con búsqueda binaria agrega un factor O(log n) en el tamaño de la cripta. Si esto pesara con criptas muy grandes, la mejora es que cada sala guarde referencias directas a sus salas vecinas. Un comportamiento de enemigo desconocido se trata como guardián (espera), para que un valor nuevo del API no detenga la partida. El errante consume el generador aleatorio solo cuando tiene al menos una salida abierta, y una sola vez, para que el replay sea idéntico.
+Un comportamiento de enemigo desconocido se trata como guardián (espera), para que un valor nuevo del API no detenga la partida. El errante consume el generador aleatorio solo cuando tiene al menos una salida abierta, y una sola vez, para que el replay sea idéntico.
 
 La decisión del rastreador cuesta O(salidas · log n), no O(salidas) como pide el enunciado en sentido estricto: con 64 veces más salas cuesta 2.5 veces más. Se aceptó por la medición anterior; si una cripta de revisión tuviera un orden de magnitud más salas, la mejora sería guardar referencias a las salas vecinas, a costa de mantenerlas en el guardado y el retroceso.
 
@@ -522,7 +522,6 @@ Letras usadas: **n** = elementos a ordenar; **I** = inversiones, es decir, cuán
 - El modo de comparaciones costosas está implementado y medido, pero ninguna parte del juego lo usa: en todos los usos se comparan tuplas de números o textos, que es barato.
 - Mergesort usa memoria extra del tamaño de la lista. Con los tamaños del juego no importa, pero con listas muy grandes sí pesaría.
 - Los puntajes globales mezclan criptas distintas, así que comparan tiempos y enemigos derrotados de criptas con distinta dificultad. Esa comparación no es justa entre criptas; solo el ranking por cripta y versión lo es.
-
 - **Id de instancia comparado como texto.** Los enemigos de una sala se activan en orden ascendente de su id de instancia (2.4), comparado como texto. Con ids del mismo largo (`e-201`, `e-202`) coincide con el orden numérico; con `e-9` frente a `e-10` no, porque `"e-10"` queda antes que `"e-9"`. Una cripta cuyos ids tengan largo distinto activaría esos enemigos en otro orden que el numérico (siempre el mismo para la misma cripta, así que el replay no se afecta).
 
 ## 4.10 Guardado binario de la partida
@@ -560,6 +559,8 @@ La partida viva se convierte a datos planos (`EstadoPartida`) en un módulo del 
 Cargar una partida reconstruye el modelo a partir del `EstadoPartida`. Se piden de nuevo el contenido y las fichas de las salas visitadas y el estado guardado manda sobre lo recién creado: suelo, trampas, enemigos (dormidos y activos), puertas, rastro, inventario con su equipo y su cursor, y estadísticas del jugador. Las acciones de la agenda, que son funciones, se recrean a partir de su descriptor con la misma pareja (tiempo, secuencia) con que se guardaron, y el estado del generador aleatorio se repone para que la partida continúe con la misma secuencia de azar. La carga se hace sin registrar inversas, de modo que no hay nada que el pergamino pueda deshacer de ella. Si el id o la versión de la cripta no coinciden con los guardados, se informa la incompatibilidad en lugar de cargar. Un enemigo activo que llegó caminando a una sala que el jugador nunca visitó se guarda con esa sala, porque es estado del juego y no de la caché.
 
 Guardar y cargar pasan por el servicio de partida. Cargar valida primero el archivo, la versión de la cripta y la del catálogo con que se guardó, y solo entonces reemplaza la partida en curso, así un fallo de validación no destruye la partida actual. Las salas visitadas se piden de nuevo a la precarga (del disco si la caché ya las tiene) y después se pisan con el estado guardado. Las salas que solo se precargaron no se guardan como cargadas, porque son estado de la caché.
+
+El archivo binario no contiene JSON: encabezado, índice, bloque global y bloques de sala se escriben campo por campo con `struct`. La función `guardar_json` del mismo módulo existe solo para la comparación de tamaño y tiempos de la Evidencia.
 
 
 ### Análisis de complejidad

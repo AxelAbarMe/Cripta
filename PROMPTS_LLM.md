@@ -1,3 +1,9 @@
+# Bitácora de prompts a modelos de lenguaje (LLM)
+
+Cada entrada tiene la fecha, la herramienta o modelo, **Prompt** (lo que se pidió, en primera persona; está redactado de forma compacta y puede estar reinterpretado, pero es fiel a lo pedido), **Prompt (resumido)** (qué se pidió, en una o dos frases) y **Para qué se usó** (qué se hizo con la respuesta). Se registran los prompts que aportaron al avance del proyecto; las consultas pequeñas de un mismo día se agrupan en una sola entrada. Cuando junto al prompt se pegó una salida de consola, un archivo o un zip, no se copia. No se incluyen credenciales ni datos personales. Todo el código y el texto generado con ayuda de un LLM fue revisado y es responsabilidad del grupo.
+
+
+
 ### 2026-09-20 — Claude Opus 5 (app de escritorio de Claude)
 **Prompt:** "Te paso el PDF del enunciado, el openapi.json y el esqueleto inicial del repo. Cómo se organiza la arquitectura que pide §6, el MVC más los adaptadores de red y disco? El enunciado exige una estructura de carpetas específica? Después, paso a paso y explicándome, hagamos un script para probar el API y ver qué responde de verdad, y empecemos los primeros DTO de la cripta y del esqueleto."
 
@@ -32,7 +38,6 @@
 **Prompt (resumido):** Se pidieron las excepciones, las interfaces, el contador de solicitudes y el cliente HTTP.
 
 **Para qué se usó:** Construir la capa de infraestructura de red que consumirán los servicios y el modelo, cumpliendo las reglas del PDF sobre identificador de cliente, manejo de errores/429 y presupuesto de solicitudes.
-
 
 ### 2026-10-04 — Claude (Sonnet 5, claude.ai)
 **Prompt:** "Te paso el zip del proyecto, el PDF del enunciado, el openapi.json y el contexto. Revisa el proyecto completo por secciones (base, estructuras, DTO, infraestructura, modelo, servicios y bench), compáralo con el enunciado, ejecuta el código para confirmar los fallos en vez de suponerlos y al final dame un veredicto de qué falta antes de seguir."
@@ -72,7 +77,7 @@ estado visible) y elegir Pygame antes de escribir Vista y Controlador.
 **Prompt:** Partida tiene un servicio que luego le envia a otra Partida modelo? Para mantener la división de capas, además ahí están las reglas creadas, comparalas contra las que pide el pdf, ahora ten en cuenta que todo el contexto se repartio en ese otro md enviado, quitando lo de Partida y vista y controlador que hare yo, ahora tomando eso en cuenta, comentame si es posible lo de vista-controlador-servicio-modelo-(DTO,Infra,Estruc) en ese orden de progresión para implementar ambas clases de Partida y empezar con un pequeño segmento de código pequeño sin métodos, solo la definición de clase básica. Ten en cuenta este nuevo zip para el contexto añadido hasta el momento, solo mira los cambios que necesites, en general es el trabajo de los otros dos compañeros definidos en el 2do MD de repartición y correción de tareas, va en proceso, puedes suponer todos los cambios implementados de esa parte a menos que luego lo especifique, ya que eso lo estarán trabajando, quiero que solamente hagas las explicaciones que te pedi breves, voy a usar pygame
 
 **Prompt (resumido):** Se compartió el nuevo zip, el contrato de `Partida` y el reparto de trabajo
-entre Isaac y Saul. Se preguntó si `Partida` necesita un servicio que la envíe a otra clase
+entre dos integrantes. Se preguntó si `Partida` necesita un servicio que la envíe a otra clase
 `Partida` del modelo, se pidió comparar el contrato con el PDF, confirmar si es viable el orden
 vista → controlador → servicio → modelo → (DTO, infra, estructuras) y obtener el esqueleto de
 ambas clases sin métodos. El usuario usará Pygame.
@@ -158,41 +163,13 @@ Toma eso como contexto, solo ignora el prompt de arriba y dime como debo de avan
 **Para qué se usó:** Escribir la conversión de la partida a datos planos y sus tests, y redactar el texto de las decisiones de diseño del guardado y de la evidencia de rendimiento.
 
 ### 2026-10-10 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** Junto con la salida en consola de la prueba de la precarga (red normal, red lenta con espera máxima de 0.5 s y pedir una sala después de cerrar la precarga), se escribió: "esto me dio la prueba de la precarga: está bien? debería hacer commit? si es así aún no quiero hacer push, quiero acumular varios commits primero. y luego vamos con lo siguiente"
+**Prompt:** Quiero validar con pruebas manuales los últimos cambios de infraestructura y servicios (la espera máxima y el cierre de la precarga, el orden de los enemigos al poblar una sala, el desalojo del catálogo con fichas en uso y la ColaCircular con su error propio) y decidir dónde debe vivir el error de la cola vacía, antes de cada commit.
 
-**Prompt (resumido):** Se compartió la prueba manual de la espera máxima y del cierre de la precarga para validarla antes del commit.
+**Prompt (resumido):** Se pidió validar con pruebas manuales la precarga, el orden de los enemigos, el desalojo con fichas en uso y la ColaCircular, y decidir dónde definir el error de la cola vacía.
 
-**Para qué se usó:** Confirmar que la precarga espera un lote como máximo ESPERA_MAXIMA_LOTE_SEGUNDOS y rechaza pedidos después de cerrarse.
+**Para qué se usó:** Confirmar la espera máxima de la precarga y el cierre del servicio, que preparar_sala ordena los enemigos con ordenar_auto y que el desalojo respeta las fichas en uso, y decidir que ColaCircularVaciaError vive junto a la estructura y hereda de IndexError, porque es un error de programación y no externo.
 
-### 2026-10-10 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** Junto con la salida en consola de la prueba del orden de los enemigos (salas con 2 y 40 enemigos), se escribió: "esto me dio, hago commit?"
-
-**Prompt (resumido):** Se compartió la prueba del orden de los enemigos al poblar una sala.
-
-**Para qué se usó:** Confirmar que preparar_sala ordena los enemigos con ordenar_auto, como pide el enunciado.
-
-### 2026-10-10 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** Junto con la salida en consola de la prueba del desalojo del catálogo (nada en uso, una ficha en uso, todas en uso y una referencia que termina), se escribió: "esto dio la prueba, vamos con lo siguiente. y antes de eso, le paso el mensaje a mi compañero?"
-
-**Prompt (resumido):** Se compartió la prueba del desalojo con fichas en uso del catálogo y se preguntó si avisar al compañero.
-
-**Para qué se usó:** Validar que ServicioCatalogo no desaloja fichas en uso y preparar el aviso para conectar Partida.fichas_en_uso desde el modelo.
-
-### 2026-10-10 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** Citando la clase ColaCircularVaciaError propuesta en la respuesta anterior, se escribió: "seguro que eso es mejor que vaya en cola_circular y no en excepciones?"
-
-**Prompt (resumido):** Se preguntó dónde conviene definir el error de la cola vacía.
-
-**Para qué se usó:** Decidir que ColaCircularVaciaError vive junto a la estructura y hereda de IndexError, porque es un error de programación y no externo.
-
-### 2026-10-10 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** Junto con la salida en consola de la prueba de ColaCircular (cola vacía, captura como IndexError, capacidad inválida, sobrescritura y bitácora de mensajes), se escribió: "esto me dio la prueba, y sobre ListaEnlazada, me dijeron que mejor espere al final y ahí vemos si la quitamos. Además, puedes explicar esas últimas dos pruebas?"
-
-**Prompt (resumido):** Se compartió la prueba de ColaCircular con su nuevo error y la validación de capacidad.
-
-**Para qué se usó:** Validar los cambios de ColaCircular antes del commit.
-
-### 2026-10-11 — Claude (claude-sonnet-5-5)
+### 2026-10-11 — Claude (Sonnet 5.5, claude.ai)
 **Prompt:** "Te paso el proyecto actualizado (versión 4) con el contrato de la partida. Empecemos el servicio que arma la partida: construcción, bitácora de acciones y reporte final, y revisa el contrato. ¿Qué necesita la parte de la interfaz para empezar los controladores?" Después: "Te paso la versión 5 con lo que hizo un compañero en la tabla de puntajes. Revisa si eso cambia lo pendiente y sigamos con la segunda parte del servicio de partida: guardar y cargar, puntaje final y ranking. Decidamos también qué hacer con la bitácora al cargar."
 
 **Prompt (resumido):** Se pidió el servicio de partida en dos partes: armarla con su bitácora y reporte, y después guardar, cargar, puntaje y ranking.
@@ -200,18 +177,11 @@ Toma eso como contexto, solo ignora el prompt de arriba y dime como debo de avan
 **Para qué se usó:** Escribir ServicioPartida y Partida.fichas_en_uso con sus tests, corregir la reversión de una acción que falla a mitad de camino y redactar las decisiones de diseño y la actualización del contrato. Adicionalmente, se usó para revisar la tabla de puntajes y su repositorio, decidir cómo se restaura la bitácora al cargar, escribir guardar, cargar, puntaje y ranking con sus tests y redactar las decisiones de diseño.
 
 ### 2026-10-11 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** "cuál de todas las opciones es la más sencilla, pero que a su vez tenga sentido?"
+**Prompt:** Quiero la opción más sencilla, pero con sentido, para ordenar el ranking de puntajes, y validar con pruebas manuales el repositorio de puntajes en disco (archivo inexistente, varios registros, archivo dañado que no se sobrescribe y campos inválidos) antes del commit.
 
-**Prompt (resumido):** Se pidió la opción más sencilla y razonable para ordenar el ranking.
+**Prompt (resumido):** Se pidió elegir la opción más sencilla y razonable para el ranking y validar el repositorio de puntajes en disco.
 
-**Para qué se usó:** Elegir la propuesta de ranking que se llevó al equipo: victorias primero y separado por cripta.
-
-### 2026-10-11 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** Junto con la salida en consola de la prueba del archivo de puntajes (archivo inexistente, tres registros, archivo dañado que no se sobrescribe y campos inválidos), se escribió: "esto me dio la salida de la prueba, de momento dejé lo del formato, pero voy a tener en consideración si se queda o qué. hago commit?"
-
-**Prompt (resumido):** Se compartió la prueba del repositorio de puntajes en disco.
-
-**Para qué se usó:** Validar RepositorioPuntajes antes del commit.
+**Para qué se usó:** Elegir la propuesta de ranking que se llevó al equipo (victorias primero y separado por cripta) y validar RepositorioPuntajes antes del commit.
 
 ### 2026-10-11 — Claude Opus 5.5 (app de escritorio de Claude)
 **Prompt:** "Te paso el zip nuevo. Agrega al bench una carga que mida el ciclo de eventos con la Partida real sobre una cripta artificial, con varias corridas, tiempo típico y peor caso, contra los 20 ms. Y que el bench del inventario no cronometre la construcción de la lista y diga qué compara."
@@ -228,15 +198,14 @@ Toma eso como contexto, solo ignora el prompt de arriba y dime como debo de avan
 **Para qué se usó:** Completar el bench de solicitudes, escribir las pruebas unitarias de infraestructura y servicios, y corregir el orden de los enemigos en preparar_sala.
 
 
-### 2026-10-17 — Claude (claude-sonnet-5-5)
+### 2026-10-17 — Claude (Sonnet 5.5, claude.ai)
 **Prompt:** Te paso la puesta al día del proyecto (v6), el enunciado, el openapi y los 01 a 04. Empecemos con la Fase 1 del plan, puntos 1 a 3: haz que el ranking ordene las derrotas por más enemigos derrotados y, en un empate, por más tiempo vivo, agrega unos puntajes globales en el servicio que reemplacen el lambda del `__main__`, y quita la línea suelta `--replay` del informe. Dime qué buscar y por qué cambiarlo en cada archivo, con sus tests. Después, como nos faltó actualizar la documentación de esos cambios, empecemos por ahí, con su commit.
 
 **Prompt (resumido):** Se compartió el estado del proyecto (versión 6) con su documento de puesta al día y se pidió ejecutar la primera fase del plan: ordenar las derrotas del ranking por enemigos derrotados y tiempo vivo, exponer los puntajes globales en el servicio de partida y limpiar una línea del informe del replay. Luego se pidió actualizar la documentación de esos cambios.
 
 **Para qué se usó:** Escribir y probar el nuevo orden del ranking y los puntajes globales con sus tests, y redactar las decisiones de diseño, la bitácora y el contrato de esta fase.
 
-
-### 2026-10-17 — Claude (claude-sonnet-5-5)
+### 2026-10-17 — Claude (Sonnet 5.5, claude.ai)
 **Prompt:** Con el 04 de la auditoría y el zip más reciente, dime qué hallazgos siguen abiertos y cuáles ya están resueltos, y propón en qué orden cerrar los que son del modelo. Revisa de paso que lo del puntaje esté bien aplicado, porque hay un test que falla.
 
 **Prompt (resumido):** Se pidió contrastar la auditoría del proyecto con el código actual, clasificar los hallazgos y proponer el orden para cerrar los del modelo. En la revisión apareció una parte del orden de los puntajes sin aplicar.
@@ -257,7 +226,7 @@ Toma eso como contexto, solo ignora el prompt de arriba y dime como debo de avan
 
 Colocale un indice numerico tipo 1. 2. 3. y asi a los mensajes, además revisa esto
 
-PS C:\Users\axela\Cripta> py -m cripta --replay partida.log
+PS C:\Users\<usuario>\Cripta> py -m cripta --replay partida.log
 [Error] Bitácora de partida inválida (partida.log): el archivo no existe
 
 y ademas:
@@ -289,43 +258,16 @@ un log de ejemplo reproducible para la defensa de --replay (§4.11, §9).
 **Para qué se usó:** Redactar las secciones de catálogo, caché y precarga con su evidencia.
 
 ### 2026-10-18 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** "Hagamos primero los arreglos rápidos: el import duplicado del cliente HTTP, MAX_REINTENTOS_429 en constantes, los comentarios desactualizados, los encabezados sin nombres y datos/ fuera de git. Luego seguimos con 4.9, 4.10 y 4.11."
+**Prompt:** Quiero cerrar los pendientes finales: arreglos pequeños de código y comentarios (import duplicado del cliente HTTP, MAX_REINTENTOS_429 en constantes, encabezados sin nombres, datos/ fuera de git), mover el script de la primera prueba del API a scripts/ y quitar pytest de requirements.txt si no hace falta. Después, escribir las secciones 4.9, 4.10 y 4.11 del Documento de Decisiones y el README sobre la versión más reciente tras un merge. También explícame por qué faltaban los __init__.py de tests/vista y tests/controlador, y completemos la bitácora de trabajo del 6 al 17 de octubre, que no incluía la parte de red, disco y servicios.
 
-**Prompt (resumido):** Se pidió ayuda con arreglos pequeños de código y comentarios, y para escribir las secciones 4.9, 4.10 y 4.11 del Documento de Decisiones. Durante el trabajo se corrigió en el documento que la burbuja "tarda demasiado", se pidió explicar mejor el umbral de 32 del selector y de dónde salían los tamaños 10 y 50, se pidió el comando para reproducir una partida real con el replay y se pegó su salida, y se integró en 4.9 el texto de un compañero al resolver un merge.
+**Prompt (resumido):** Se pidió ayuda para cerrar los pendientes finales: arreglos pequeños de código y comentarios, limpieza del repositorio (prueba_api.py y pytest), las secciones 4.9, 4.10 y 4.11 del Documento de Decisiones, el README, los __init__.py faltantes de las pruebas y la bitácora de trabajo de la parte de red, disco y servicios.
 
-**Para qué se usó:** Arreglos pequeños de código y comentarios, y redactar las secciones de ordenamiento, guardado binario y bitácora con replay.
+**Para qué se usó:** Arreglos pequeños y limpieza del repositorio, redactar las secciones de ordenamiento, guardado binario y bitácora con replay, escribir el README, agregar los __init__.py para que discover ejecute 33 tests más (213 en total) y completar la bitácora de trabajo.
 
-### 2026-10-18 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** "Vamos con el readme, pero antes mi compañero hizo unos cambios, así que hice un merge, no sé si quieres que te pase el nuevo zip antes del readme."
+### 2026-10-18 — Claude (Sonnet 5.5, claude.ai)
+**Prompt:** Te paso el contexto actual, el enunciado, el openapi y el zip del proyecto, más los últimos cambios (git pull y los arreglos que están haciendo mis compañeros). Revisa la parte de la documentación: que en la bitácora de prompts todos los prompts vengan completos junto con su resumen, que en la bitácora de trabajo la última anotación no tenga puntos pendientes, y que en las Decisiones de Diseño esté todo completo, sin las líneas de "pendiente revisar" y con sentido, porque algunas cosas se escribieron hace días y pueden estar desactualizadas. No leas el zip completo a profundidad, solo los archivos que necesites.
 
-**Prompt (resumido):** Se pidió ayuda para escribir el README sobre la versión más reciente del proyecto.
+**Prompt (resumido):** Se pidió revisar la documentación del proyecto: completar y uniformar PROMPTS_LLM.md, cerrar la última entrada de la bitácora sin pendientes y comprobar que el Documento de Decisiones esté completo y actualizado respecto al código.
 
-**Para qué se usó:** Escribir el README con la instalación, las banderas, los comandos, los archivos generados y las pruebas.
+**Para qué se usó:** Detectar y corregir textos desactualizados o contradictorios en las Decisiones de Diseño (muerte de enemigos en 4.1, límites de 4.6, formato de 4.2, referencias a secciones del enunciado), unificar PROMPTS_LLM.md y cerrar la bitácora del 18/10 con lo realizado.
 
-### 2026-10-18 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** "qué es eso de los init? explícame dónde hacerlo"
-
-**Prompt (resumido):** Se pidió explicar y ubicar los __init__.py que faltaban en tests/vista y tests/controlador.
-
-**Para qué se usó:** Agregar los dos archivos para que discover ejecute esos 33 tests (213 en total).
-
-### 2026-10-18 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** "pero espera, creo que no estás tomando algo en cuenta, y es que aunque salgan entradas de los días 6 de octubre hasta el 17, no abarca lo de todos, es decir, lo que hemos hecho tú y yo aún no está incluido en esas entradas anteriores. Lo que recuerdo es que la primera entrada de la bitácora (la del 20 de septiembre), la hicimos nosotros, y de ahí no me volví a meter hasta el 6 de octubre (si mal no recuerdo)"
-
-**Prompt (resumido):** Se señaló que la bitácora de trabajo no incluía la parte de red, disco y servicios del 6 al 17 de octubre.
-
-**Para qué se usó:** Completar la bitácora de trabajo con esos días y agregar las entradas del 16 y 18 de octubre.
-
-### 2026-10-18 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** "lo de prueba_api, no había sido un script nuestro para probar al inicio? lo vamos a dejar?"
-
-**Prompt (resumido):** Se preguntó qué hacer con el script de la primera prueba del API.
-
-**Para qué se usó:** Mover prueba_api.py a scripts/ sin el código viejo comentado.
-
-### 2026-10-18 — Claude Opus 5.5 (app de escritorio de Claude)
-**Prompt:** "pero eso del pytest es necesario? el enunciado lo pide? o es solo otra forma de hacerlo?"
-
-**Prompt (resumido):** Se preguntó si la dependencia pytest era necesaria.
-
-**Para qué se usó:** Quitar pytest de requirements.txt, porque las pruebas usan unittest.

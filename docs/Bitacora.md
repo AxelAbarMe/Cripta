@@ -123,11 +123,11 @@ Se unieron las dos ramas de trabajo en main y se comprobó el proyecto completo:
 
 Se agregó al mapa datos_de_puerta, que devuelve la llave y el cierre automático de una puerta mirando sus dos lados.
 
-Se escribió comportamiento_enemigo.py con la decisión del turno de un enemigo (§2.8): si comparte sala con el jugador ataca; si no, el guardián espera, el errante elige al azar una salida abierta y el rastreador sigue el rastro fresco más reciente de las salas vecinas, con desempate por menor id. El módulo solo decide; ejecutar la acción lo hará el motor.
+Se escribió comportamiento_enemigo.py con la decisión del turno de un enemigo (2.8): si comparte sala con el jugador ataca; si no, el guardián espera, el errante elige al azar una salida abierta y el rastreador sigue el rastro fresco más reciente de las salas vecinas, con desempate por menor id. El módulo solo decide; ejecutar la acción lo hará el motor.
 
 Se escribió accion.py con las 9 acciones del jugador definidas en el contrato de Partida, con su validación, su costo base y su conversión a dict para la bitácora de la partida.
 
-Se escribió el primer trozo del motor (partida.py y resultado_partida.py): construcción de la partida con su generador de azar propio, inicio según §2.4, ciclo de eventos hasta el siguiente turno del jugador, turnos de los enemigos (atacar, moverse o esperar), derrota, la consulta vista() con todo lo que debe mostrar la interfaz y la acción esperar. Se probó con la cripta real de fixtures: con la misma semilla dos partidas producen exactamente los mismos mensajes y tiempos, y con otra semilla cambian.
+Se escribió el primer trozo del motor (partida.py y resultado_partida.py): construcción de la partida con su generador de azar propio, inicio según 2.4, ciclo de eventos hasta el siguiente turno del jugador, turnos de los enemigos (atacar, moverse o esperar), derrota, la consulta vista() con todo lo que debe mostrar la interfaz y la acción esperar. Se probó con la cripta real de fixtures: con la misma semilla dos partidas producen exactamente los mismos mensajes y tiempos, y con otra semilla cambian.
 
 Lo siguiente que hay que realizar:
 * Motor Partida, trozo 2: mover y abrir (llave comparada con el id de la ficha y cierre automático), trampas y victoria.
@@ -240,6 +240,11 @@ Al revisar las pruebas se vio que las carpetas tests/vista y tests/controlador n
 
 Se completó la bitácora de la parte de red, disco y servicios de los días 6 al 17 de octubre, que no se había registrado.
 
-Lo siguiente que hay que realizar:
-* Completar PROMPTS_LLM.md con los prompts de la parte de red, disco y servicios.
-* Revisión final del proyecto antes de la entrega.
+Se hizo pull de los últimos cambios de main. Trajeron pruebas nuevas para el manejo del HTTP 429 (el servidor pide esperar porque llegaron demasiadas solicitudes): el cliente HTTP espera el tiempo indicado por el servidor y reintenta, cada reintento cuenta en el presupuesto, todos los reintentos usan el mismo identificador de cliente, un 429 sin tiempo indicado espera un segundo, un 429 que no se resuelve termina con un error que nombra la operación después de MAX_REINTENTOS_429 reintentos, y con el presupuesto agotado nunca se supera el máximo. Otra prueba comprueba que ese error de red, mostrado desde el controlador, no cierra el juego: se muestra el mensaje y se vuelve al menú. La suite completa pasa con 222 pruebas.
+
+Se hizo una revisión completa de la documentación sobre la versión más reciente del proyecto:
+* Documento de Decisiones: no queda ninguna línea marcada como pendiente de revisar y las 11 secciones tienen sus seis partes, incluida la decisión de 4.7. Se corrigió una contradicción en 4.1 sobre la muerte de un enemigo (el motor cancela su evento pendiente y, además, el turno comprueba que siga vivo), se actualizó el texto de límites de 4.6, que decía que había que repetir la medición cuando el motor registrara inversas reales (ya lo hace y esas inversas están incluidas en las mediciones de la partida real de 4.1), se indicó en 4.5 que el recorrido del inventario es circular, se quitó un párrafo repetido en los límites de 4.7, se aclaró en 4.10 que el archivo binario no contiene JSON, se indicó en 4.4 por qué no se usa una tabla hash y se corrigió un formato roto en 4.2.
+* PROMPTS_LLM.md: se unificó el nombre de la herramienta, se quitaron nombres de personas y se agruparon en una sola entrada por día las consultas pequeñas.
+
+Se decidió no agregar más alternativas descartadas al bench: el enunciado pide medir al menos una alternativa descartada por sección, y las que quedan sin medir (la lista ordenada en 4.1 y FIFO en 4.4) están declaradas como tales en sus límites conocidos, con la razón de cada descarte.
+

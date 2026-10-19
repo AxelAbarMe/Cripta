@@ -8,7 +8,7 @@ El proyecto usa estructuras de datos propias (montículo para la agenda de event
 
 ## 1. Requisitos
 
-- **Python 3.11 o más reciente.** Se probó con 3.11 y 3.14.
+- **Python 3.11 o más reciente.** Se probó con 3.12 y 3.14.
 - **Internet**, solo para jugar en línea. Con `--offline` el juego funciona sin conexión (ver la sección 3).
 - **Una consola de al menos 113 columnas de ancho.** La pantalla del juego se dibuja con texto y mide exactamente eso; si la ventana es más angosta, las líneas se parten y el dibujo se desordena.
 
@@ -25,7 +25,7 @@ py -m pip install -r requirements.txt
 - Las dos primeras líneas crean y activan un **entorno virtual** (una copia aislada de Python para este proyecto). Son opcionales, pero evitan mezclar paquetes con otros proyectos. En Linux o macOS la activación es `source .venv/bin/activate`.
 - La única dependencia que usa el programa es `requests`, la librería que hace las solicitudes HTTP. Se necesita instalada también para jugar con `--offline`.
 
-> **`py` o `python`:** En Windows En Windows el comando `py` abre el Python instalado. En Linux y macOS se usa `python3` (o `python`, según la instalación). Todos los comandos de este documento funcionan igual cambiando `py` por el que corresponda.
+> **`py` o `python`:** En Windows el comando `py` abre el Python instalado. En Linux y macOS se usa `python3` (o `python`, según la instalación). Todos los comandos de este documento funcionan igual cambiando `py` por el que corresponda.
 
 ## 3. Cómo ejecutar
 
@@ -45,7 +45,7 @@ Las banderas se pueden combinar, por ejemplo `py -m cripta --offline --cache-siz
 **Términos:**
 
 - **Catálogo:** la lista de "fichas" del juego (cada tipo de objeto, enemigo o trampa, con sus estadísticas). El juego las pide al API por lotes y las guarda en una **caché**: una copia local para no volver a pedirlas.
-- **Fixtures:** archivos JSON con respuestas reales del API, guardados tal como llegaron, para jugar y probar sin red. Hoy incluyen la cripta `cripta-01` ("Osario menor", 6 salas). El formato está en `docs/FORMATO_OFFLINE.md`; para regenerarlos con internet: `py -m scripts.generar_fixtures cripta-01`.
+- **Fixtures:** archivos JSON con respuestas reales del API, guardados tal como llegaron, para jugar y probar sin red. Incluyen las cuatro criptas publicadas: `cripta-01` ("Osario menor", 6 salas), `cripta-02` (20 salas), `cripta-03` (40 salas) y `cripta-04` (50 salas). El formato está en `docs/FORMATO_OFFLINE.md`; para regenerar una cripta con internet: `py -m scripts.generar_fixtures cripta-02` (cambiando el id).
 - Al salir del juego se imprime un **reporte final**: solicitudes usadas contra el presupuesto, aciertos y fallos de la caché del catálogo, y cuántas salas se trajeron por red o desde disco.
 
 ## 4. Cómo se juega
@@ -89,6 +89,22 @@ py -m cripta --offline --replay datos/partida.log
 El replay vuelve a ejecutar las acciones, sin interfaz ni preguntas, e imprime cada paso y el desenlace. Usa la red, salvo que se agregue `--offline` (que solo sirve si la partida fue en una cripta guardada en `fixtures/`). Si la versión de la cripta o del catálogo cambió desde que se jugó, o la bitácora está marcada como parcial, no la reproduce y explica por qué: con otros datos el resultado ya no sería el mismo.
 
 Al guardar, el juego también copia la bitácora en `datos/partida.sav.log`, de modo que una partida cargada se puede seguir reproduciendo desde el principio.
+
+**Bitácoras de ejemplo.** En `docs/ejemplos/` hay tres partidas ya jugadas que se reproducen sin red, sin necesidad de jugar antes:
+
+```
+py -m cripta --offline --replay docs/ejemplos/partida_cripta-02.log
+py -m cripta --offline --replay docs/ejemplos/partida_cripta-03.log
+py -m cripta --offline --replay docs/ejemplos/partida_cripta-04.log
+```
+
+| Archivo | Qué muestra |
+|---|---|
+| `partida_cripta-02.log` | Combate con una rata: el daño tiene una parte al azar, y el replay lo repite igual porque usa la misma semilla. |
+| `partida_cripta-03.log` | Uso del pergamino de retroceso: deshace el último movimiento y el tiempo vuelve atrás. |
+| `partida_cripta-04.log` | Puerta abierta con llave, recorrido por las cámaras ocultas y cierre automático de la puerta. |
+
+Las tres terminan con código de salida `0` (reproducción fiel).
 
 **Código de salida** (el número que el programa devuelve al sistema al terminar; sirve para scripts):
 `0` la reproducción fue fiel · `1` no fue fiel (se explica el motivo) · `2` error externo (archivo inexistente, red, etc.).
@@ -153,10 +169,11 @@ cripta/
 ├── dto/               conversión de las respuestas JSON del API a objetos
 ├── bench/             cargas sintéticas de --bench
 └── assets/            imágenes para la vista gráfica
-fixtures/              respuestas del API guardadas para --offline
+fixtures/              respuestas del API guardadas para --offline (las 4 criptas publicadas)
 scripts/               generar_fixtures.py y prueba_api.py (prueba rápida del API)
 tests/                 pruebas, por capa
 docs/                  Documento de Decisiones, bitácora, contrato de la partida, formato offline
+└── ejemplos/          bitácoras de ejemplo para --replay
 PROMPTS_LLM.md         prompts usados con asistentes de IA
 ```
 

@@ -1,7 +1,7 @@
 '''Contrato de la Vista de Cripta: lo que el ControladorCripta espera de cualquier interfaz.
-VistaConsola y VistaGrafica heredan de esta clase e implementan los 13 métodos.
+VistaConsola hereda de esta clase e implementa los 13 métodos, otra interfaz solo tendría que hacer lo mismo.
 La vista solo lee VistaPartida y ResultadoAccion; nunca toca el modelo ni el servicio.
-Sus órdenes salen como objetos Orden y recibe DatosFinales (ambos en controlador/controller_cripta.py).
+Sus órdenes salen como objetos Orden y recibe DatosFinales (ambos en controlador/controlador_cripta.py).
 '''
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING

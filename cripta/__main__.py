@@ -1,6 +1,6 @@
 '''Arranque de Cripta: arma infraestructura, servicio, vista y controlador (la vista solo en la rama interactiva).
 Banderas: --offline (lee fixtures/), --cache-size N (fichas del catálogo en memoria) y --bench (mediciones sin vista).
-Con --bench se aceptan además --escala, --solo y --markdown; --replay RUTA reproduce un log sin vista. Falta --grafica.
+Con --bench se aceptan además --escala, --solo y --markdown; --replay RUTA reproduce un log sin vista.
 Archivos generados en datos/: cache/, puntajes/, partida.sav y partida.log.
 Uso: py -m cripta [--offline] [--cache-size N]  |  py -m cripta --bench [--escala X]  |  py -m cripta --replay partida.log
 '''

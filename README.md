@@ -167,8 +167,7 @@ cripta/
 ├── infraestructura/   cliente HTTP y offline, contador de solicitudes, caché, guardado, bitácora, puntajes
 ├── estructuras/       estructuras de datos y ordenamientos propios
 ├── dto/               conversión de las respuestas JSON del API a objetos
-├── bench/             cargas sintéticas de --bench
-└── assets/            imágenes para la vista gráfica
+└── bench/             cargas sintéticas de --bench
 fixtures/              respuestas del API guardadas para --offline (las 4 criptas publicadas)
 scripts/               generar_fixtures.py y prueba_api.py (prueba rápida del API)
 tests/                 pruebas, por capa

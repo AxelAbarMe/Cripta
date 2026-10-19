@@ -20,7 +20,7 @@ Convención: todos los nombres de métodos, atributos y clases nuevos van **en e
 
 ## 2. Construcción
 
-```python
+```
 Partida(datos_generales, mapa, servicio_catalogo, servicio_precarga, semilla)
 ```
 
@@ -57,7 +57,7 @@ Quien construye todo esto es ServicioPartida (§11); el __main__ solo le entrega
 Decisión: `usar`, `equipar` y `soltar` llevan el `indice` explícito, y `Partida` coloca el cursor del inventario ahí antes de ejecutar. Así una acción por sí sola es reproducible; si dependiera de dónde quedó el cursor, el replay no podría reconstruirla.
 
 Formato en el log (un `dict` por línea, tal como lo escribe `EscritorBitacoraPartida.registrar_accion`):
-```python
+```
 {"tipo": "mover", "direccion": "N"}
 {"tipo": "atacar", "instancia": "e-201"}
 {"tipo": "equipar", "indice": 2}
@@ -71,7 +71,7 @@ Métodos: `accion.a_dict()` y `Accion.desde_dict(datos)`. `desde_dict` lanza `Va
 
 ## 4. Ejecutar una acción
 
-```python
+```
 resultado = partida.ejecutar_accion(accion)
 ```
 
@@ -113,7 +113,7 @@ Cuando `desenlace` deja de ser `"en_curso"`, `ejecutar_accion` ya no acepta más
 
 ## 6. Guardado y carga
 
-```python
+```
 estado = partida.a_estado_guardado(version_catalogo)
 partida = Partida.desde_estado_guardado(estado, datos_generales, mapa, servicio_catalogo, servicio_precarga)
 ```
@@ -131,12 +131,12 @@ El contrato con infraestructura: `EstadoPartida` y `GuardadoBinario` están cong
 
 ## 7. Cómo lo usa cada parte
 
-| Quién | Qué hace con `Partida` |
-|---|---|
+| Quién | Qué hace con `Partida`                                                                                                                                                                                                                               |
+|---|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Controlador** | Traduce el teclado a `Accion`, llama a `ejecutar_accion`, pide `vista()` a la vista y llama a `servicio.ejecutar(accion)`, que ejecuta y registra en la bitácora; para consultar usa `servicio.partida.vista()`. `registrar_accion(accion.a_dict())` |
-| **Replay** | Lee el log con `LectorBitacoraPartida`, valida versiones, lama a `servicio.iniciar_nueva(cripta, semilla)` sin ruta de bitácora con la semilla del encabezado y llama `ejecutar_accion(Accion.desde_dict(d))` por cada línea. No necesita vista |
-| **Bench** | Puede crear una `Partida` con una cripta artificial (`tests/cripta_artificial.py`) y medir el ciclo de §5.2 |
-| **Guardado** | Llama a `a_estado_guardado()` / `desde_estado_guardado()` y le pasa el estado a `GuardadoBinario` |
+| **Replay** | Lee el log con `LectorBitacoraPartida`, valida versiones, llama a `servicio.iniciar_nueva(cripta, semilla)` sin ruta de bitácora con la semilla del encabezado y llama `ejecutar_accion(Accion.desde_dict(d))` por cada línea. No necesita vista     |
+| **Bench** | Puede crear una `Partida` con una cripta artificial (`tests/cripta_artificial.py`) y medir el ciclo de §5.2                                                                                                                                          |
+| **Guardado** | Llama a `a_estado_guardado()` / `desde_estado_guardado()` y le pasa el estado a `GuardadoBinario`                                                                                                                                                    |
 
 ---
 
@@ -155,7 +155,7 @@ Dos `Partida` creadas con la **misma cripta, la misma semilla y la misma secuenc
 ---
 
 ## 10. Estado de implementación
-Este archivo define la interfaz **antes** de implementarla. Se marca cada punto cuando exista:
+Este archivo se escribió antes de implementar la interfaz, como guía para el motor, el controlador y el replay. Todos sus puntos ya están implementados:
 
 - [x] `accion.py`: `Accion`, `a_dict`, `desde_dict`
 - [x] `partida.py`: construcción e `iniciar()`

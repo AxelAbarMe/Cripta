@@ -1,0 +1,20 @@
+{"id_cripta": "cripta-03", "version_cripta": "24d301ed6e9f", "version_catalogo": "be68d322d2f5", "semilla": 501544604, "tipo": "encabezado"}
+{"tipo": "recoger", "ficha_id": "itm_antorcha"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_daga_oxidada"}
+{"tipo": "recoger", "ficha_id": "itm_llave_bronce"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_coraza_cuero"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_llave_negra"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_antidoto"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "atacar", "instancia": "e-rata-cripta-03-1"}
+{"tipo": "atacar", "instancia": "e-rata-cripta-03-1"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_pergamino_retroceso"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "pergamino"}
+{"tipo": "esperar"}

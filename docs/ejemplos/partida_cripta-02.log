@@ -1,0 +1,15 @@
+{"id_cripta": "cripta-02", "version_cripta": "8091a5cd8b7c", "version_catalogo": "be68d322d2f5", "semilla": 1153900178, "tipo": "encabezado"}
+{"tipo": "recoger", "ficha_id": "itm_antorcha"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_daga_oxidada"}
+{"tipo": "recoger", "ficha_id": "itm_llave_bronce"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_coraza_cuero"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_llave_negra"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "recoger", "ficha_id": "itm_antidoto"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "atacar", "instancia": "e-rata-cripta-02-1"}
+{"tipo": "atacar", "instancia": "e-rata-cripta-02-1"}

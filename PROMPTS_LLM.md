@@ -271,3 +271,9 @@ un log de ejemplo reproducible para la defensa de --replay (§4.11, §9).
 
 **Para qué se usó:** Detectar y corregir textos desactualizados o contradictorios en las Decisiones de Diseño (muerte de enemigos en 4.1, límites de 4.6, formato de 4.2, referencias a secciones del enunciado), unificar PROMPTS_LLM.md y cerrar la bitácora del 18/10 con lo realizado.
 
+### 2026-11-09 — Antigravity CLI 1.5.3 (Gemini 3.8 Flash)
+**Prompt:** "/speckit-constitution Establece la constitución del proyecto Cripta, segunda parte, completa y en español, con ocho principios y reglas verificables: estructuras de datos a mano (sin dict ni set como índice, heapq, bisect, collections ni sort), determinismo con random.Random(semilla), separación MVC y adaptadores, ningún dato de una cripta concreta en el código, presupuesto de red, rendimiento respaldado con --bench (con los límites de 20, 200, 50 y 5 ms), especificación antes que código y compatibilidad con la primera parte. Incluye restricciones del proyecto, flujo de trabajo (los agentes no hacen commit ni push) y gobernanza con versión 1.0.0." (El texto completo está en prompts/p2/01-constitution.md.)
+
+**Prompt (resumido):** Se pidió generar la constitución de la segunda parte con los ocho principios acordados por el grupo, las restricciones, el flujo de trabajo y la gobernanza.
+
+**Para qué se usó:** Generar el borrador de .specify/memory/constitution.md, que el grupo revisó y ajustó a mano antes de confirmarlo.

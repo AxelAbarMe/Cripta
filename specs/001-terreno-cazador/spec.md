@@ -1,12 +1,12 @@
-# Feature Specification: Terreno y Cazador
+# Especificación de Funcionalidad: Terreno y Cazador
 
-**Feature Branch**: `001-terreno-cazador`
+**Rama de la funcionalidad**: `001-terreno-cazador`
 
-**Created**: 2026-11-09
+**Creado**: 2026-11-09
 
-**Status**: Draft
+**Estado**: Borrador
 
-**Input**: User description: "Capacidad: terreno y cazador de Cripta Parte II.
+**Entrada**: Descripción del usuario: "Capacidad: terreno y cazador de Cripta Parte II.
 
 Terreno: cada salida puede declarar un costo entero >= 1; si no lo declara vale 100; es igual en ambos sentidos. Moverse a través de una salida cuesta el costo de esa salida; el intervalo sigue siendo max(1, costo_salida * 100 // velocidad). Aplica a todos los actores. Atacar, esperar y demás acciones no cambian. Errantes y rastreadores conservan su comportamiento.
 
@@ -29,79 +29,79 @@ Incluye como escenarios de aceptación todos estos casos del Apéndice B:
 
 Prefijo de requisitos: FR-TER-NNN. No menciones estructuras de datos, clases ni módulos."
 
-## User Scenarios & Testing *(mandatory)*
+## Escenarios de Usuario y Pruebas *(obligatorio)*
 
-### User Story 1 - Movimiento y costos variables del terreno para actores (Priority: P1)
+### Historia de Usuario 1 - Movimiento y costos variables del terreno para actores (Prioridad: P1)
 
 Como jugador o entidad del juego (actor), al desplazarme entre salas conectadas a través de una salida abierta, el tiempo virtual que consume mi movimiento debe reflejar la dificultad del terreno determinada por el costo específico de esa salida (o el costo base estándar de 100 si no se especifica), aplicando el costo de forma idéntica en ambos sentidos de la conexión y garantizando que el intervalo de tiempo virtual nunca sea inferior a 1 unidad temporal.
 
-**Why this priority**: El costo de terreno es el fundamento de la dinámica espacial de la Parte II: afecta a jugadores y a todos los tipos de enemigos en su consumo temporal y en la agenda del reloj de eventos.
+**Por qué esta prioridad**: El costo de terreno es el fundamento de la dinámica espacial de la Parte II: afecta a jugadores y a todos los tipos de enemigos en su consumo temporal y en la agenda del reloj de eventos.
 
-**Independent Test**: Puede verificarse de manera aislada cargando un laberinto con salidas de costo variado y comprobando que el jugador y enemigos convencionales consumen exactamente los intervalos temporales prescritos según su velocidad y el costo de la salida atravesada, tanto en ida como en vuelta.
+**Prueba independiente**: Puede verificarse de manera aislada cargando un laberinto con salidas de costo variado y comprobando que el jugador y enemigos convencionales consumen exactamente los intervalos temporales prescritos según su velocidad y el costo de la salida atravesada, tanto en ida como en vuelta.
 
-**Acceptance Scenarios**:
+**Escenarios de aceptación**:
 
-1. **Given** un actor con velocidad 100 en una sala, y una salida abierta hacia una sala vecina con costo declarado de 250, **When** el actor se desplaza a través de dicha salida, **Then** la acción consume un costo de 250 unidades, el intervalo de tiempo virtual programado es de 250 unidades, y al regresar por la misma salida abierta en sentido opuesto el costo es también de 250 unidades.
-2. **Given** un actor con velocidad 100 en una sala, y una salida abierta hacia una sala vecina que no declara costo, **When** el actor se desplaza a través de dicha salida, **Then** la acción asume un costo por defecto de 100 unidades y programa un intervalo temporal de 100 unidades.
-3. **Given** un actor con velocidad elevada de 200 en una sala, y una salida abierta hacia una vecina con costo 1, **When** el actor se desplaza a través de dicha salida, **Then** el cálculo del intervalo produce un tiempo virtual de al menos 1 unidad temporal, evitando valores nulos o negativos.
-4. **Given** un actor con velocidad inicial 100 que inicia el cruce de una salida con costo 400 en el instante t = 0 (con tiempo de llegada previsto en t = 400), **When** en el instante t = 100 su velocidad cambia a 200 por efecto de una poción de velocidad, **Then** el tiempo restante se escala proporcionalmente a 150 unidades adicionales, reprogramando su llegada en el instante virtual t = 250.
-5. **Given** un actor en una sala contigua a salidas de costos variables, **When** el actor ejecuta una acción de esperar o atacar, **Then** el costo de dicha acción permanece inalterado en su valor base de 100 unidades, sin verse modificado por los costos de las salidas circundantes.
-6. **Given** un enemigo errante o rastreador activo en una sala con salidas abiertas de costos heterogéneos, **When** llega su turno de acción, **Then** el errante selecciona al azar una salida abierta y el rastreador selecciona la salida hacia la sala accesible con rastro más fresco menor a 400 unidades, utilizando en ambos casos el costo de la salida seleccionada para determinar el costo y la duración del movimiento.
+1. **Dado** un actor con velocidad 100 en una sala, y una salida abierta hacia una sala vecina con costo declarado de 250, **Cuando** el actor se desplaza a través de dicha salida, **Entonces** la acción consume un costo de 250 unidades, el intervalo de tiempo virtual programado es de 250 unidades, y al regresar por la misma salida abierta en sentido opuesto el costo es también de 250 unidades.
+2. **Dado** un actor con velocidad 100 en una sala, y una salida abierta hacia una sala vecina que no declara costo, **Cuando** el actor se desplaza a través de dicha salida, **Entonces** la acción asume un costo por defecto de 100 unidades y programa un intervalo temporal de 100 unidades.
+3. **Dado** un actor con velocidad elevada de 200 en una sala, y una salida abierta hacia una vecina con costo 1, **Cuando** el actor se desplaza a través de dicha salida, **Entonces** el cálculo del intervalo produce un tiempo virtual de al menos 1 unidad temporal, evitando valores nulos o negativos.
+4. **Dado** un actor con velocidad inicial 100 que inicia el cruce de una salida con costo 400 en el instante t = 0 (con tiempo de llegada previsto en t = 400), **Cuando** en el instante t = 100 su velocidad cambia a 200 por efecto de una poción de velocidad, **Entonces** el tiempo restante se escala proporcionalmente a 150 unidades adicionales, reprogramando su llegada en el instante virtual t = 250.
+5. **Dado** un actor en una sala contigua a salidas de costos variables, **Cuando** el actor ejecuta una acción de esperar o atacar, **Entonces** el costo de dicha acción permanece inalterado en su valor base de 100 unidades, sin verse modificado por los costos de las salidas circundantes.
+6. **Dado** un enemigo errante o rastreador activo en una sala con salidas abiertas de costos heterogéneos, **Cuando** llega su turno de acción, **Entonces** el errante selecciona al azar una salida abierta y el rastreador selecciona la salida hacia la sala accesible con rastro más fresco menor a 400 unidades, utilizando en ambos casos el costo de la salida seleccionada para determinar el costo y la duración del movimiento.
 
 ---
 
-### User Story 2 - Persecución táctica del enemigo Cazador por costo mínimo (Priority: P1)
+### Historia de Usuario 2 - Persecución táctica del enemigo Cazador por costo mínimo (Prioridad: P1)
 
 Como enemigo con comportamiento de Cazador, en cada turno de mi ciclo de vida debo evaluar el estado actual del laberinto para perseguir al jugador por la ruta de menor costo total acumulado a través de salidas actualmente abiertas, o atacarlo directamente si ya me encuentro en la misma sala, asegurando que mis movimientos siempre elijan la opción más económica en costo total aunque implique atravesar un mayor número de salas intermedias.
 
-**Why this priority**: El cazador es la principal amenaza inteligente introducida en la Parte II; su persecución óptima y letal es el núcleo del desafío del jugador y de la simulación.
+**Por qué esta prioridad**: El cazador es la principal amenaza inteligente introducida en la Parte II; su persecución óptima y letal es el núcleo del desafío del jugador y de la simulación.
 
-**Independent Test**: Puede verificarse en un entorno controlado situando a un cazador y al jugador en salas separadas con múltiples caminos alternativos de diferente número de salas y costos, confirmando que el cazador avanza por la ruta de menor costo acumulado y ataca al compartir sala.
+**Prueba independiente**: Puede verificarse en un entorno controlado situando a un cazador y al jugador en salas separadas con múltiples caminos alternativos de diferente número de salas y costos, confirmando que el cazador avanza por la ruta de menor costo acumulado y ataca al compartir sala.
 
-**Acceptance Scenarios**:
+**Escenarios de aceptación**:
 
-1. **Given** un cazador y el jugador que se encuentran en la misma sala, **When** llega el turno de acción del cazador, **Then** el cazador ataca al jugador con costo base de 100 unidades y no realiza desplazamiento de sala.
-2. **Given** un cazador en la sala A y el jugador en la sala B, existiendo un camino directo de 1 salida abierta de costo 300, y un camino alternativo de 3 salidas abiertas de costo 50 cada una (costo total acumulado de 150), **When** llega el turno de acción del cazador (con rango mayor o igual a 150), **Then** el cazador opta por la ruta de menor costo acumulado (150 frente a 300) y se mueve un paso hacia la primera sala intermedia de dicho camino, teniendo dicha acción un costo de 50 unidades.
-3. **Given** un cazador que determina una ruta óptima de costo mínimo d hacia el jugador cuya primera salida abierta tiene costo C, **When** el cazador ejecuta su turno de desplazamiento, **Then** se mueve a la sala vecina inmediata de esa ruta y el costo de su acción corresponde exactamente a C unidades, programando su siguiente turno según dicho costo y su velocidad.
+1. **Dado** un cazador y el jugador que se encuentran en la misma sala, **Cuando** llega el turno de acción del cazador, **Entonces** el cazador ataca al jugador con costo base de 100 unidades y no realiza desplazamiento de sala.
+2. **Dado** un cazador en la sala A y el jugador en la sala B, existiendo un camino directo de 1 salida abierta de costo 300, y un camino alternativo de 3 salidas abiertas de costo 50 cada una (costo total acumulado de 150), **Cuando** llega el turno de acción del cazador (con rango mayor o igual a 150), **Entonces** el cazador opta por la ruta de menor costo acumulado (150 frente a 300) y se mueve un paso hacia la primera sala intermedia de dicho camino, teniendo dicha acción un costo de 50 unidades.
+3. **Dado** un cazador que determina una ruta óptima de costo mínimo d hacia el jugador cuya primera salida abierta tiene costo C, **Cuando** el cazador ejecuta su turno de desplazamiento, **Entonces** se mueve a la sala vecina inmediata de esa ruta y el costo de su acción corresponde exactamente a C unidades, programando su siguiente turno según dicho costo y su velocidad.
 
 ---
 
-### User Story 3 - Decisiones del Cazador ante desempates, bloqueos, límites de rango y puertas dinámicas (Priority: P2)
+### Historia de Usuario 3 - Decisiones del Cazador ante desempates, bloqueos, límites de rango y puertas dinámicas (Prioridad: P2)
 
 Como enemigo Cazador, debo resolver situaciones de ambigüedad y contingencias de forma estrictamente determinista: si dos salas vecinas conducen a rutas de costo mínimo idéntico, elegiré la vecina de menor identificador; si no hay ruta abierta o la ruta óptima excede mi rango de percepción, esperaré; y si las puertas del laberinto cambian entre turnos, mi decisión siempre equivaldrá a calcular desde cero con el estado presente del laberinto.
 
-**Why this priority**: Garantiza el determinismo matemático, la auditabilidad de las partidas y la robustez de la toma de decisiones ante un entorno dinámico donde las puertas se abren o cierran y los actores se desplazan.
+**Por qué esta prioridad**: Garantiza el determinismo matemático, la auditabilidad de las partidas y la robustez de la toma de decisiones ante un entorno dinámico donde las puertas se abren o cierran y los actores se desplazan.
 
-**Independent Test**: Puede comprobarse mediante escenarios con simetría de costos para evaluar desempates por identificador, puertas con cierres automáticos que alteran la conectividad entre turnos, y distancias superiores al rango asignado.
+**Prueba independiente**: Puede comprobarse mediante escenarios con simetría de costos para evaluar desempates por identificador, puertas con cierres automáticos que alteran la conectividad entre turnos, y distancias superiores al rango asignado.
 
-**Acceptance Scenarios**:
+**Escenarios de aceptación**:
 
-1. **Given** un cazador en una sala conectada a dos salas vecinas v1 (identificador 4) y v2 (identificador 8), donde ambas ofrecen rutas de salidas abiertas hacia el jugador con el mismo costo mínimo total d, **When** llega el turno de acción del cazador, **Then** el cazador desempata a favor de la sala con menor identificador y se desplaza hacia la sala con identificador 4.
-2. **Given** un cazador y el jugador separados por puertas cerradas de modo que no existe ningún camino compuesto exclusivamente por salidas abiertas entre sus salas, **When** llega el turno de acción del cazador, **Then** el cazador decide esperar, consumiendo un costo de acción de 100 unidades.
-3. **Given** un cazador con atributo de rango de 150 unidades, y una ruta abierta de costo mínimo hacia el jugador cuyo costo total acumulado es de 200 unidades, **When** llega el turno de acción del cazador, **Then** al superar el costo mínimo (200) su rango (150), el cazador decide esperar, consumiendo un costo de acción de 100 unidades.
-4. **Given** un cazador que en su turno previo avanzó por una ruta de costo mínimo, y durante el intervalo una puerta de dicha ruta se cierra automáticamente, **When** llega el siguiente turno del cazador, **Then** la decisión tomada es idéntica a evaluar desde cero el estado actual del laberinto: si existe otra ruta abierta dentro de su rango la toma, y si no existe o excede su rango, espera con costo 100.
-5. **Given** un cazador persiguiendo al jugador a través de salas que el jugador no ha explorado o cuyo contenido detallado no ha sido descargado por el sistema, **When** el cazador toma su decisión de movimiento, **Then** el cazador utiliza el conocimiento completo de las salidas y puertas del laberinto sin ser afectado por la niebla de guerra ni por la ausencia de descarga de entidades de salas remotas, y no abre puertas cerradas bajo ninguna circunstancia.
+1. **Dado** un cazador en una sala conectada a dos salas vecinas v1 (identificador 4) y v2 (identificador 8), donde ambas ofrecen rutas de salidas abiertas hacia el jugador con el mismo costo mínimo total d, **Cuando** llega el turno de acción del cazador, **Entonces** el cazador desempata a favor de la sala con menor identificador y se desplaza hacia la sala con identificador 4.
+2. **Dado** un cazador y el jugador separados por puertas cerradas de modo que no existe ningún camino compuesto exclusivamente por salidas abiertas entre sus salas, **Cuando** llega el turno de acción del cazador, **Entonces** el cazador decide esperar, consumiendo un costo de acción de 100 unidades.
+3. **Dado** un cazador con atributo de rango de 150 unidades, y una ruta abierta de costo mínimo hacia el jugador cuyo costo total acumulado es de 200 unidades, **Cuando** llega el turno de acción del cazador, **Entonces** al superar el costo mínimo (200) su rango (150), el cazador decide esperar, consumiendo un costo de acción de 100 unidades.
+4. **Dado** un cazador que en su turno previo avanzó por una ruta de costo mínimo, y durante el intervalo una puerta de dicha ruta se cierra automáticamente, **Cuando** llega el siguiente turno del cazador, **Entonces** la decisión tomada es idéntica a evaluar desde cero el estado actual del laberinto: si existe otra ruta abierta dentro de su rango la toma, y si no existe o excede su rango, espera con costo 100.
+5. **Dado** un cazador persiguiendo al jugador a través de salas que el jugador no ha explorado o cuyo contenido detallado no ha sido descargado por el sistema, **Cuando** el cazador toma su decisión de movimiento, **Entonces** el cazador utiliza el conocimiento completo de las salidas y puertas del laberinto sin ser afectado por la niebla de guerra ni por la ausencia de descarga de entidades de salas remotas, y no abre puertas cerradas bajo ninguna circunstancia.
 
 ---
 
-### User Story 4 - Contrato de datos de terreno, cazadores y ubicación de llaves con control de versión (Priority: P2)
+### Historia de Usuario 4 - Contrato de datos de terreno, cazadores y ubicación de llaves con control de versión (Prioridad: P2)
 
 Como sistema de juego, al consultar los datos del laberinto desde el servicio externo (o réplica fuera de línea), debo recibir los costos específicos en las salidas del esqueleto, reconocer fichas de enemigos cazadores con su atributo de rango, consultar la ubicación de las llaves de la cripta, e invalidar de forma automática cualquier dato previamente persistido que pertenezca a versiones incompatibles o de la Parte I sin requerir el borrado manual de archivos.
 
-**Why this priority**: Asegura la compatibilidad con el nuevo contrato de datos de la Parte II y previene corrupciones o lecturas inconsistentes de partidas o cachés locales.
+**Por qué esta prioridad**: Asegura la compatibilidad con el nuevo contrato de datos de la Parte II y previene corrupciones o lecturas inconsistentes de partidas o cachés locales.
 
-**Independent Test**: Se verifica solicitando la información de un laberinto y comprobando que los costos de salida y las fichas de cazador se registran correctamente, que la consulta de llaves refleja las salas o portadores correctos, y que archivos generados con la versión de la Parte I son detectados y declarados incompatibles.
+**Prueba independiente**: Se verifica solicitando la información de un laberinto y comprobando que los costos de salida y las fichas de cazador se registran correctamente, que la consulta de llaves refleja las salas o portadores correctos, y que archivos generados con la versión de la Parte I son detectados y declarados incompatibles.
 
-**Acceptance Scenarios**:
+**Escenarios de aceptación**:
 
-1. **Given** una respuesta de páginas de esqueleto del laberinto proveniente del servicio con salidas que declaran costo entero y salidas que omiten dicho campo, **When** el sistema incorpora las salas y salidas, **Then** las salidas con costo mantienen su valor entero positivo y las que omiten el campo reciben el costo por defecto de 100.
-2. **Given** una respuesta del catálogo del servicio que incluye una ficha de enemigo con comportamiento "cazador" y atributo "rango", **When** el sistema incorpora la ficha, **Then** registra el comportamiento como cazador y almacena su rango en unidades de costo para ser utilizado por sus instancias.
-3. **Given** una cripta identificada con una versión específica, **When** se consulta el servicio para obtener la ubicación de sus llaves, **Then** se obtiene la lista de llaves indicando para cada una su sala correspondiente y si la porta un enemigo, siendo dicha información válida exclusivamente mientras la versión de la cripta coincida.
-4. **Given** un archivo de datos persistidos generado en la primera parte o correspondiente a una versión de cripta o catálogo diferente, **When** el sistema intenta cargar o validar dichos datos persistidos, **Then** el sistema detecta formalmente la incompatibilidad por versión y los invalida o rechaza sin requerir el borrado manual de archivos del disco.
+1. **Dado** una respuesta de páginas de esqueleto del laberinto proveniente del servicio con salidas que declaran costo entero y salidas que omiten dicho campo, **Cuando** el sistema incorpora las salas y salidas, **Entonces** las salidas con costo mantienen su valor entero positivo y las que omiten el campo reciben el costo por defecto de 100.
+2. **Dado** una respuesta del catálogo del servicio que incluye una ficha de enemigo con comportamiento "cazador" y atributo "rango", **Cuando** el sistema incorpora la ficha, **Entonces** registra el comportamiento como cazador y almacena su rango en unidades de costo para ser utilizado por sus instancias.
+3. **Dado** una cripta identificada con una versión específica, **Cuando** se consulta el servicio para obtener la ubicación de sus llaves, **Entonces** se obtiene la lista de llaves indicando para cada una su sala correspondiente y si la porta un enemigo, siendo dicha información válida exclusivamente mientras la versión de la cripta coincida.
+4. **Dado** un archivo de datos persistidos generado en la primera parte o correspondiente a una versión de cripta o catálogo diferente, **Cuando** el sistema intenta cargar o validar dichos datos persistidos, **Entonces** el sistema detecta formalmente la incompatibilidad por versión y los invalida o rechaza sin requerir el borrado manual de archivos del disco.
 
 ---
 
-### Edge Cases
+### Casos Límite
 
 - ¿Qué ocurre si un cazador tiene dos salidas abiertas hacia salas vecinas con diferente identificador pero que forman parte de la misma ruta o rutas de igual costo mínimo total hacia el jugador? Se desempata estrictamente eligiendo la vecina con menor identificador numérico de sala.
 - ¿Qué ocurre si el jugador se desplaza a la misma sala donde se encuentra el cazador mientras éste esperaba o estaba en tránsito? Al llegar el siguiente turno del cazador, éste observa que comparte sala con el jugador y ataca inmediatamente en lugar de moverse.
@@ -110,9 +110,9 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - ¿Qué ocurre si el rango del cazador es exactamente igual al costo mínimo d de la ruta abierta (d == rango)? El cazador se mueve normalmente por la ruta óptima, pues la condición de espera es estrictamente d > rango.
 - ¿Qué ocurre si el cazador y el jugador están en la misma sala pero la distancia teórica a través del mapa fuera mayor que el rango? Al compartir sala, la condición de ataque prioritario prevalece y el cazador ataca sin evaluar distancias ni rango.
 
-## Requirements *(mandatory)*
+## Requisitos *(obligatorio)*
 
-### Functional Requirements
+### Requisitos Funcionales
 
 - **FR-TER-001**: Toda salida entre dos salas contiguas del laberinto puede declarar un costo entero mayor o igual a 1. Si dicho costo no se declara o es nulo en los datos recibidos, su valor por defecto debe ser 100.
 - **FR-TER-002**: El costo de una salida debe ser estrictamente simétrico, teniendo exactamente el mismo valor al ser atravesada en cualquiera de los dos sentidos de la conexión.
@@ -135,7 +135,7 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - **FR-TER-019**: La persistencia de datos debe invalidar formalmente cualquier archivo o registro previo si no coincide la versión de la cripta o del catálogo, o si corresponde al formato de la primera parte, prohibiéndose requerir el borrado manual de archivos como mecanismo de control.
 - **FR-TER-020**: El ciclo de eventos de la simulación entre dos decisiones consecutivas del jugador debe completarse en menos de 20 milisegundos en la cripta de referencia, aun en presencia de decenas de cazadores activos persiguiendo al mismo objetivo, medido en el entorno local sin red ni renderizado gráfico.
 
-### Key Entities *(include if feature involves data)*
+### Entidades Clave *(incluir si la funcionalidad involucra datos)*
 
 - **Salida / Conexión**: Vía de paso bidireccional entre dos salas contiguas del laberinto. Atributos conceptuales: sala de origen, sala de destino, estado de puerta (abierta o cerrada con llave), costo de paso (entero >= 1, por defecto 100).
 - **Actor**: Entidad con presencia física en una sala y participación activa en la línea de tiempo virtual. Atributos conceptuales: identificador de instancia, sala actual, puntos de vida, ataque, defensa, velocidad, tiempo siguiente de acción programada.
@@ -143,9 +143,9 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - **Ubicación de Llave**: Información provista por el servicio sobre la procedencia de una llave en la cripta. Atributos conceptuales: identificador de la llave, identificador de la sala donde se ubica, e identificador opcional del enemigo que la suelta al ser derrotado (o indicación de encontrarse en el suelo de la sala).
 - **Versión de Cripta y Catálogo**: Identificadores de versión provistos por el servicio que gobiernan la validez de los datos del laberinto y el catálogo, empleados para invalidar de forma automática cualquier estado persistido obsoleto.
 
-## Success Criteria *(mandatory)*
+## Criterios de Éxito *(obligatorio)*
 
-### Measurable Outcomes
+### Resultados Medibles
 
 - **SC-001**: El ciclo de eventos de la simulación entre dos acciones consecutivas del jugador se ejecuta en menos de 20 milisegundos en la cripta de referencia con al menos 30 cazadores activos en persecución simultánea.
 - **SC-002**: El 100% de las decisiones de movimiento y persecución del cazador coinciden exactamente con la ruta de costo mínimo teórico y la regla de desempate por menor identificador de sala.
@@ -153,7 +153,7 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - **SC-004**: Ninguna acción de desplazamiento a través de salidas con costo produce intervalos de tiempo virtual inferiores a 1 unidad temporal, considerando el espectro de velocidades de actores entre 1 y 500.
 - **SC-005**: El 100% de los archivos o datos persistidos generados bajo versiones previas o formatos de la primera parte son detectados formalmente como incompatibles sin requerir intervención manual sobre el sistema de archivos.
 
-## Assumptions
+## Supuestos
 
 - Toda ficha de enemigo con comportamiento "cazador" provista por un catálogo válido incluye un valor de rango entero positivo. En caso de recibir un catálogo con rango nulo o ausente para un cazador, se asumirá por defecto un rango ilimitado (persigue a cualquier distancia mientras exista ruta de salidas abiertas).
 - Los costos de salida suministrados por el servicio son números enteros mayores o iguales a 1. Si un valor no se declara o es nulo, asume el valor por defecto de 100.

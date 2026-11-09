@@ -1,37 +1,37 @@
-# Specification Quality Checklist: Terreno y Cazador
+# Lista de Verificación de Calidad de la Especificación: Terreno y Cazador
 
-**Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-11-09
-**Feature**: [spec.md](../spec.md)
+**Propósito**: Validar la completitud y calidad de la especificación antes de proceder a la planificación
+**Creado**: 2026-11-09
+**Funcionalidad**: [spec.md](../spec.md)
 
-## Content Quality
+## Calidad del Contenido
 
-- [x] No implementation details (languages, frameworks, APIs)
-- [x] Focused on user value and business needs
-- [x] Written for non-technical stakeholders
-- [x] All mandatory sections completed
+- [x] Sin detalles de implementación (lenguajes, frameworks, APIs)
+- [x] Enfocado en el valor para el usuario y necesidades del negocio
+- [x] Redactado para partes interesadas no técnicas
+- [x] Todas las secciones obligatorias completadas
 
-## Requirement Completeness
+## Completitud de Requisitos
 
-- [x] No [NEEDS CLARIFICATION] markers remain
-- [x] Requirements are testable and unambiguous
-- [x] Success criteria are measurable
-- [x] Success criteria are technology-agnostic (no implementation details)
-- [x] All acceptance scenarios are defined
-- [x] Edge cases are identified
-- [x] Scope is clearly bounded
-- [x] Dependencies and assumptions identified
+- [x] No quedan marcas de [NEEDS CLARIFICATION]
+- [x] Los requisitos son verificables e inequívocos
+- [x] Los criterios de éxito son medibles
+- [x] Los criterios de éxito son agnósticos a la tecnología (sin detalles de implementación)
+- [x] Todos los escenarios de aceptación están definidos
+- [x] Los casos límite están identificados
+- [x] El alcance está claramente delimitado
+- [x] Dependencias y supuestos identificados
 
-## Feature Readiness
+## Preparación de la Funcionalidad
 
-- [x] All functional requirements have clear acceptance criteria
-- [x] User scenarios cover primary flows
-- [x] Feature meets measurable outcomes defined in Success Criteria
-- [x] No implementation details leak into specification
+- [x] Todos los requisitos funcionales tienen criterios de aceptación claros
+- [x] Los escenarios de usuario cubren los flujos principales
+- [x] La funcionalidad cumple con los resultados medibles definidos en los Criterios de Éxito
+- [x] No se filtran detalles de implementación en la especificación
 
-## Notes
+## Notas
 
-- All validation criteria passed successfully.
-- Requirements strictly adhere to rule 4 of `AGENTS.md` and principle VII of `constitution.md`: no data structures, classes, or modules are mentioned.
-- All 7 acceptance scenarios from Apéndice B are formally included under user stories with Given/When/Then format.
-- The specification is ready for the clarify or planning phase (`/speckit-clarify` or `/speckit-plan`).
+- Todos los criterios de validación se cumplieron con éxito.
+- Los requisitos cumplen estrictamente la regla 4 de `AGENTS.md` y el principio VII de `constitution.md`: no se mencionan estructuras de datos, clases ni módulos.
+- Los 7 escenarios de aceptación del Apéndice B están incluidos formalmente bajo historias de usuario con formato Dado/Cuando/Entonces.
+- La especificación está lista para la fase de clarificación o planificación (`/speckit-clarify` o `/speckit-plan`).

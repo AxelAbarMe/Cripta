@@ -21,7 +21,7 @@ Representa una vía de tránsito entre dos salas contiguas del laberinto.
 | `costo` | `int` | No | `100` | Costo de terreno para atravesar la salida. Debe ser un entero $\ge 1$. Si en el JSON es nulo o ausente, asume `100`. Simétrico en ambos sentidos (FR-TER-001, FR-TER-002). |
 
 #### Reglas de Validación
-- `costo >= 1`: Si se proporciona un valor menor a 1 o no entero, se rechaza con `ValueError`.
+- `costo >= 1`: Si se proporciona un valor menor a 1 o no entero en datos externos (JSON), se rechaza con la excepción externa (`CriptaDatosInvalidosError` en `--offline` o `CriptaApiError` en red); en llamadas directas de código interno, con `ValueError`.
 - Simetría: `costo(A, B) == costo(B, A)` garantizado al incorporar el esqueleto.
 
 ---
@@ -39,17 +39,17 @@ Modela un enemigo en el laberinto, incorporando el nuevo comportamiento `cazador
 | `ataque` | `int` | Sí | — | Poder de ataque base ($\ge 0$). |
 | `defensa` | `int` | Sí | — | Poder de defensa base ($\ge 0$). |
 | `velocidad` | `int` | Sí | — | Velocidad de acción ($\ge 1$, referencia 100). |
-| `comportamiento` | `str` | Sí | — | Comportamiento: `"guardian"`, `"errante"`, `"rastreador"` o `"cazador"`. |
+| `comportamiento` | `str` | Sí | — | Comportamiento: `"guardián"`, `"errante"`, `"rastreador"` o `"cazador"`. |
 | `suelta` | `tuple[str, ...]` | No | `()` | Fichas de objetos depositados al morir. |
 | `rango` | `int \| None` | Condicional | `None` | Rango de percepción en unidades de costo. **Obligatorio y entero $\ge 1$** si `comportamiento == "cazador"`. Para otros comportamientos puede ser nulo o ignorado (FR-TER-008, FR-TER-017). |
 
 #### Reglas de Validación
-- Si `comportamiento == "cazador"` y `rango is None` o `rango < 1`: la ficha es rechazada de inmediato lanzando `ValueError(f"Ficha cazador '{id}' inválida: requiere rango entero >= 1")`.
+- Si `comportamiento == "cazador"` y `rango is None` o `rango < 1`: dado que las fichas de catálogo provienen de datos externos, la ficha es rechazada lanzando la excepción de datos externos (`CriptaDatosInvalidosError` en `--offline` o `CriptaApiError` en HTTP), incluyendo el identificador de la ficha (`id`) en el mensaje de error. Se reserva `ValueError` exclusivamente para errores de programación interna.
 - Si `comportamiento != "cazador"`: `rango` se tolera como `None` o entero opcional.
 
 ---
 
-### 1.3 Ubicación de Llave (`LlaveUbicacionDTO`)
+### 1.3 Ubicación de Llave (`LlaveUbicacionDTO` — Nuevo)
 
 Representa la ubicación de una llave en la cripta obtenida desde el servicio (`GET /criptas/{id}/llaves`).
 
@@ -66,7 +66,7 @@ Representa la ubicación de una llave en la cripta obtenida desde el servicio (`
 
 ---
 
-### 1.4 Estado del Buscador de Rutas (`BuscadorRutas`)
+### 1.4 Estado del Buscador de Rutas (`BuscadorRutas` — Nuevo)
 
 Componente del Modelo responsable del cálculo y la gestión de la tabla compartida de distancias.
 

@@ -17,17 +17,14 @@
           },
           "sala": {
             "type": "integer",
-            "minimum": 1,
             "description": "Identificador de la sala donde se ubica la llave"
           },
           "enemigo": {
             "type": ["string", "null"],
             "description": "Identificador del enemigo que porta la llave. Si es null o ausente, la llave se ubica en el suelo de la sala"
           }
-        },
-        "additionalProperties": false
+        }
       }
     }
-  },
-  "additionalProperties": false
+  }
 }

@@ -24,19 +24,24 @@ Esta guía describe los escenarios ejecutables paso a paso para validar de extre
 
 ## 2. Escenarios de Validación
 
-### Escenario 1: Validación del Contrato de Datos (Costo, Rango y Llaves)
-**Objetivo**: Verificar que los DTOs y adaptadores leen correctamente el campo `costo` en salidas, el campo `rango` en cazadores, y el endpoint `/llaves` en modo offline (FR-TER-001, FR-TER-008, FR-TER-018).
+### Escenario 1: Regeneración de Fixtures y Validación del Contrato de Datos (Costo, Rango y Llaves)
+**Objetivo**: Regenerar fixtures incluyendo los nuevos campos y verificar que los DTOs y adaptadores leen correctamente el campo `costo` en salidas, el campo `rango` en cazadores, y el endpoint `/llaves` en modo offline (FR-TER-001, FR-TER-008, FR-TER-018).
 
 **Comandos**:
 ```powershell
+# 1. Regenerar fixtures con costo, rango y llaves
+py -m scripts.generar_fixtures
+
+# 2. Ejecutar pruebas unitarias de DTOs e infraestructura (archivos de prueba Nuevos)
 py -m unittest tests.dto.test_salida_dto
 py -m unittest tests.dto.test_enemigo_dto
 py -m unittest tests.dto.test_llave_ubicacion_dto
 py -m unittest tests.infraestructura.test_cliente_offline_llaves
 ```
 **Resultado Esperado**:
+- Fixtures actualizados en `fixtures/` con salidas ponderadas, fichas con rango y `llaves.json`.
 - Salidas sin costo asignan `100`; salidas con costo conservan su valor entero $\ge 1$.
-- Fichas de cazador sin rango o con rango $\le 0$ lanzan `ValueError`.
+- Fichas de cazador sin rango o con rango $\le 0$ lanzan `CriptaDatosInvalidosError` (o `CriptaApiError`) indicando el ID de la ficha en el mensaje de error.
 - `obtener_llaves()` retorna las tuplas con `(id, sala, enemigo)` correctamente.
 
 ---
@@ -46,6 +51,7 @@ py -m unittest tests.infraestructura.test_cliente_offline_llaves
 
 **Comandos**:
 ```powershell
+# Archivo de prueba Nuevo
 py -m unittest tests.aceptacion.test_terreno_costos
 ```
 **Resultado Esperado**:
@@ -61,6 +67,7 @@ py -m unittest tests.aceptacion.test_terreno_costos
 
 **Comandos**:
 ```powershell
+# Archivo de prueba Nuevo
 py -m unittest tests.aceptacion.test_cazador_persecucion
 ```
 **Resultado Esperado**:
@@ -76,6 +83,7 @@ py -m unittest tests.aceptacion.test_cazador_persecucion
 
 **Comando**:
 ```powershell
+# Script auditor propuesto en CONTEXTO_CRIPTA2.md (Nuevo)
 py -m scripts.revisar_prohibidos
 ```
 **Resultado Esperado**: Código de salida `0` sin ningún error de importación prohibida.
@@ -92,7 +100,7 @@ py -m cripta --bench --solo invalidacion
 py -m cripta --bench --solo ciclo agenda
 ```
 **Resultado Esperado**:
-- `ruta_cazador`: el cálculo compartido mantiene el ciclo en $< 5$ ms con 30 cazadores, mientras que el cálculo individual escala linealmente con el número de cazadores.
+- `ruta_cazador`: confirmar la hipótesis de que el cálculo compartido mantiene el ciclo holgadamente por debajo de 20 ms con 30 cazadores, mientras que el cálculo individual escala linealmente con el número de cazadores.
 - `invalidacion`: con puertas estables, reutilizar la tabla produce 0 búsquedas Dijkstra; con puertas inestables, el sobrecosto de invalidación es marginal.
 - `ciclo`: el ciclo de eventos permanece $< 20$ ms en la cripta de referencia.
 

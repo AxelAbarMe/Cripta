@@ -27,7 +27,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 - **Justificación**:
   - `HeapMinimo` realiza inserción en $O(\log V)$ y extracción del mínimo en $O(\log V)$.
   - El acceso y actualización de distancias en una lista contigua `list[int | None]` indexada por entero toma $O(1)$ sin recurrir a `dict` ni `set`.
-  - La complejidad temporal resultante es $O(E + V \log V)$, óptima para grafos dispersos con grado acotado $\le 4$.
+  - La complejidad temporal resultante es $O((V + E) \log V)$, óptima para grafos dispersos con grado acotado $\le 4$.
 
 ---
 
@@ -52,7 +52,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
   - Cumple estrictamente el Principio I de la Constitución («almacenamiento contiguo indexado por posición entera»).
   - Acceso $O(1)$ puro para lectura y actualización de `dist[sala_id]`.
   - El conjunto de nodos visitados/cerrados se registra mediante una lista booleana contigua `visitados = [False] * (max_sala_id + 1)`, con consulta y marcado en $O(1)$.
-  - Memoria insignificante: para una cripta de 1 000 salas, una lista de 1 000 enteros ocupa menos de 8 KB.
+  - Memoria insignificante: para una cripta de 1 000 salas, una lista contigua de 1 000 enteros tiene una huella de memoria despreciable (hipótesis a confirmar con `--bench`).
 
 ---
 
@@ -66,7 +66,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 
 #### Alternativa 1: Cálculo Individual por Cada Cazador (Dijkstra Hacia Adelante)
 - **Descripción**: Cada vez que un cazador ejecuta su turno, lanza una búsqueda Dijkstra desde su sala $u$ hacia la sala del jugador $S_J$.
-- **Razón de Descarte**: Con $H$ cazadores activos en un ciclo, se ejecutan $H$ búsquedas independientes de Dijkstra. Para $H = 30$ cazadores en una cripta de 400 salas, $30 \times (V \log V + E)$ consume entre 45 ms y 80 ms en Python, violando el límite de 20 ms.
+- **Razón de Descarte**: Con $H$ cazadores activos en un ciclo, se ejecutan $H$ búsquedas independientes de Dijkstra. Para $H = 30$ cazadores en una cripta de 400 salas, se plantea como hipótesis a confirmar con `--bench` que $30 \times ((V + E) \log V)$ superaría el límite de 20 ms.
 
 #### Alternativa 2: Matriz de Todas las Rutas Más Cortas (Floyd-Warshall o All-Pairs)
 - **Descripción**: Precalcular y mantener las distancias entre todos los pares de salas de la cripta.
@@ -81,7 +81,14 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
   - Un único recorrido calcula simultáneamente $\text{dist}(S_J, v)$ para todas las salas $v$ dentro del alcance.
   - Cada cazador en sala $u$ consulta en $O(1)$ sus a lo sumo 4 vecinas abiertas $v$, evaluando la condición de ruta mínima:
     $$\text{costo}(u, v) + \text{dist}(v, S_J) == d$$
-  - Complejidad: 1 búsqueda $O(V_R \log V_R + E_R) + H \times O(1)$. Para 30 cazadores, el tiempo se reduce de ~60 ms a ~1.5 ms.
+  - Complejidad: 1 búsqueda $O((V_R + E_R) \log V_R) + H \times O(1)$. Para 30 cazadores, se plantea como hipótesis a confirmar con `--bench` que el tiempo se reduce a una fracción mínima del ciclo frente al cálculo individual.
+
+### Condiciones de Rendimiento: Cuándo Conviene Cada Alternativa
+- **Cálculo compartido**: Resulta superior cuando conviven múltiples cazadores activos ($H > 1$) o cuando los rangos de persecución son homogéneos, ya que una sola búsqueda cubre a todos los cazadores por igual ($O((V_R + E_R) \log V_R) + H \times O(1)$).
+- **Cálculo individual**: Podría convenir en rendimiento únicamente bajo condiciones específicas:
+  1. **Muy pocos cazadores** (ej. $H = 1$), donde la sobrecarga de estructurar la búsqueda compartida no se amortiza.
+  2. **Rangos extremadamente heterogéneos con $R_{\max}$ grande**: Si un solo cazador tiene un rango muy amplio ($R_{\max}$ grande) y varios otros tienen rangos muy pequeños, la búsqueda compartida se ve obligada a expandirse hasta $R_{\max}$, explorando potencialmente muchas más salas de las que explorarían individualmente los cazadores de rango corto.
+- **Medición empírica**: Las condiciones de frontera exactas en que el cálculo compartido aventaja al individual se medirán experimentalmente con `--bench` (carga `ruta_cazador`).
 
 ### Condiciones bajo las cuales Podría Cambiar la Respuesta y Garantía de Equivalencia
 - La respuesta entre el cálculo compartido y el cálculo desde cero individual **no cambia jamás** si se respetan las siguientes condiciones:
@@ -185,8 +192,8 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
    - `desde_json`: si `"costo"` está presente, validar entero $\ge 1$; si es nulo o ausente, asignar 100.
 2. **`EnemigoDTO` (`cripta/dto/enemigo_dto.py`)**:
    - Atributo inmutable `rango: int | None = None`.
-   - `desde_json`: si `comportamiento == "cazador"`, exigir que `"rango"` sea un entero positivo $\ge 1$. Si es nulo o ausente, lanzar `ValueError` («ficha de catálogo inválida»).
-3. **`LlaveUbicacionDTO` (`cripta/dto/llave_ubicacion_dto.py`)**:
+   - `desde_json`: si `comportamiento == "cazador"`, exigir que `"rango"` sea un entero positivo $\ge 1$. Si es nulo o ausente, al tratarse de datos externos provenientes del catálogo, lanzar la excepción correspondiente (`CriptaDatosInvalidosError` en `--offline` o `CriptaApiError` en HTTP) con el ID de la ficha en el mensaje de error. Se reserva `ValueError` exclusivamente para errores de programación interna.
+3. **`LlaveUbicacionDTO` (`cripta/dto/llave_ubicacion_dto.py` — Nuevo)**:
    - Nuevo DTO inmutable `(id: str, sala: int, enemigo: str | None = None)`.
    - Si `enemigo` es nulo o ausente, la llave está en el suelo de la sala. Si está presente, la porta el enemigo indicado.
 4. **Puertos y Adaptadores (`cripta/infraestructura/`)**:

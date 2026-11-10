@@ -32,7 +32,7 @@ Este documento define formalmente los contratos externos e internos para la Part
     }
     ```
   - `404 Not Found`: Si la cripta no existe.
-  - `429 Too Many Requests`: `{"error": "rate_limited", "reintentar_en": n}`. Debe esperarse y reintentarse respetando presupuesto.
+  - `429 Too Many Requests`: `{"error": "...", "reintentar_en": n}`. Debe esperarse y reintentarse respetando presupuesto.
 - **Esquema formal**: Definido en [contrato_servicio_llaves.json](contrato_servicio_llaves.json).
 
 ---
@@ -73,7 +73,7 @@ Este documento define formalmente los contratos externos e internos para la Part
     "suelta": ["itm_pocion_vida"]
   }
   ```
-- **Regla**: Si `comportamiento == "cazador"`, `rango` es obligatorio y debe ser entero $\ge 1$.
+- **Regla**: Si `comportamiento == "cazador"`, `rango` es obligatorio y debe ser entero $\ge 1$. Si está ausente o no es válido, al tratarse de datos externos se rechaza con `CriptaDatosInvalidosError` (en modo `--offline`) o `CriptaApiError` (en API REST), incluyendo el ID de la ficha en el mensaje de error. Se reserva `ValueError` exclusivamente para errores de programación interna.
 
 ---
 
@@ -96,7 +96,7 @@ class ClienteCripta(Protocol):
 
 ---
 
-### 2.2 DTOs (`cripta/dto/`)
+### 2.2 DTOs (`cripta/dto/` — `llave_ubicacion_dto.py` es Nuevo)
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -115,8 +115,9 @@ class LlaveUbicacionDTO:
 
     @classmethod
     def desde_json(cls, datos: dict) -> "LlaveUbicacionDTO":
+        # Ante datos externos incompletos, se lanza CriptaDatosInvalidosError o CriptaApiError.
         if "id" not in datos or "sala" not in datos:
-            raise ValueError("Datos de llave incompletos: requiere 'id' y 'sala'")
+            raise CriptaDatosInvalidosError("desde_json", "llaves.json", "Faltan campos obligatorios 'id' o 'sala'")
         return cls(
             id=str(datos["id"]),
             sala=int(datos["sala"]),
@@ -126,7 +127,7 @@ class LlaveUbicacionDTO:
 
 ---
 
-### 2.3 Contrato de `BuscadorRutas` (`cripta/modelo/buscador_rutas.py`)
+### 2.3 Contrato de `BuscadorRutas` (`cripta/modelo/buscador_rutas.py` — Nuevo)
 
 ```python
 class BuscadorRutas:

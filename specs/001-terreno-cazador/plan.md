@@ -1,12 +1,12 @@
-# Implementation Plan: Terreno y Cazador
+# Plan de Implementación: Terreno y Cazador
 
-**Branch**: `001-terreno-cazador` | **Date**: 2026-11-09 | **Spec**: [spec.md](spec.md)
+**Rama**: `001-terreno-cazador` | **Fecha**: 2026-11-09 | **Especificación**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/001-terreno-cazador/spec.md` y restricciones obligatorias de la Constitución (`.specify/memory/constitution.md`).
+**Entrada**: Especificación de funcionalidad desde `specs/001-terreno-cazador/spec.md` y restricciones obligatorias de la Constitución (`.specify/memory/constitution.md`).
 
 ---
 
-## Summary
+## Resumen
 
 La capacidad **Terreno y Cazador** introduce costos de desplazamiento variables en las salidas del laberinto ($\text{costo} \ge 1$, por defecto 100) y un nuevo comportamiento de enemigo inteligente (**cazador**) dotado de un atributo de `rango` de percepción. El cazador persigue al jugador a través de la ruta de costo acumulado mínimo sobre salidas abiertas en ese instante, atacando si comparte sala, esperando si no hay ruta o si la distancia excede su rango, y desempatando siempre a favor de la sala vecina con menor identificador numérico.
 
@@ -19,36 +19,36 @@ Para garantizar un tiempo de ciclo de eventos menor a 20 ms con decenas de cazad
 
 ---
 
-## Technical Context
+## Contexto Técnico
 
-**Language/Version**: Python 3.11+ (desarrollado y probado sobre Python 3.12.3 en Windows con finales de línea CRLF).
+**Lenguaje/Versión**: Python 3.11+ (desarrollado y probado sobre Python 3.12.3 en Windows con finales de línea CRLF).
 
-**Primary Dependencies**: Ninguna biblioteca externa nueva. Solo biblioteca estándar (`struct`, `json`, `math`, `typing`) y `requests` (ya presente en `requirements.txt`). Prohibido terminantemente el uso de `heapq`, `bisect`, `collections`, `networkx` o bibliotecas de grafos.
+**Dependencias Principales**: Ninguna biblioteca externa nueva. Solo biblioteca estándar (`struct`, `json`, `math`, `typing`) y `requests` (ya presente en `requirements.txt`). Prohibido terminantemente el uso de `heapq`, `bisect`, `collections`, `networkx` o bibliotecas de grafos.
 
-**Storage**: Persistencia local en `datos/cache/` (JSON estructurado por clave versionada) y `datos/partida.sav` (formato binario propio con `struct`). Detección automática de incompatibilidad por versión sin borrado manual de archivos.
+**Almacenamiento**: Persistencia local en `datos/cache/` (JSON estructurado por clave versionada) y `datos/partida.sav` (formato binario propio con `struct`, ruta en tiempo de ejecución). Detección automática de incompatibilidad por versión sin borrado manual de archivos.
 
-**Testing**: Módulo estándar `unittest` en `tests/`, con ejecutores deterministas `cliente_falso.py` y `cripta_artificial.py`. Todas las pruebas de aceptación citan explícitamente su requisito `FR-TER-NNN`.
+**Pruebas**: Módulo estándar `unittest` en `tests/`, con ejecutores deterministas `cliente_falso.py` y `cripta_artificial.py`. Todas las pruebas de aceptación citan explícitamente su requisito `FR-TER-NNN`.
 
-**Target Platform**: Terminal de consola de al menos 113 columnas en Windows / Linux / macOS.
+**Plataforma Objetivo**: Terminal de consola de al menos 113 columnas en Windows / Linux / macOS.
 
-**Project Type**: Juego de mazmorra por turnos y simulador de eventos discretos en arquitectura MVC estricta con CLI y modo `--offline` desacoplado.
+**Tipo de Proyecto**: Juego de mazmorra por turnos y simulador de eventos discretos en arquitectura MVC estricta con CLI y modo `--offline` desacoplado.
 
-**Performance Goals**:
+**Objetivos de Rendimiento**:
 - Ciclo de eventos completo entre dos decisiones del jugador $< 20\text{ ms}$ en la cripta de referencia, aun con decenas de cazadores activos en persecución simultánea (FR-TER-020).
-- Tiempo de decisión por cazador en modo compartido: $O(1)$ tras la búsqueda inicial ($< 0.1\text{ ms}$ por cazador).
+- Tiempo de decisión por cazador en modo compartido: $O(1)$ tras la búsqueda inicial (hipótesis a confirmar con `--bench` de sobrecosto marginal).
 
-**Constraints**:
+**Restricciones**:
 - Cumplimiento irrestricto de la Constitución: estructuras a mano, determinismo con `random.Random(semilla)` local, prohibición total de `dict` y `set` como índice o caché evaluada, sin datos fijos de criptas en código.
 - Cero líneas adicionales en `partida.log` por movimientos o decisiones de cazadores (solo acciones aceptadas del jugador).
 - Compatibilidad retroactiva: las 222 pruebas de la Parte I deben seguir terminando en `OK`.
 
-**Scale/Scope**: Laberintos de hasta 1 000 salas, con decenas de cazadores activos simultáneos y rangos de 1 a 1 000 unidades de costo.
+**Escala/Alcance**: Laberintos de hasta 1 000 salas, con decenas de cazadores activos simultáneos y rangos de 1 a 1 000 unidades de costo.
 
 ---
 
-## Constitution Check
+## Verificación Constitucional
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*Control de Paso: Debe aprobarse antes de la investigación de Fase 0. Re-verificar tras el diseño de Fase 1.*
 
 | Principio Constitucional | Estado | Evidencia y Justificación en este Plan |
 |---|---|---|
@@ -63,9 +63,9 @@ Para garantizar un tiempo de ciclo de eventos menor a 20 ms con decenas de cazad
 
 ---
 
-## Project Structure
+## Estructura del Proyecto
 
-### Documentation (this feature)
+### Documentación (esta funcionalidad)
 
 ```text
 specs/001-terreno-cazador/
@@ -80,13 +80,13 @@ specs/001-terreno-cazador/
 └── tasks.md             # Tareas ejecutables (Fase 5 tasks - generado por /speckit-tasks)
 ```
 
-### Source Code (repository root)
+### Código Fuente (raíz del repositorio)
 
 ```text
 cripta/
 ├── dto/
 │   ├── salida_dto.py            # Modificado: agrega campo costo (int >= 1, def 100)
-│   ├── enemigo_dto.py           # Modificado: agrega campo rango (int >= 1 para cazador)
+│   ├── enemigo_dto.py           # Modificado: agrega campo rango (int >= 1 para cazador), valida datos externos con CriptaDatosInvalidosError/CriptaApiError
 │   └── llave_ubicacion_dto.py   # Nuevo: DTO inmutable para GET /criptas/{id}/llaves
 ├── infraestructura/
 │   ├── puertos.py               # Modificado: protocolo ClienteCripta agrega obtener_llaves()
@@ -99,29 +99,29 @@ cripta/
 │   ├── buscador_rutas.py        # Nuevo: Dijkstra compartido, cola HeapMinimo y tabla plana
 │   ├── comportamiento_enemigo.py# Modificado: incorpora lógica de decisión _decidir_cazador
 │   ├── enemigo.py               # Modificado: expone propiedad rango de la ficha
-│   ├── partida.py               # Modificado: costos variables en movimiento, invalidación, agenda
-│   └── resultado_partida.py     # Modificado: SalidaVista (costo) y EnemigoVista (cazador)
+│   └── partida.py               # Modificado: costos variables en movimiento, invalidación, agenda
 ├── estructuras/
 │   └── heap_min.py              # Modificado: agrega métodos esta_vacio() y __len__()
-├── vista/
-│   └── vista_consola.py         # Modificado: muestra costos de salidas y distingue cazadores
 └── bench/
     └── cargas_bench.py          # Modificado: añade cargas ruta_cazador e invalidacion
 
+scripts/
+└── generar_fixtures.py          # Modificado: añade regeneración de fixtures con costo, rango y endpoint /llaves
+
 tests/
 ├── dto/
-│   ├── test_salida_dto.py       # Pruebas de costo por defecto y validación
-│   ├── test_enemigo_dto.py      # Pruebas de rango obligatorio para cazador
-│   └── test_llave_ubicacion_dto.py # Pruebas del DTO de llaves
+│   ├── test_salida_dto.py       # Nuevo: Pruebas de costo por defecto y validación
+│   ├── test_enemigo_dto.py      # Nuevo: Pruebas de rango obligatorio para cazador
+│   └── test_llave_ubicacion_dto.py # Nuevo: Pruebas del DTO de llaves
 ├── infraestructura/
-│   ├── test_cliente_offline_llaves.py # Pruebas de cliente offline y presupuesto
-│   └── test_cache_llaves.py     # Pruebas de invalidación por versión
+│   ├── test_cliente_offline_llaves.py # Nuevo: Pruebas de cliente offline y presupuesto
+│   └── test_cache_llaves.py     # Nuevo: Pruebas de invalidación por versión
 ├── modelo/
-│   ├── test_buscador_rutas.py   # Pruebas unitarias de Dijkstra, poda por rango y desempate
-│   └── test_cazador_decisiones.py # Pruebas de decisiones del cazador (ataque, espera, movimiento)
+│   ├── test_buscador_rutas.py   # Nuevo: Pruebas unitarias de Dijkstra, poda por rango y desempate
+│   └── test_cazador_decisiones.py # Nuevo: Pruebas de decisiones del cazador (ataque, espera, movimiento)
 └── aceptacion/
-    ├── test_terreno_costos.py   # Escenarios de aceptación de costos y velocidad (FR-TER-001 a 006)
-    └── test_cazador_persecucion.py # Escenarios de persecución y desempate (FR-TER-008 a 015)
+    ├── test_terreno_costos.py   # Nuevo: Escenarios de aceptación de costos y velocidad (FR-TER-001 a 006)
+    └── test_cazador_persecucion.py # Nuevo: Escenarios de persecución y desempate (FR-TER-008 a 015)
 ```
 
 ---
@@ -133,10 +133,10 @@ tests/
 - **Operaciones Reales y Frecuencia**:
   - En cada ciclo donde hay al menos un cazador activo persiguiendo al jugador: selección del siguiente nodo de menor costo acumulado y cálculo de distancias hacia el objetivo. Frecuencia: 1 búsqueda Dijkstra por cada movimiento del jugador o cambio de puertas.
 - **Alternativas Evaluadas y Descarte**:
-  - *Alternativa A (Búsqueda lineal en lista contigua)*: Descartada porque extraer el mínimo toma $O(V)$, resultando en $O(V^2 + E)$. Con 400 salas, la búsqueda tarda más de 25 ms en Python, excediendo el límite del ciclo.
+  - *Alternativa A (Búsqueda lineal en lista contigua)*: Descartada porque extraer el mínimo toma $O(V)$, resultando en $O(V^2 + E)$. Con 400 salas, se plantea como hipótesis a confirmar con `--bench` que la búsqueda lineal excedería el límite de 20 ms por ciclo.
   - *Alternativa B (Algoritmo A\* individual con heurística)*: Descartada porque el laberinto no garantiza una métrica euclidiana admisible y A\* individual impide compartir el cálculo entre múltiples cazadores.
 - **Decisión**: Algoritmo de Dijkstra clásico utilizando la cola de prioridad propia `HeapMinimo` (`cripta/estructuras/heap_min.py`) insertando tuplas `(distancia_acumulada, sala_id)`.
-- **Complejidad**: $O(E + V \log V)$ para la búsqueda completa; con poda por rango $R_{\max}$, acotada a $O(E_R + V_R \log V_R)$.
+- **Complejidad**: $O((V + E) \log V)$ para la búsqueda completa; con poda por rango $R_{\max}$, acotada a $O((V_R + E_R) \log V_R)$.
 
 ---
 
@@ -157,15 +157,19 @@ tests/
 - **Operaciones Reales y Frecuencia**:
   - $H$ cazadores ($H \in [1, 30]$) deben decidir su siguiente paso en un mismo ciclo de eventos hacia la sala actual del jugador $S_J$.
 - **Alternativas Evaluadas y Descarte**:
-  - *Alternativa A (Dijkstra individual hacia adelante por cada cazador)*: Descartada porque con 30 cazadores se ejecutan 30 búsquedas independientes ($30 \times O(V \log V + E)$), tardando $\approx 60\text{ ms}$, violando el límite de 20 ms.
+  - *Alternativa A (Dijkstra individual hacia adelante por cada cazador)*: Descartada porque con 30 cazadores se ejecutan 30 búsquedas independientes ($30 \times O((V + E) \log V)$), con la hipótesis a confirmar con `--bench` de que superaría el límite de 20 ms por ciclo.
   - *Alternativa B (Matriz de todos los pares / Floyd-Warshall)*: Descartada por costo prohibitivo de memoria $O(V^2)$ y tiempo $O(V^3)$, y necesidad de recalcularla entera ante cualquier cambio de puerta.
 - **Decisión**: Cálculo compartido mediante una **única búsqueda Dijkstra inverso desde la sala del jugador $S_J$**.
   - Dado que los costos y las puertas son simétricos (FR-TER-002), $\text{dist}(u, S_J) = \text{dist}(S_J, u)$.
   - Cada cazador en sala $u$ examina en su turno sus salidas abiertas hacia vecinas $v$ y evalúa la condición de optimalidad:
     $$\text{costo}(u, v) + \text{dist}(v, S_J) == d$$
+- **Condiciones de rendimiento: cuándo conviene cuál y medición con `--bench`**:
+  - *Cálculo compartido*: Es la opción conveniente cuando hay múltiples cazadores activos ($H > 1$) y rangos relativamente homogéneos, al amortizar la búsqueda $O((V_R + E_R) \log V_R)$ entre todos los cazadores ($+ H \times O(1)$).
+  - *Cálculo individual*: Podría convenir en rendimiento únicamente en casos de muy pocos cazadores (ej. $H = 1$) o cuando los rangos son sumamente dispares con un $R_{\max}$ grande (un solo cazador con rango inmenso que obliga a explorar gran parte del laberinto, mientras los demás tienen rangos mínimos). En ese escenario extremo, búsquedas individuales acotadas localmente podrían visitar menos aristas que una búsqueda compartida expandida hasta $R_{\max}$.
+  - *Validación empírica*: Esta disyuntiva y las condiciones exactas donde el cálculo compartido supera al individual se medirán con `--bench` (carga `ruta_cazador`).
 - **Condiciones bajo las cuales cambia la respuesta**:
   - La respuesta **nunca cambia** respecto a calcular desde cero si: (a) se evalúa el estado actual de puertas; (b) se desempata por $\min(v.id)$; (c) se invalida la tabla si el jugador se mueve o una puerta cambia de estado.
-- **Complejidad**: 1 búsqueda Dijkstra $O(E_R + V_R \log V_R) + H \times O(1)$. Para 30 cazadores, tiempo total $< 2\text{ ms}$.
+- **Complejidad**: 1 búsqueda Dijkstra $O((V_R + E_R) \log V_R) + H \times O(1)$. Para 30 cazadores, se plantea como hipótesis a confirmar con `--bench` que el tiempo total se mantendrá sustancialmente por debajo de los 20 ms.
 
 ---
 
@@ -193,7 +197,7 @@ tests/
 - **Decisión**: Durante la búsqueda compartida desde $S_J$, acotar la expansión fijando $R_{\max} = \max_{h \in \text{cazadores activos}} (h.\text{rango})$.
   - Al extraer un nodo del montículo con distancia $> R_{\max}$, el bucle de Dijkstra se detiene inmediatamente.
   - Dado que todos los costos de salida son enteros $\ge 1$, ninguna sala futura puede tener distancia $\le R_{\max}$.
-- **Complejidad**: El costo temporal depende de la sub-región de radio $R_{\max}$, no del tamaño total del laberinto ($O(V_R \log V_R)$ con $V_R \ll V$).
+- **Complejidad**: El costo temporal depende de la sub-región de radio $R_{\max}$, no del tamaño total del laberinto ($O((V_R + E_R) \log V_R)$ con $V_R \ll V$).
 
 ---
 
@@ -228,9 +232,9 @@ tests/
 ### 8. Contrato de Datos y Desacoplamiento para Fusión Temprana
 
 - **Operaciones Reales y Frecuencia**:
-  - Ingesta de esqueleto con `costo`, catálogo con `rango`, consulta `GET /criptas/{id}/llaves` y validación de versiones.
+  - Ingesta de esqueleto con `costo`, catálogo con `rango`, consulta `GET /criptas/{id}/llaves`, regeneración de fixtures (`scripts/generar_fixtures.py`) y validación de versiones.
 - **Decisión**:
-  - Modelar como un bloque modular de código y pruebas (DTOs, interfaces de puerto, clientes HTTP y offline, y caché versionada) que puede integrarse en un PR inicial a `main` antes de la lógica del cazador, desbloqueando el trabajo concurrente de las funcionalidades 002, 003 y 004.
+  - Modelar como un bloque modular de código y pruebas (DTOs, interfaces de puerto, clientes HTTP y offline, regeneración de fixtures en `scripts/generar_fixtures.py` y caché versionada) que puede integrarse en un PR inicial a `main` antes de la lógica del cazador, desbloqueando el trabajo concurrente de las funcionalidades 002, 003 y 004.
 
 ---
 
@@ -239,7 +243,7 @@ tests/
 | Archivo (Ruta Real) | Cambio Requerido | Justificación Técnica |
 |---|---|---|
 | `cripta/dto/salida_dto.py` | Modificado | Agregar campo `costo: int = 100` y validación en `desde_json` ($\ge 1$). |
-| `cripta/dto/enemigo_dto.py` | Modificado | Agregar campo `rango: int \| None = None` y validación obligatoria para cazadores. |
+| `cripta/dto/enemigo_dto.py` | Modificado | Agregar campo `rango: int \| None = None` y validación para cazadores lanzando `CriptaDatosInvalidosError`/`CriptaApiError` con ID de ficha en el mensaje si es inválido. |
 | `cripta/dto/llave_ubicacion_dto.py` | **Nuevo** | Definición inmutable de `LlaveUbicacionDTO` para `GET /criptas/{id}/llaves`. |
 | `cripta/infraestructura/puertos.py` | Modificado | Añadir método abstracto `obtener_llaves(id_cripta)` en protocolo `ClienteCripta`. |
 | `cripta/infraestructura/cliente_http.py` | Modificado | Implementar `obtener_llaves` con presupuesto, timeout y reintentos 429. |
@@ -247,17 +251,18 @@ tests/
 | `cripta/infraestructura/cliente_general.py` | Modificado | Añadir delegación sincronizada a `obtener_llaves`. |
 | `cripta/infraestructura/cache.py` | Modificado | Persistencia y recuperación de `llaves.json` versionado por versión de cripta. |
 | `cripta/infraestructura/serializacion.py` | Modificado | Incluir `costo` en esqueleto y `rango` en catálogo al serializar a JSON. |
+| `scripts/generar_fixtures.py` | Modificado | Incorporar regeneración y verificación de fixtures con `costo` en salidas, `rango` en catálogo y consulta de `llaves.json`. |
 | `cripta/modelo/buscador_rutas.py` | **Nuevo** | Implementación de `BuscadorRutas` (Dijkstra compartido, poda y desempate). |
 | `cripta/modelo/comportamiento_enemigo.py` | Modificado | Añadir función `_decidir_cazador` y enlace en `decidir_accion_enemigo`. |
 | `cripta/modelo/enemigo.py` | Modificado | Exponer propiedad `rango` tomada de su ficha de catálogo. |
 | `cripta/modelo/partida.py` | Modificado | Usar costo de salida en `_mover`, costo de salida en `_turno_enemigo`, invalidar `BuscadorRutas` en eventos clave (`_mover`, `_abrir`, etc.). |
-| `cripta/modelo/resultado_partida.py` | Modificado | Añadir `costo` en `SalidaVista` e indicador de cazador en `EnemigoVista`. |
 | `cripta/estructuras/heap_min.py` | Modificado | Añadir métodos `esta_vacio()` y `__len__()` sobre la lista existente. |
-| `cripta/vista/vista_consola.py` | Modificado | Mostrar costos en salidas e identificar visualmente a los cazadores. |
 | `cripta/bench/cargas_bench.py` | Modificado | Registrar cargas sintéticas `ruta_cazador` e `invalidacion`. |
 | `cripta/servicios/servicio_bench.py` | Modificado | Habilitar ejecución de las nuevas cargas de `--bench`. |
+| `cripta/modelo/resultado_partida.py` | **Sin cambios** | Ningún requisito funcional (FR) de la especificación solicita cambios en las vistas del resultado ni DTOs de presentación. |
+| `cripta/vista/vista_consola.py` | **Sin cambios** | Ningún requisito funcional (FR) solicita modificaciones en la interfaz de consola en esta funcionalidad. |
 | `cripta/constantes.py` | **Sin cambios** | Mantiene constantes de acciones y direcciones intactas. |
-| `cripta/excepciones.py` | **Sin cambios** | Reutiliza jerarquía de excepciones de la Parte I. |
+| `cripta/excepciones.py` | **Sin cambios** | Reutiliza excepciones existentes de la Parte I: se usa `CriptaDatosInvalidosError` (en `--offline`/fixtures) y `CriptaApiError` (en API REST) con el ID de la ficha en el mensaje para cazadores sin rango u otros datos externos corruptos; `ValueError` se reserva estrictamente para errores de programación interna. |
 | `cripta/modelo/actor.py` | **Sin cambios** | Atributos base de actor compatibles. |
 | `cripta/modelo/jugador.py` | **Sin cambios** | Comportamiento del jugador se mantiene idéntico. |
 | `cripta/modelo/inventario.py` | **Sin cambios** | Gestión de inventario sobre lista doble enlazada sin alteraciones. |

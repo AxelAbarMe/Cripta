@@ -100,6 +100,7 @@ cripta/
 ├── modelo/
 │   ├── buscador_rutas.py        # Nuevo: Dijkstra compartido, cola HeapMinimo y tabla plana
 │   ├── comportamiento_enemigo.py# Modificado: incorpora lógica de decisión _decidir_cazador
+│   ├── efectos.py               # Modificado: EfectoCierrePuerta invalida BuscadorRutas (T033); se verifica EfectoCambioVelocidad (T022)
 │   ├── enemigo.py               # Modificado: expone propiedad rango de la ficha
 │   └── partida.py               # Modificado: costos variables en movimiento, invalidación, agenda
 ├── estructuras/
@@ -259,11 +260,14 @@ tests/
 | `scripts/generar_fixtures.py` | Modificado | Incorporar regeneración y verificación de fixtures con `costo` en salidas, `rango` en catálogo y consulta de `llaves.json`. |
 | `cripta/modelo/buscador_rutas.py` | **Nuevo** | Implementación de `BuscadorRutas` (Dijkstra compartido, poda y desempate). |
 | `cripta/modelo/comportamiento_enemigo.py` | Modificado | Añadir función `_decidir_cazador` y enlace en `decidir_accion_enemigo`. |
+| `cripta/modelo/efectos.py` | Modificado | `EfectoCierrePuerta` invalida `BuscadorRutas` al cerrar una puerta (T033); se verifica que `EfectoCambioVelocidad` llama a `calcular_tiempo_reprogramado` (T022). |
 | `cripta/modelo/enemigo.py` | Modificado | Exponer propiedad `rango` tomada de su ficha de catálogo. |
 | `cripta/modelo/partida.py` | Modificado | Usar costo de salida en `_mover`, costo de salida en `_turno_enemigo`, invalidar `BuscadorRutas` en eventos clave (`_mover`, `_abrir`, etc.). |
 | `cripta/estructuras/heap_min.py` | Modificado | Añadir métodos `esta_vacio()` y `__len__()` sobre la lista existente. |
 | `cripta/bench/cargas_bench.py` | Modificado | Registrar cargas sintéticas `ruta_cazador` e `invalidacion`. |
-| `cripta/servicios/servicio_bench.py` | Modificado | Habilitar ejecución de las nuevas cargas de `--bench`. |
+| `cripta/servicios/servicio_bench.py` | **Modificado** | Habilitar ejecución de las nuevas cargas de `--bench` (T038). |
+| `DECISIONES.md` (raíz) | Modificado | Ampliar con la sección de la capacidad 001: decisiones, alternativas descartadas, resultados de `--bench` y límites conocidos (T043). |
+| `tests/controlador/test_controlador_errores.py` | **Modificado** | Ampliar con la prueba de FR-TER-023: desplazamiento rechazado sin consumir tiempo ni registrar en `partida.log` (T019b). |
 | `cripta/modelo/resultado_partida.py` | **Sin cambios** | Ningún requisito funcional (FR) de la especificación solicita cambios en las vistas del resultado ni DTOs de presentación. |
 | `cripta/vista/vista_consola.py` | **Sin cambios** | Ningún requisito funcional (FR) solicita modificaciones en la interfaz de consola en esta funcionalidad. |
 | `cripta/constantes.py` | **Sin cambios** | Mantiene constantes de acciones y direcciones intactas. |
@@ -352,9 +356,9 @@ tests/
 | **FR-TER-002** (costo estrictamente simétrico) | `cripta/modelo/cripta_mapa.py` | `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
 | **FR-TER-003** (costo de movimiento = costo de salida) | `cripta/modelo/partida.py` (`_mover`) | `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
 | **FR-TER-004** (intervalo $\max(1, c \cdot 100 // v)$) | `cripta/modelo/reloj.py` | `tests.modelo.test_reloj` (Nuevo) y `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
-| **FR-TER-005** (escalado de tiempo ante cambio velocidad) | `cripta/modelo/reloj.py` (`reprogramar`) | `tests.modelo.test_reloj` (Nuevo) y `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
+| **FR-TER-005** (escalado de tiempo ante cambio velocidad) | `cripta/modelo/reloj.py` (`calcular_tiempo_reprogramado`, `reprogramar`), `cripta/modelo/efectos.py` (`EfectoCambioVelocidad`) | `tests.modelo.test_reloj` (Nuevo) y `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
 | **FR-TER-006** (costos fijos para acciones sin movimiento) | `cripta/modelo/partida.py` | `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
-| **FR-TER-007** (errantes y rastreadores usan costo salida) | `cripta/modelo/partida.py` (`_turno_enemigo`) | `tests.modelo.test_comportamiento_enemigo` |
+| **FR-TER-007** (errantes y rastreadores usan costo salida) | `cripta/modelo/partida.py` (`_turno_enemigo`) | `tests.aceptacion.test_terreno_costos` |
 | **FR-TER-008** (ficha cazador requiere rango entero $\ge 1$) | `cripta/dto/enemigo_dto.py` | `tests.dto.test_enemigo_dto` / Escenario Quickstart 1 |
 | **FR-TER-009** (cazador ataca si comparte sala, costo 100) | `cripta/modelo/comportamiento_enemigo.py` | `tests.aceptacion.test_cazador_persecucion` / Escenario Quickstart 3 |
 | **FR-TER-010** (evaluación de costo mínimo hacia jugador) | `cripta/modelo/buscador_rutas.py` | `tests.modelo.test_buscador_rutas` |

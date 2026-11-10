@@ -338,17 +338,49 @@ un log de ejemplo reproducible para la defensa de --replay (§4.11, §9).
 
 **Para qué se usó:** Completar las correcciones que quedaron a medias en specs/001-terreno-cazador/. El auditor de prohibiciones se resolvió con un Select-String en quickstart.md, sin crear scripts/revisar_prohibidos.py. Se revisó con git diff que solo cambiaron archivos de esa carpeta y PROMPTS_LLM.md.
 
-### 2026-11-09 — Antigravity CLI 1.5.3 (Gemini 3.8 Flash)
+### 2026-11-09 — Antigravity CLI 1.5.3 (Claude Sonnet 4.6)
 **Prompt:** "/speckit-tasks Genera tasks.md en español, incluidos los títulos de las fases y secciones de la plantilla. Usa solo specs/001-terreno-cazador/spec.md, plan.md, data-model.md, research.md, quickstart.md y contracts/. No agregues reglas del juego ni decisiones de diseño que no estén en ellos. Si falta algo, detente y pregunta. Cada tarea cita los identificadores FR-TER-NNN que atiende y la ruta real del archivo que toca (marca Nuevo si no existe). Cada escenario de aceptación de spec.md, incluidos los siete casos del Apéndice B, tiene al menos una tarea de prueba automatizada que cita el requisito, y las pruebas van antes que el código. Las pruebas usan unittest, con un __init__.py en cada carpeta nueva (tests/dto y tests/aceptacion llevan una tarea explícita). Ninguna tarea usa heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted() donde aplica. Ninguna tarea contiene commits ni push. Organización: Fase A bloque de contrato de datos separable y fusionable primero en su propio Pull Request; Fase B terreno; Fase C cazador; Fase D mediciones --bench con la alternativa descartada; Fase E cierre con las 222 pruebas de la Parte I, auditoría de importaciones prohibidas, --replay y entrada en PROMPTS_LLM.md. Marca [P] solo las tareas independientes e indica el orden de dependencias y el punto de corte del primer Pull Request. Modifica solo specs/001-terreno-cazador/tasks.md." (El texto completo está en prompts/p2/05-tasks-001.md.)
 
 **Prompt (resumido):** Se pidió generar la lista de tareas de la capacidad de terreno y cazador, organizada en cinco fases, con cada tarea citando sus requisitos FR-TER y la ruta real del archivo, pruebas antes del código y el contrato de datos como primer bloque fusionable.
 
 **Para qué se usó:** Generar el borrador de tasks.md en specs/001-terreno-cazador/, que luego se revisó contra spec.md y plan.md (cobertura de FR-TER-001 a 023 y de los escenarios del Apéndice B).
 
-### 2026-11-09 — Antigravity CLI 1.5.3 (Gemini 3.8 Flash)
+### 2026-11-09 — Antigravity CLI 1.5.3 (Claude Sonnet 4.6)
 **Prompt:** "Corrige solo specs/001-terreno-cazador/tasks.md (y, si hace falta, la tabla de impacto de plan.md). No toques spec.md ni otros archivos. 1. Agrega una tarea de prueba y, si corresponde, de código para FR-TER-023. Quita FR-TER-023 de T035. 2. En T006 elimina la prueba de rechazo de un archivo de la Parte I. 3. En T020 y T022 reutiliza calcular_tiempo_reprogramado de cripta/modelo/reloj.py en lugar de una fórmula nueva. 4. En T038 y T039 marca Nuevo o Modificado según Test-Path y agrega esos archivos a la tabla de impacto de plan.md. 5. En la estrategia indica que cada fase de código va en una rama nueva desde main. 6. En T036 agrega el caso de rangos heterogéneos, en T002 cambia id de ficha por id de sala y corrige la dependencia entre C y D."
 
 **Prompt (resumido):** Se pidió corregir seis puntos de tasks.md: cobertura de FR-TER-023, una prueba fuera de alcance, una fórmula inventada, archivos no citados en el plan, estrategia de ramas y detalles menores.
 
 **Para qué se usó:** Ajustar tasks.md al plan y a la especificación antes de /speckit-analyze.
 
+### 2026-11-09 — Claude (claude.ai)
+**Prompt:** "Corrige solo specs/001-terreno-cazador/tasks.md y la tabla de trazabilidad de plan.md. No toques
+spec.md ni otros archivos.
+1. En "Estrategia de Implementación" aclara que hay tres Pull Requests: (a) documentación (spec,
+   plan, tasks), (b) Fase A en rama nueva desde main, (c) Fases B a E en otra rama nueva desde main
+   después de fusionar la Fase A. Quita la frase que llama a la Fase A "PR de documentación".
+2. Quita de la Fase B la nota "puede iniciarse en paralelo con Fase C" y de la Fase D la nota
+   "puede iniciarse en paralelo con Fase E". El orden es secuencial A, B, C, D, E.
+3. Elimina T043 de tasks.md. El registro de /speckit-tasks en PROMPTS_LLM.md se hace fuera de las
+   tareas de implementación.
+4. Mueve T035b a la Fase B, en B.1 antes de T021, y agrégale una tarea de código posterior que
+   verifique o corrija cripta/modelo/partida.py (_despachar) para que el desplazamiento rechazado no
+   consuma tiempo ni escriba en partida.log (FR-TER-023). Actualiza las dependencias.
+5. En T007 cambia "id de ficha" por "id de la sala".
+6. En la trazabilidad de plan.md, usa para FR-TER-007 y FR-TER-021 el archivo de prueba que cita
+   cada tarea. En T028 cambia "Ampliar" por "Crear".
+7. Usa en T021, T022 y T025 los nombres reales de cripta/modelo/reloj.py: <pega aquí el resultado
+   de Select-String>."
+
+**Prompt (resumido):** Ramas: quedaron tres Pull Requests: documentación, Fase A y Fases B a E, cada uno desde una rama nueva desde main.
+Paralelismo: quité las notas contradictorias. El orden es A, B, C, D, E.
+FR-TER-023: la prueba pasó a la Fase B, antes del código (T019b), y agregué la tarea de verificación posterior (T025b). La prueba ahora pide mensaje de rechazo, reloj sin avanzar, estado e historial intactos y sin línea en partida.log.
+Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
+
+**Para qué se usó:** Ajustar tasks.md al plan y a la especificación antes de /speckit-analyze.
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Claude Sonnet 4.6)
+**Prompt:** "Corrige solo la tabla de impacto, el árbol de código fuente y la tabla de trazabilidad de specs/001-terreno-cazador/plan.md, y la tarea T043 de tasks.md. No toques spec.md ni otros archivos. 1. Agrega cripta/modelo/efectos.py como Modificado (EfectoCierrePuerta invalida el BuscadorRutas, T033; se verifica EfectoCambioVelocidad, T022), en la tabla de impacto y en el árbol. 2. Reemplaza la fila docs/DECISIONES.md por DECISIONES.md (raíz), Modificado, sección de la capacidad 001 (T043). En la fila de tests/controlador/test_controlador_errores.py cambia T035b por T019b. En tasks.md T043 cambia verificar con Test-Path y crearlo por ampliar DECISIONES.md. 3. En la trazabilidad, FR-TER-007: la prueba es tests.aceptacion.test_terreno_costos. 4. En la trazabilidad, FR-TER-005: componente reloj.py (calcular_tiempo_reprogramado, reprogramar) y efectos.py (EfectoCambioVelocidad)."
+
+**Prompt (resumido):** Se pidió alinear plan.md con tasks.md: agregar efectos.py al impacto, actualizar la referencia de DECISIONES.md y de T019b, y corregir la prueba de FR-TER-007 y el componente de FR-TER-005 en la trazabilidad.
+
+**Para qué se usó:** Eliminar inconsistencias entre el plan y las tareas antes de /speckit-analyze.

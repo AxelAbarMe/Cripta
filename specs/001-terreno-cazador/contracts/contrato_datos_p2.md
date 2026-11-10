@@ -115,11 +115,11 @@ class LlaveUbicacionDTO:
 
     @classmethod
     def desde_json(cls, datos: dict) -> "LlaveUbicacionDTO":
-        # Ante datos externos incompletos se lanza CriptaDatosInvalidosError, con cualquier fuente.
+        # Ante datos externos inválidos lanza ValueError con el dato afectado. El cliente lo convierte.
         if "id" not in datos or "sala" not in datos:
-            raise CriptaDatosInvalidosError("desde_json", "llaves.json", "Faltan campos obligatorios 'id' o 'sala'")
+            raise ValueError(f"ubicación de llave sin 'id' o 'sala': {datos}")
         if not str(datos["id"]) or not isinstance(datos["sala"], int) or datos["sala"] < 1:
-            raise CriptaDatosInvalidosError("desde_json", "llaves.json", "'id' vacío o 'sala' no es un entero >= 1")
+            raise ValueError(f"ubicación de llave con 'id' vacío o 'sala' menor que 1: {datos}")
         return cls(
             id=str(datos["id"]),
             sala=datos["sala"],

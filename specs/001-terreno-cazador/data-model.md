@@ -21,8 +21,8 @@ Representa una vía de tránsito entre dos salas contiguas del laberinto.
 | `costo` | `int \| None` | No | `None` | Costo de terreno declarado en este lado de la salida, entero $\ge 1$. Si en el JSON es nulo o ausente queda en `None` (no declarado). El costo de la conexión lo resuelve `CriptaMapa`: el declarado en cualquiera de los dos lados, o `100` si ninguno lo declara (FR-TER-001, FR-TER-002). |
 
 #### Reglas de Validación
-- `costo >= 1`: Si se proporciona un valor menor a 1 o no entero en datos externos (JSON), se rechaza con `CriptaDatosInvalidosError`, sea cual sea la fuente (HTTP o `--offline`), porque el DTO no la conoce.
-- Simetría: `CriptaMapa` resuelve el costo de cada conexión desde ambos lados al incorporar el esqueleto; si ningún lado lo declara, vale `100`; si solo un lado lo declara, rige para ambos; si los dos lados declaran costos distintos, lanza `CriptaDatosInvalidosError` con las salas de la conexión.
+- `costo >= 1`: Si se proporciona un valor menor a 1 o no entero en datos externos (JSON), el DTO lanza `ValueError` con la salida afectada en el mensaje (la sala y la dirección las agrega `SalaDTO.desde_json`, que las conoce), y el cliente lo convierte: `ClienteOffline` en `CriptaDatosInvalidosError` con la ruta del archivo y `ClienteHttp` en `CriptaApiError` con la operación, como en la Parte I. El DTO no lanza `CriptaDatosInvalidosError` porque no conoce la operación ni la ruta.
+- Simetría: `CriptaMapa` resuelve el costo de cada conexión desde ambos lados al incorporar el esqueleto; si ningún lado lo declara, vale `100`; si solo un lado lo declara, rige para ambos; si los dos lados declaran costos distintos, lanza `CriptaDatosInvalidosError` con operación «construir el mapa», ruta «esqueleto de la cripta» y las salas de la conexión en el detalle.
 
 ---
 

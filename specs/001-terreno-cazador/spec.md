@@ -29,6 +29,16 @@ Incluye como escenarios de aceptación todos estos casos del Apéndice B:
 
 Prefijo de requisitos: FR-TER-NNN. No menciones estructuras de datos, clases ni módulos."
 
+## Clarificaciones
+
+### Sesión 2026-11-09
+
+- Q: ¿Cómo debe comportarse un enemigo cazador si su ficha en el catálogo tiene el atributo de rango nulo o ausente? (FR-TER-008) → A: Ficha inválida: toda ficha con comportamiento cazador requiere obligatoriamente un rango entero positivo (>= 1); si el rango es nulo o ausente, la ficha se rechaza formalmente como dato inválido.
+- Q: ¿Qué registros deben escribirse en el archivo partida.log durante los turnos de los cazadores y los desplazamientos en terreno con costo? → A: Opción A: solo las acciones aceptadas del jugador (formato idéntico a la Parte I); los movimientos, esperas y ataques de los cazadores son eventos internos del motor y no generan líneas en partida.log.
+- Q: ¿Qué orden de resolución debe regir cuando múltiples eventos coinciden en el mismo instante del reloj virtual (tiempo_siguiente) en la agenda? (FR-TER-015) → A: Opción A: criterio determinista de la Parte I (P1 §2.1 y CONTEXTO_CRIPTA2 §D.3): desempate estricto por menor número de secuencia de programación en la agenda; ante activaciones simultáneas de enemigos, se programan en orden ascendente de identificador de instancia.
+- Q: ¿Qué comportamiento observable y efectos en el reloj virtual y bitácora deben tener las acciones de movimiento rechazadas del jugador? (FR-TER-003) → A: Opción A: regla canónica de la Parte I (P1 §3.3, §D.3 y Apéndice B): mensaje descriptivo observable ("La puerta está cerrada." o "No hay salida hacia el [dirección]."), tiempo virtual consumido cero (el reloj no avanza), el estado permanece inalterado y no se escribe ninguna entrada en partida.log.
+- Q: ¿Cómo debe interpretar el sistema la procedencia de una llave devuelta por el servicio cuando el campo enemigo es nulo o está ausente? (FR-TER-018) → A: Opción A: regla de CONTEXTO_CRIPTA2.md §0.2 ítem 8: si enemigo es nulo o ausente, la llave se ubica en el suelo de la sala indicada; si contiene un identificador de enemigo, dicho enemigo la porta y se deposita en el suelo tras ser derrotado.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Movimiento y costos variables del terreno para actores (Prioridad: P1)
@@ -106,9 +116,14 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - ¿Qué ocurre si un cazador tiene dos salidas abiertas hacia salas vecinas con diferente identificador pero que forman parte de la misma ruta o rutas de igual costo mínimo total hacia el jugador? Se desempata estrictamente eligiendo la vecina con menor identificador numérico de sala.
 - ¿Qué ocurre si el jugador se desplaza a la misma sala donde se encuentra el cazador mientras éste esperaba o estaba en tránsito? Al llegar el siguiente turno del cazador, éste observa que comparte sala con el jugador y ataca inmediatamente en lugar de moverse.
 - ¿Qué ocurre si un enemigo cazador muere mientras esperaba o se movía? Deja de ejecutar eventos y cualquier acción futura programada queda sin efecto en el reloj virtual.
+- ¿Qué ocurre si la ficha de un cazador en el catálogo presenta el atributo de rango nulo o ausente? La ficha se clasifica y rechaza formalmente como dato inválido, impidiendo la instanciación de un cazador sin rango.
 - ¿Qué ocurre si todos los caminos hacia el jugador están bloqueados por puertas cerradas? El cazador no abre puertas bajo ninguna circunstancia y procede a esperar consumiendo un costo de 100 unidades.
 - ¿Qué ocurre si el rango del cazador es exactamente igual al costo mínimo d de la ruta abierta (d == rango)? El cazador se mueve normalmente por la ruta óptima, pues la condición de espera es estrictamente d > rango.
 - ¿Qué ocurre si el cazador y el jugador están en la misma sala pero la distancia teórica a través del mapa fuera mayor que el rango? Al compartir sala, la condición de ataque prioritario prevalece y el cazador ataca sin evaluar distancias ni rango.
+- ¿Se registran las decisiones, movimientos o ataques de los cazadores en partida.log? No; la bitácora contiene exclusivamente las acciones aceptadas del jugador en formato idéntico al de la primera parte, reproduciéndose el comportamiento de los cazadores deterministamente por semilla en --replay.
+- ¿Qué ocurre si dos cazadores o un cazador y otro actor tienen su turno programado exactamente en el mismo instante virtual t? Se resuelve deterministamente despachando primero el evento con menor número de secuencia de programación en la agenda; si fueron activados simultáneamente al entrar a una sala, se habrán programado en orden ascendente de su identificador de instancia.
+- ¿Qué ocurre si el jugador intenta moverse a través de una puerta cerrada o hacia una salida inexistente? La acción es rechazada de inmediato con un mensaje explicativo observable ("La puerta está cerrada." o "No hay salida hacia el [dirección]."), el reloj virtual no avanza, el estado permanece inalterado y no se produce ninguna entrada en partida.log.
+- ¿Qué ocurre si la consulta de llaves entrega una llave con campo de enemigo nulo o ausente? La llave se ubica directamente en el suelo de la sala indicada y puede ser recogida sin mediar combate previo.
 
 ## Requisitos *(obligatorio)*
 
@@ -121,7 +136,7 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - **FR-TER-005**: Si la velocidad de un actor cambia mientras se encuentra en tránsito cruzando una salida, el tiempo restante para completar el cruce debe escalarse en el instante virtual t del cambio según la fórmula `restante_nuevo = max(1, (t_siguiente - t) * velocidad_anterior // velocidad_nueva)`, actualizando el tiempo de finalización del evento a `t + restante_nuevo`.
 - **FR-TER-006**: Los costos de las acciones que no constituyen desplazamiento espacial (tales como atacar, esperar, usar objetos, equipar, recoger, soltar y abrir puertas con llave) no deben verse afectados por los costos de las salidas del laberinto.
 - **FR-TER-007**: Los enemigos con comportamientos errante y rastreador deben conservar su lógica de selección de destino (el errante selecciona al azar una salida abierta; el rastreador selecciona la salida hacia la sala accesible con rastro más reciente menor a 400 unidades, desempatando por menor identificador de sala), consumiendo para su desplazamiento el costo específico de la salida seleccionada.
-- **FR-TER-008**: El sistema debe incorporar el comportamiento de enemigo "cazador" como cuarto comportamiento disponible en el catálogo de entidades, requiriendo que su ficha incluya un atributo de rango expresado como un número entero positivo en unidades de costo.
+- **FR-TER-008**: El sistema debe incorporar el comportamiento de enemigo "cazador" como cuarto comportamiento disponible en el catálogo de entidades. Toda ficha con comportamiento "cazador" requiere obligatoriamente un atributo de rango expresado como un número entero positivo (>= 1) en unidades de costo; si el rango es nulo o está ausente, la ficha debe ser rechazada formalmente como dato inválido.
 - **FR-TER-009**: En su turno de acción, si el cazador comparte sala con el jugador, debe atacar prioritariamente al jugador con el costo base estándar de ataque (100 unidades).
 - **FR-TER-010**: En su turno de acción, si el cazador no comparte sala con el jugador, debe evaluar el costo mínimo d para alcanzar la sala actual del jugador sumando exclusivamente los costos de las salidas que se encuentren abiertas en ese instante.
 - **FR-TER-011**: Si no existe ninguna ruta compuesta por salidas abiertas hacia la sala actual del jugador, o si el costo mínimo d es estrictamente mayor que el rango del cazador (d > rango), el cazador debe esperar consumiendo un costo de acción de 100 unidades.
@@ -130,17 +145,20 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - **FR-TER-014**: El cazador debe conocer el esqueleto completo del laberinto y el estado actual de todas sus puertas, no verse afectado por la niebla de guerra, no abrir puertas cerradas bajo ninguna circunstancia, y su toma de decisión no debe depender de si el contenido detallado de una sala ha sido descargado.
 - **FR-TER-015**: La decisión de cada turno del cazador debe presentar equivalencia observable idéntica a calcular la ruta desde cero en ese instante, reflejando fielmente cualquier cambio en puertas, movimiento de actores o fallecimiento de entidades.
 - **FR-TER-016**: El sistema debe interpretar el atributo de costo en las salidas del esqueleto del laberinto provistas por el servicio externo o modo fuera de línea, asignando 100 si no se encuentra presente.
-- **FR-TER-017**: El sistema debe interpretar el comportamiento "cazador" y su atributo "rango" en las fichas del catálogo de entidades provistas por el servicio externo o modo fuera de línea.
-- **FR-TER-018**: El sistema debe proveer una consulta para obtener la ubicación de cada llave de la cripta (indicando sala y si está en posesión de un enemigo), contabilizando dicha consulta en el presupuesto de solicitudes y manteniéndola válida únicamente mientras la versión de la cripta coincida.
+- **FR-TER-017**: El sistema debe interpretar el comportamiento "cazador" y su atributo "rango" en las fichas del catálogo de entidades provistas por el servicio externo o modo fuera de línea, validando que el rango sea un entero positivo (>= 1) y rechazando formalmente la ficha como dato inválido si el campo es nulo o ausente.
+- **FR-TER-018**: El sistema debe proveer una consulta para obtener la ubicación de cada llave de la cripta (indicando sala y si está en posesión de un enemigo), contabilizando dicha consulta en el presupuesto de solicitudes y manteniéndola válida únicamente mientras la versión de la cripta coincida. Si en los datos de la llave el campo de enemigo es nulo o ausente, la llave debe considerarse ubicada directamente en el suelo de la sala; si contiene un identificador de enemigo, la llave es portada por dicho enemigo y se deposita en el suelo únicamente al derrotarlo en combate.
 - **FR-TER-019**: La persistencia de datos debe invalidar formalmente cualquier archivo o registro previo si no coincide la versión de la cripta o del catálogo, prohibiéndose requerir el borrado manual de archivos como mecanismo de control.
 - **FR-TER-020**: El ciclo de eventos de la simulación entre dos decisiones consecutivas del jugador debe completarse en menos de 20 milisegundos en la cripta de referencia, aun en presencia de decenas de cazadores activos persiguiendo al mismo objetivo, medido en el entorno local sin red ni renderizado gráfico.
+- **FR-TER-021**: El archivo de bitácora `partida.log` debe registrar exclusivamente las acciones aceptadas del jugador en formato idéntico al de la primera parte; las decisiones, movimientos, ataques y esperas de los cazadores y demás enemigos constituyen eventos internos de la simulación reproducibles por semilla y no deben generar entradas en `partida.log`.
+- **FR-TER-022**: Ante eventos programados para el mismo instante de tiempo virtual en la agenda, el orden de despacho debe determinarse estrictamente por el menor número de secuencia asignado al programar el evento; ante activaciones simultáneas de enemigos al entrar a una sala, sus primeros turnos deben programarse en orden ascendente de su identificador de instancia.
+- **FR-TER-023**: Cualquier intento de acción de desplazamiento rechazado (como intentar atravesar una puerta cerrada o avanzar en una dirección sin salida existente) debe emitir un mensaje descriptivo de rechazo observable, no debe consumir tiempo en el reloj virtual (duración cero), no debe modificar el estado del juego ni el historial, y no debe generar ninguna línea en `partida.log`.
 
 ### Entidades Clave *(incluir si la funcionalidad involucra datos)*
 
 - **Salida / Conexión**: Vía de paso bidireccional entre dos salas contiguas del laberinto. Atributos conceptuales: sala de origen, sala de destino, estado de puerta (abierta o cerrada con llave), costo de paso (entero >= 1, por defecto 100).
 - **Actor**: Entidad con presencia física en una sala y participación activa en la línea de tiempo virtual. Atributos conceptuales: identificador de instancia, sala actual, puntos de vida, ataque, defensa, velocidad, tiempo siguiente de acción programada.
 - **Cazador**: Tipo específico de actor enemigo con comportamiento de persecución guiada por costo mínimo. Atributos adicionales: ficha de catálogo asociada, comportamiento cazador, rango de persecución (entero >= 1 en unidades de costo).
-- **Ubicación de Llave**: Información provista por el servicio sobre la procedencia de una llave en la cripta. Atributos conceptuales: identificador de la llave, identificador de la sala donde se ubica, e identificador opcional del enemigo que la suelta al ser derrotado (o indicación de encontrarse en el suelo de la sala).
+- **Ubicación de Llave**: Información provista por el servicio sobre la procedencia de una llave en la cripta. Atributos conceptuales: identificador de la llave, identificador de la sala donde se ubica, e identificador opcional del enemigo portador (si es nulo o ausente, la llave yace en el suelo de la sala; si está presente, se obtiene tras vencer al enemigo).
 - **Versión de Cripta y Catálogo**: Identificadores de versión provistos por el servicio que gobiernan la validez de los datos del laberinto y el catálogo, empleados para invalidar de forma automática cualquier estado persistido obsoleto.
 
 ## Criterios de Éxito *(obligatorio)*
@@ -155,7 +173,7 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 
 ## Supuestos
 
-- El contrato del servicio permite que la ficha de un cazador traiga el rango nulo o ausente. El enunciado no define qué hace el cazador en ese caso, y la decisión queda pendiente para la fase de clarificación.
+- Toda ficha de catálogo con comportamiento cazador debe proveer un rango entero positivo (>= 1); una ficha sin rango o con rango nulo es considerada formalmente inválida y rechazada durante la carga de catálogo.
 - Los costos de salida suministrados por el servicio son números enteros mayores o iguales a 1. Si un valor no se declara o es nulo, asume el valor por defecto de 100.
 - La consulta de ubicación de llaves consume exactamente una solicitud del presupuesto de solicitudes de la cripta y su resultado permanece vigente mientras no se altere la versión de la cripta.
 - Los actores conservan sus atributos de combate, fórmulas de daño y reglas de turno de la primera parte; la incorporación de salidas con costo variable modifica exclusivamente la duración y el costo del desplazamiento entre salas.

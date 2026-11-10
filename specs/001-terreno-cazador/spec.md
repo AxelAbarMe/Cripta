@@ -35,9 +35,9 @@ Prefijo de requisitos: FR-TER-NNN. No menciones estructuras de datos, clases ni 
 
 - Q: ¿Cómo debe comportarse un enemigo cazador si su ficha en el catálogo tiene el atributo de rango nulo o ausente? (FR-TER-008) → A: Ficha inválida: toda ficha con comportamiento cazador requiere obligatoriamente un rango entero positivo (>= 1); si el rango es nulo o ausente, la ficha se rechaza formalmente como dato inválido.
 - Q: ¿Qué registros deben escribirse en el archivo partida.log durante los turnos de los cazadores y los desplazamientos en terreno con costo? → A: Opción A: solo las acciones aceptadas del jugador (formato idéntico a la Parte I); los movimientos, esperas y ataques de los cazadores son eventos internos del motor y no generan líneas en partida.log.
-- Q: ¿Qué orden de resolución debe regir cuando múltiples eventos coinciden en el mismo instante del reloj virtual (tiempo_siguiente) en la agenda? (FR-TER-015) → A: Opción A: criterio determinista de la Parte I (P1 §2.1 y CONTEXTO_CRIPTA2 §D.3): desempate estricto por menor número de secuencia de programación en la agenda; ante activaciones simultáneas de enemigos, se programan en orden ascendente de identificador de instancia.
-- Q: ¿Qué comportamiento observable y efectos en el reloj virtual y bitácora deben tener las acciones de movimiento rechazadas del jugador? (FR-TER-003) → A: Opción A: regla canónica de la Parte I (P1 §3.3, §D.3 y Apéndice B): mensaje descriptivo observable ("La puerta está cerrada." o "No hay salida hacia el [dirección]."), tiempo virtual consumido cero (el reloj no avanza), el estado permanece inalterado y no se escribe ninguna entrada en partida.log.
-- Q: ¿Cómo debe interpretar el sistema la procedencia de una llave devuelta por el servicio cuando el campo enemigo es nulo o está ausente? (FR-TER-018) → A: Opción A: regla de CONTEXTO_CRIPTA2.md §0.2 ítem 8: si enemigo es nulo o ausente, la llave se ubica en el suelo de la sala indicada; si contiene un identificador de enemigo, dicho enemigo la porta y se deposita en el suelo tras ser derrotado.
+- Q: ¿Qué orden de resolución debe regir cuando múltiples eventos coinciden en el mismo instante del reloj virtual (tiempo_siguiente) en la agenda? (FR-TER-015) → A: Opción A: criterio determinista de la Parte I (P1 §2.1, §2.3 y §2.4): desempate estricto por menor número de secuencia de programación en la agenda; ante activaciones simultáneas de enemigos, se programan en orden ascendente de identificador de instancia.
+- Q: ¿Qué comportamiento observable y efectos en el reloj virtual y bitácora deben tener las acciones de movimiento rechazadas del jugador? (FR-TER-003) → A: Opción A: regla canónica de la Parte I (Apéndice B de la Parte I): mensaje que informa el motivo del rechazo, tiempo virtual consumido cero (el reloj no avanza), el estado permanece inalterado y no se escribe ninguna entrada en partida.log.
+- Q: ¿Cómo debe interpretar el sistema la procedencia de una llave devuelta por el servicio cuando el campo enemigo es nulo o está ausente? (FR-TER-018) → A: Opción A: regla de P2 §4.2: si enemigo es nulo o ausente, la llave se ubica en el suelo de la sala indicada; si contiene un identificador de enemigo, dicho enemigo la porta y se deposita en el suelo tras ser derrotado.
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
@@ -122,7 +122,7 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - ¿Qué ocurre si el cazador y el jugador están en la misma sala pero la distancia teórica a través del mapa fuera mayor que el rango? Al compartir sala, la condición de ataque prioritario prevalece y el cazador ataca sin evaluar distancias ni rango.
 - ¿Se registran las decisiones, movimientos o ataques de los cazadores en partida.log? No; la bitácora contiene exclusivamente las acciones aceptadas del jugador en formato idéntico al de la primera parte, reproduciéndose el comportamiento de los cazadores deterministamente por semilla en --replay.
 - ¿Qué ocurre si dos cazadores o un cazador y otro actor tienen su turno programado exactamente en el mismo instante virtual t? Se resuelve deterministamente despachando primero el evento con menor número de secuencia de programación en la agenda; si fueron activados simultáneamente al entrar a una sala, se habrán programado en orden ascendente de su identificador de instancia.
-- ¿Qué ocurre si el jugador intenta moverse a través de una puerta cerrada o hacia una salida inexistente? La acción es rechazada de inmediato con un mensaje explicativo observable ("La puerta está cerrada." o "No hay salida hacia el [dirección]."), el reloj virtual no avanza, el estado permanece inalterado y no se produce ninguna entrada en partida.log.
+- ¿Qué ocurre si el jugador intenta moverse a través de una puerta cerrada o hacia una salida inexistente? La acción es rechazada de inmediato con un mensaje que informa el motivo del rechazo, el reloj virtual no avanza, el estado permanece inalterado y no se produce ninguna entrada en partida.log.
 - ¿Qué ocurre si la consulta de llaves entrega una llave con campo de enemigo nulo o ausente? La llave se ubica directamente en el suelo de la sala indicada y puede ser recogida sin mediar combate previo.
 
 ## Requisitos *(obligatorio)*
@@ -165,10 +165,10 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 
 ### Resultados Medibles
 
-- **SC-001**: El ciclo de eventos de la simulación entre dos acciones consecutivas del jugador se ejecuta en menos de 20 milisegundos en la cripta de referencia con decenas de cazadores activos en persecución simultánea
+- **SC-001**: El ciclo de eventos de la simulación entre dos acciones consecutivas del jugador se ejecuta en menos de 20 milisegundos en la cripta de referencia con decenas de cazadores activos en persecución simultánea.
 - **SC-002**: El 100% de las decisiones de movimiento y persecución del cazador coinciden exactamente con la ruta de costo mínimo teórico y la regla de desempate por menor identificador de sala.
 - **SC-003**: El 100% de los escenarios de aceptación especificados a partir del Apéndice B para terreno y cazador son reproducibles y verificables mediante pruebas automatizadas.
-- **SC-004**: Ninguna acción de desplazamiento a través de salidas con costo produce intervalos de tiempo virtual inferiores a 1 unidad temporal, para cualquier velocidad positiva de actor
+- **SC-004**: Ninguna acción de desplazamiento a través de salidas con costo produce intervalos de tiempo virtual inferiores a 1 unidad temporal, para cualquier velocidad positiva de actor.
 - **SC-005**: El 100% de los archivos o datos persistidos generados bajo versiones previas o formatos de la primera parte son detectados formalmente como incompatibles sin requerir intervención manual sobre el sistema de archivos.
 
 ## Supuestos

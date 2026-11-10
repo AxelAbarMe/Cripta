@@ -132,7 +132,7 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - **FR-TER-016**: El sistema debe interpretar el atributo de costo en las salidas del esqueleto del laberinto provistas por el servicio externo o modo fuera de línea, asignando 100 si no se encuentra presente.
 - **FR-TER-017**: El sistema debe interpretar el comportamiento "cazador" y su atributo "rango" en las fichas del catálogo de entidades provistas por el servicio externo o modo fuera de línea.
 - **FR-TER-018**: El sistema debe proveer una consulta para obtener la ubicación de cada llave de la cripta (indicando sala y si está en posesión de un enemigo), contabilizando dicha consulta en el presupuesto de solicitudes y manteniéndola válida únicamente mientras la versión de la cripta coincida.
-- **FR-TER-019**: La persistencia de datos debe invalidar formalmente cualquier archivo o registro previo si no coincide la versión de la cripta o del catálogo, o si corresponde al formato de la primera parte, prohibiéndose requerir el borrado manual de archivos como mecanismo de control.
+- **FR-TER-019**: La persistencia de datos debe invalidar formalmente cualquier archivo o registro previo si no coincide la versión de la cripta o del catálogo, prohibiéndose requerir el borrado manual de archivos como mecanismo de control.
 - **FR-TER-020**: El ciclo de eventos de la simulación entre dos decisiones consecutivas del jugador debe completarse en menos de 20 milisegundos en la cripta de referencia, aun en presencia de decenas de cazadores activos persiguiendo al mismo objetivo, medido en el entorno local sin red ni renderizado gráfico.
 
 ### Entidades Clave *(incluir si la funcionalidad involucra datos)*
@@ -147,15 +147,15 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 
 ### Resultados Medibles
 
-- **SC-001**: El ciclo de eventos de la simulación entre dos acciones consecutivas del jugador se ejecuta en menos de 20 milisegundos en la cripta de referencia con al menos 30 cazadores activos en persecución simultánea.
+- **SC-001**: El ciclo de eventos de la simulación entre dos acciones consecutivas del jugador se ejecuta en menos de 20 milisegundos en la cripta de referencia con decenas de cazadores activos en persecución simultánea
 - **SC-002**: El 100% de las decisiones de movimiento y persecución del cazador coinciden exactamente con la ruta de costo mínimo teórico y la regla de desempate por menor identificador de sala.
 - **SC-003**: El 100% de los escenarios de aceptación especificados a partir del Apéndice B para terreno y cazador son reproducibles y verificables mediante pruebas automatizadas.
-- **SC-004**: Ninguna acción de desplazamiento a través de salidas con costo produce intervalos de tiempo virtual inferiores a 1 unidad temporal, considerando el espectro de velocidades de actores entre 1 y 500.
+- **SC-004**: Ninguna acción de desplazamiento a través de salidas con costo produce intervalos de tiempo virtual inferiores a 1 unidad temporal, para cualquier velocidad positiva de actor
 - **SC-005**: El 100% de los archivos o datos persistidos generados bajo versiones previas o formatos de la primera parte son detectados formalmente como incompatibles sin requerir intervención manual sobre el sistema de archivos.
 
 ## Supuestos
 
-- Toda ficha de enemigo con comportamiento "cazador" provista por un catálogo válido incluye un valor de rango entero positivo. En caso de recibir un catálogo con rango nulo o ausente para un cazador, se asumirá por defecto un rango ilimitado (persigue a cualquier distancia mientras exista ruta de salidas abiertas).
+- El contrato del servicio permite que la ficha de un cazador traiga el rango nulo o ausente. El enunciado no define qué hace el cazador en ese caso, y la decisión queda pendiente para la fase de clarificación.
 - Los costos de salida suministrados por el servicio son números enteros mayores o iguales a 1. Si un valor no se declara o es nulo, asume el valor por defecto de 100.
 - La consulta de ubicación de llaves consume exactamente una solicitud del presupuesto de solicitudes de la cripta y su resultado permanece vigente mientras no se altere la versión de la cripta.
 - Los actores conservan sus atributos de combate, fórmulas de daño y reglas de turno de la primera parte; la incorporación de salidas con costo variable modifica exclusivamente la duración y el costo del desplazamiento entre salas.

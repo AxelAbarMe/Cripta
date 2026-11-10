@@ -2,7 +2,7 @@
 
 Juego de mazmorra por turnos, hecho en Python para el curso Estructuras de Datos (II ciclo 2026). La mazmorra (la "cripta") no viene dentro del programa: se descarga de un **API REST** (un servidor web que entrega los datos en formato JSON) con un **presupuesto** limitado de solicitudes por partida. El juego avanza con un **reloj virtual**: un contador de tiempo propio del juego, que no depende de la hora real.
 
-El proyecto usa estructuras de datos propias (montículo para la agenda de eventos, listas enlazadas, pila, cola circular, vector ordenado) y sigue la arquitectura **MVC** (modelo, vista y controlador separados). Las decisiones de diseño y sus mediciones están en `docs/DecisionesDiseño.md`.
+El proyecto usa estructuras de datos propias (montículo para la agenda de eventos, listas enlazadas, pila, cola circular, vector ordenado) y sigue la arquitectura **MVC** (modelo, vista y controlador separados). Las decisiones de diseño y sus mediciones están en `DECISIONES.md`.
 
 ---
 

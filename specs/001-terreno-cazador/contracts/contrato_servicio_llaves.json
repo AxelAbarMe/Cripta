@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RespuestaConsultaLlaves",
+  "description": "Esquema JSON de la respuesta de GET /criptas/{id}/llaves en OpenAPI v1.1.0",
+  "type": "object",
+  "required": ["llaves"],
+  "properties": {
+    "llaves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "sala"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identificador de la ficha de la llave en el catálogo (ej. itm_llave_bronce)"
+          },
+          "sala": {
+            "type": "integer",
+            "description": "Identificador de la sala donde se ubica la llave"
+          },
+          "enemigo": {
+            "type": ["string", "null"],
+            "description": "Identificador del enemigo que porta la llave. Si es null o ausente, la llave se ubica en el suelo de la sala"
+          }
+        }
+      }
+    }
+  }
+}

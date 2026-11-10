@@ -2,7 +2,7 @@
 
 **Rama**: `001-terreno-cazador` | **Fecha**: 2026-11-09 | **Especificación**: [spec.md](spec.md)
 
-Este documento consolida las decisiones de arquitectura, diseño de estructuras de datos y análisis de alternativas para la capacidad de Terreno y Cazador, cumpliendo estrictamente con la Constitución del proyecto y las restricciones del curso.
+Este documento consolida las decisiones de arquitectura, diseño de estructuras de datos y análisis de alternativas para la capacidad de Terreno y Cazador, conforme a la Constitución del proyecto y las restricciones del curso. Toda afirmación de rendimiento es una hipótesis a confirmar con `--bench` (Principio VI).
 
 ---
 
@@ -16,25 +16,25 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 
 #### Alternativa 1: Dijkstra Unidireccional con Búsqueda Lineal del Mínimo sobre Lista Contigua
 - **Descripción**: Mantener una lista contigua de nodos pendientes. En cada paso, recorrer linealmente la lista completa para encontrar el nodo con menor distancia tentativa.
-- **Razón de Descarte**: En un laberinto con $V$ salas y rango amplio, la extracción del mínimo toma $O(V)$, lo que eleva el costo total a $O(V^2 + E)$. Para criptas de 400 a 1 000 salas con múltiples cazadores, el tiempo de búsqueda supera con creces el límite estricto de 20 ms por ciclo de eventos (P2 §6.1).
+- **Razón de Descarte**: En un laberinto con $V$ salas y rango amplio, la extracción del mínimo toma $O(V)$, lo que eleva el costo total a $O(V^2 + E)$. Se plantea como hipótesis a confirmar con `--bench` que, para criptas de cientos de salas con varios cazadores, esto comprometería el límite de 20 ms por ciclo de eventos (P2 §6.1).
 
 #### Alternativa 2: Algoritmo A* hacia el Jugador con Heurística de Distancia Manhattan o Topológica
 - **Descripción**: Implementar A* guiado por una función heurística para orientar la búsqueda hacia la sala del jugador.
-- **Razón de Descarte**: El grafo de la cripta no posee coordenadas espaciales continuas garantizadas (es una topología de salas conectadas por salidas N, S, E, O que puede ser no planar o no euclidiana). Una heurística no admisible rompe la optimalidad y la equivalencia observable exigida por FR-TER-015; además, A* individual por cada cazador impide reutilizar la búsqueda para múltiples cazadores persiguiendo al mismo objetivo.
+- **Razón de Descarte**: El grafo de la cripta es una topología de salas conectadas por salidas N, S, E, O sin coordenadas espaciales garantizadas, por lo que no hay una heurística admisible conocida. Una heurística no admisible rompe la optimalidad y la equivalencia observable exigida por FR-TER-015. Además, A* individual por cada cazador impide reutilizar la búsqueda para múltiples cazadores persiguiendo al mismo objetivo.
 
 #### Alternativa 3 (Elegida): Algoritmo de Dijkstra con Montículo Binario Propio (`HeapMinimo`) y Tabla Contigua Directa
 - **Decisión**: Implementar el algoritmo de Dijkstra clásico utilizando la estructura propia `HeapMinimo` (reutilizada y complementada desde `cripta/estructuras/heap_min.py`) como cola de prioridad de pares `(distancia, sala_id)`, y un arreglo plano `list` indexado directamente por `sala_id` entero para el registro de distancias mínimas y nodos cerrados.
 - **Justificación**:
   - `HeapMinimo` realiza inserción en $O(\log V)$ y extracción del mínimo en $O(\log V)$.
   - El acceso y actualización de distancias en una lista contigua `list[int | None]` indexada por entero toma $O(1)$ sin recurrir a `dict` ni `set`.
-  - La complejidad temporal resultante es $O((V + E) \log V)$, óptima para grafos dispersos con grado acotado $\le 4$.
+  - La complejidad temporal resultante es $O((V + E) \log V)$ con montículo binario, adecuada para grafos dispersos con grado acotado $\le 4$.
 
 ---
 
 ## 2. Registro de Distancias y Visitados sin `dict` ni `set`
 
 ### Contexto y Requisitos
-- La Constitución prohíbe taxativamente el uso de `dict` y `set` como índices, tablas de búsqueda o estructuras propias. Se permite únicamente `list` como almacenamiento contiguo indexado por posición entera.
+- La Constitución prohíbe el uso de `dict` y `set` como índices, tablas de búsqueda o estructuras propias. Se permite únicamente `list` como almacenamiento contiguo indexado por posición entera.
 
 ### Alternativas Consideradas
 
@@ -49,10 +49,10 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 #### Alternativa 3 (Elegida): Arreglo Plano Contiguo Indexado Directamente por `sala_id`
 - **Decisión**: Utilizar una lista de tamaño `max_sala_id + 1` inicializada con un valor centinela (`-1` o `None`).
 - **Justificación**:
-  - Cumple estrictamente el Principio I de la Constitución («almacenamiento contiguo indexado por posición entera»).
-  - Acceso $O(1)$ puro para lectura y actualización de `dist[sala_id]`.
+  - Cumple el Principio I de la Constitución («almacenamiento contiguo indexado por posición entera»).
+  - Acceso $O(1)$ para lectura y actualización de `dist[sala_id]`.
   - El conjunto de nodos visitados/cerrados se registra mediante una lista booleana contigua `visitados = [False] * (max_sala_id + 1)`, con consulta y marcado en $O(1)$.
-  - Memoria insignificante: para una cripta de 1 000 salas, una lista contigua de 1 000 enteros tiene una huella de memoria despreciable (hipótesis a confirmar con `--bench`).
+  - Espacio $O(V)$ (la huella de memoria concreta es una hipótesis a confirmar con `--bench`).
 
 ---
 
@@ -66,36 +66,36 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 
 #### Alternativa 1: Cálculo Individual por Cada Cazador (Dijkstra Hacia Adelante)
 - **Descripción**: Cada vez que un cazador ejecuta su turno, lanza una búsqueda Dijkstra desde su sala $u$ hacia la sala del jugador $S_J$.
-- **Razón de Descarte**: Con $H$ cazadores activos en un ciclo, se ejecutan $H$ búsquedas independientes de Dijkstra. Para $H = 30$ cazadores en una cripta de 400 salas, se plantea como hipótesis a confirmar con `--bench` que $30 \times ((V + E) \log V)$ superaría el límite de 20 ms.
+- **Razón de Descarte provisional**: Con $H$ cazadores activos en un ciclo, se ejecutan $H$ búsquedas independientes de Dijkstra. Para $H = 30$ cazadores, se plantea como hipótesis a confirmar con `--bench` que $30 \times ((V + E) \log V)$ superaría el límite de 20 ms.
 
 #### Alternativa 2: Matriz de Todas las Rutas Más Cortas (Floyd-Warshall o All-Pairs)
 - **Descripción**: Precalcular y mantener las distancias entre todos los pares de salas de la cripta.
-- **Razón de Descarte**: Complejidad espacial $O(V^2)$ y temporal $O(V^3)$. Cualquier cambio de estado en una puerta (apertura o cierre automático) invalidaría la matriz completa, requiriendo un recálculo masivo prohibitivo en tiempo real.
+- **Razón de Descarte**: Complejidad espacial $O(V^2)$ y temporal $O(V^3)$. Cualquier cambio de estado en una puerta (apertura o cierre automático) invalidaría la matriz completa, requiriendo un recálculo masivo.
 
 #### Alternativa 3 (Elegida): Cálculo Compartido desde el Objetivo (Single-Source Dijkstra Inverso)
 - **Decisión**: Ejecutar una **única** búsqueda de Dijkstra teniendo como nodo origen la sala actual del jugador $S_J$, explorando hacia afuera sobre las salidas abiertas.
 - **Justificación y Equivalencia**:
-  - Las conexiones del laberinto son estrictamente simétricas en costo (FR-TER-002) y transitabilidad de puertas (si una puerta está abierta, lo está en ambos sentidos).
-  - Por simetría de grafos no dirigidos ponderados, la distancia mínima de $u$ a $S_J$ es matemáticamente idéntica a la distancia mínima de $S_J$ a $u$:
+  - Las conexiones del laberinto son simétricas en costo (FR-TER-002) y transitabilidad de puertas (si una puerta está abierta, lo está en ambos sentidos).
+  - Por simetría de grafos no dirigidos ponderados, la distancia mínima de $u$ a $S_J$ es idéntica a la distancia mínima de $S_J$ a $u$:
     $$\text{dist}(u, S_J) = \text{dist}(S_J, u)$$
   - Un único recorrido calcula simultáneamente $\text{dist}(S_J, v)$ para todas las salas $v$ dentro del alcance.
   - Cada cazador en sala $u$ consulta en $O(1)$ sus a lo sumo 4 vecinas abiertas $v$, evaluando la condición de ruta mínima:
     $$\text{costo}(u, v) + \text{dist}(v, S_J) == d$$
-  - Complejidad: 1 búsqueda $O((V_R + E_R) \log V_R) + H \times O(1)$. Para 30 cazadores, se plantea como hipótesis a confirmar con `--bench` que el tiempo se reduce a una fracción mínima del ciclo frente al cálculo individual.
+  - Complejidad: 1 búsqueda $O((V_R + E_R) \log V_R) + H \times O(1)$. Para 30 cazadores, se plantea como hipótesis a confirmar con `--bench` que el tiempo se reduce a una fracción del cálculo individual.
 
 ### Condiciones de Rendimiento: Cuándo Conviene Cada Alternativa
-- **Cálculo compartido**: Resulta superior cuando conviven múltiples cazadores activos ($H > 1$) o cuando los rangos de persecución son homogéneos, ya que una sola búsqueda cubre a todos los cazadores por igual ($O((V_R + E_R) \log V_R) + H \times O(1)$).
-- **Cálculo individual**: Podría convenir en rendimiento únicamente bajo condiciones específicas:
+- **Cálculo compartido**: Se espera superior cuando conviven múltiples cazadores activos ($H > 1$) o cuando los rangos de persecución son homogéneos, ya que una sola búsqueda cubre a todos los cazadores ($O((V_R + E_R) \log V_R) + H \times O(1)$).
+- **Cálculo individual**: Podría convenir en rendimiento bajo condiciones específicas:
   1. **Muy pocos cazadores** (ej. $H = 1$), donde la sobrecarga de estructurar la búsqueda compartida no se amortiza.
-  2. **Rangos extremadamente heterogéneos con $R_{\max}$ grande**: Si un solo cazador tiene un rango muy amplio ($R_{\max}$ grande) y varios otros tienen rangos muy pequeños, la búsqueda compartida se ve obligada a expandirse hasta $R_{\max}$, explorando potencialmente muchas más salas de las que explorarían individualmente los cazadores de rango corto.
-- **Medición empírica**: Las condiciones de frontera exactas en que el cálculo compartido aventaja al individual se medirán experimentalmente con `--bench` (carga `ruta_cazador`).
+  2. **Rangos muy heterogéneos con $R_{\max}$ grande**: Si un solo cazador tiene un rango muy amplio y varios otros tienen rangos muy pequeños, la búsqueda compartida se ve obligada a expandirse hasta $R_{\max}$, explorando potencialmente muchas más salas de las que explorarían individualmente los cazadores de rango corto.
+- **Medición empírica**: Las condiciones de frontera exactas en que un enfoque aventaja al otro se medirán con `--bench` (carga `ruta_cazador`).
 
-### Condiciones bajo las cuales Podría Cambiar la Respuesta y Garantía de Equivalencia
-- La respuesta entre el cálculo compartido y el cálculo desde cero individual **no cambia jamás** si se respetan las siguientes condiciones:
-  1. **Simetría de costos**: Garantizada por FR-TER-002.
-  2. **Estado idéntico de puertas**: La búsqueda solo expande aristas con puertas abiertas en ese preciso instante.
-  3. **Desempate determinista**: El cazador evalúa todas sus vecinas abiertas $v$ con $\text{costo}(u, v) + \text{dist}(v, S_J) == d$ y elige $\min(v.id)$ (FR-TER-013). Como $\text{dist}(v, S_J)$ es única, el conjunto de vecinas óptimas y el desempate por menor ID son matemáticamente idénticos.
-  4. **Invalidación estricta ante cambios**: Si el jugador cambia de sala o una puerta cambia de estado, la tabla compartida se invalida de inmediato.
+### Equivalencia del Resultado (Corrección, no Rendimiento)
+- La decisión del cazador con cálculo compartido **no cambia** respecto a calcular desde cero individualmente si se respetan las siguientes condiciones:
+  1. **Simetría de costos**: Establecida por FR-TER-002 y comprobada con una prueba sobre la cripta de referencia.
+  2. **Estado idéntico de puertas**: La búsqueda solo expande aristas con puertas abiertas en ese instante.
+  3. **Desempate determinista**: El cazador evalúa todas sus vecinas abiertas $v$ con $\text{costo}(u, v) + \text{dist}(v, S_J) == d$ y elige $\min(v.id)$ (FR-TER-013). Como $\text{dist}(v, S_J)$ es única, el conjunto de vecinas óptimas y el desempate por menor ID son idénticos en ambos enfoques.
+  4. **Invalidación ante cambios**: Si el jugador cambia de sala o una puerta cambia de estado, la tabla compartida se invalida.
 
 ---
 
@@ -111,10 +111,12 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 | **Movimiento del jugador** | Sí (cambia el nodo origen $S_J$) | **INVALIDAR** | Las distancias relativas al jugador cambian por completo. |
 | **Apertura de puerta** (jugador con llave) | Sí (se añade una arista transitable) | **INVALIDAR** | Pueden aparecer nuevas rutas más cortas. |
 | **Cierre de puerta** (`cierre_automatico` o trampa) | Sí (se elimina una arista transitable) | **INVALIDAR** | Las rutas que cruzaban dicha puerta quedan bloqueadas. |
+| **Pergamino de retroceso** | Sí (revierte movimientos del jugador y estados de puertas) | **INVALIDAR** | Se restaura el estado previo, requiriendo sincronización limpia. |
+| **Activación de un cazador con rango mayor al $R_{\max}$ calculado** | Sí (el alcance de la búsqueda era insuficiente) | **INVALIDAR (recalcular con el nuevo $R_{\max}$)** | La tabla no cubre la región que el nuevo cazador necesita. |
+| **Carga de una partida guardada** | Sí (cambia el estado completo) | **INVALIDAR** | No hay garantía de que la tabla corresponda al estado cargado. |
 | **Movimiento de un cazador** | No (los enemigos no bloquean salas ni puertas) | **CONSERVAR** | La posición del jugador y la transitabilidad del laberinto permanecen intactas. |
 | **Muerte de un actor (enemigo)** | No (no afecta topología ni al jugador) | **CONSERVAR** | El grafo y la sala del jugador no se alteran. |
 | **Cambio de velocidad de un actor** | No (solo altera el tiempo de agenda, no los costos espaciales) | **CONSERVAR** | El costo $d$ es suma de costos de salida, independiente de la velocidad. |
-| **Pergamino de retroceso** | Sí (revierte movimientos del jugador y estados de puertas) | **INVALIDAR** | Se restaura el estado previo, requiriendo sincronización limpia. |
 
 ---
 
@@ -129,7 +131,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 - Al invocar la búsqueda compartida de Dijkstra desde $S_J$, se determina el rango máximo relevante:
   $$R_{\max} = \max_{h \in \text{cazadores activos}} (h.\text{rango})$$
 - **Poda temprana en Dijkstra**:
-  Cuando el elemento extraído del montículo tiene una distancia acumulada $d_{\text{actual}} > R_{\max}$, el algoritmo **detiene inmediatamente la expansión** (break del bucle).
+  Cuando el elemento extraído del montículo tiene una distancia acumulada $d_{\text{actual}} > R_{\max}$, el algoritmo **detiene la expansión** (break del bucle).
 - **Corrección**:
   Dado que todos los costos de salida son enteros positivos ($c \ge 1$), no existen aristas de costo cero o negativo. Por la propiedad voraz de Dijkstra, cualquier extracción futura tendrá distancia $\ge d_{\text{actual}} > R_{\max}$. Ninguna sala con distancia $\le R_{\max}$ puede ser descubierta después.
 - **Consulta del cazador**:
@@ -159,7 +161,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
      $$\text{candidatas} = \{ (v.\text{id}, \text{dir}, \text{costo}(u, v)) \mid D_v == d \}$$
   7. Seleccionar la tupla con menor $v.\text{id}$.
   8. La dirección elegida es `dir` y el costo de la acción es `costo(u, v)`.
-- **Determinismo**: La tupla `(v.id, dir, costo)` garantiza un orden total estricto sin ambigüedades.
+- **Determinismo**: La tupla `(v.id, dir, costo)` define un orden total sin ambigüedades.
 
 ---
 
@@ -174,9 +176,9 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 ### Decisión Técnica
 - **Cálculo de Intervalo**: Reutilizar `calcular_intervalo` y `calcular_tiempo_reprogramado` de `cripta/modelo/reloj.py`.
 - **Reprogramación con Nueva Secuencia**:
-  En `RelojEventos.reprogramar(evento, tiempo_nuevo)`, se cancela el evento anterior y se inserta un nuevo `EventoProgramado` con `self._secuencia += 1`.
-  Esto garantiza que los desempates en el mismo tick $t$ se resuelvan con orden total determinista estricto.
-- **Frecuencia de Eventos**: Con salidas de costo 1 y velocidad 200, el intervalo es $\max(1, 100 // 200) = 1$. La agenda `HeapMinimo` maneja eventos en ticks continuos en $O(\log K)$ sin degradación.
+  En `RelojEventos.reprogramar(evento, nuevo_tiempo)`, se cancela el evento anterior y se inserta un nuevo `EventoProgramado` con un número de secuencia nuevo.
+  Esto permite que los desempates en el mismo tick $t$ se resuelvan con un orden total determinista.
+- **Frecuencia de Eventos**: Con salidas de costo 1 y velocidad 200, el intervalo es $\max(1, 100 // 200) = 1$. La agenda sobre `HeapMinimo` tiene inserción y extracción en $O(\log K)$. Se plantea como hipótesis a confirmar con `--bench --solo agenda` que la tasa de eventos no degrada el ciclo.
 
 ---
 

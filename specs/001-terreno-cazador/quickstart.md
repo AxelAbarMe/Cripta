@@ -79,14 +79,13 @@ py -m unittest tests.aceptacion.test_cazador_persecucion
 ---
 
 ### Escenario 4: Auditoría de Prohibiciones y Reglas del Curso
-**Objetivo**: Asegurar que no se hayan introducido importaciones ni estructuras prohibidas (`heapq`, `bisect`, `collections`, `networkx`, `set`, `dict` como índice).
+**Objetivo**: Comprobar que no se introdujeron importaciones prohibidas (`heapq`, `bisect`, `collections`, `networkx`) en el código del modelo ni en las estructuras (Principio I).
 
 **Comando**:
 ```powershell
-# Script auditor propuesto en CONTEXTO_CRIPTA2.md (Nuevo)
-py -m scripts.revisar_prohibidos
+Select-String -Path cripta\modelo\*.py, cripta\estructuras\*.py -Pattern "heapq|bisect|collections|networkx"
 ```
-**Resultado Esperado**: Código de salida `0` sin ningún error de importación prohibida.
+**Resultado Esperado**: Sin coincidencias. El uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request, porque una búsqueda de texto no distingue los usos permitidos.
 
 ---
 
@@ -100,8 +99,8 @@ py -m cripta --bench --solo invalidacion
 py -m cripta --bench --solo ciclo agenda
 ```
 **Resultado Esperado**:
-- `ruta_cazador`: confirmar la hipótesis de que el cálculo compartido mantiene el ciclo holgadamente por debajo de 20 ms con 30 cazadores, mientras que el cálculo individual escala linealmente con el número de cazadores.
-- `invalidacion`: con puertas estables, reutilizar la tabla produce 0 búsquedas Dijkstra; con puertas inestables, el sobrecosto de invalidación es marginal.
+- `ruta_cazador`: hipótesis a confirmar: el cálculo compartido mantiene el ciclo por debajo de 20 ms con 30 cazadores, y el individual crece con el número de cazadores. Incluir un caso de rangos heterogéneos.
+- `invalidacion`: hipótesis: con puertas estables, reutilizar la tabla reduce las búsquedas frente a recalcular siempre; con puertas inestables se mide a partir de qué frecuencia de cambios deja de convenir. Se reportan los resultados tal como salgan.
 - `ciclo`: el ciclo de eventos permanece $< 20$ ms en la cripta de referencia.
 
 ---
@@ -114,3 +113,5 @@ py -m cripta --bench --solo ciclo agenda
 py -m cripta --offline --replay docs/ejemplos/partida_cripta-02.log
 ```
 **Resultado Esperado**: Termina con código de salida `0`.
+
+**Riesgo**: regenerar fixtures (Escenario 1) puede cambiar la versión de la cripta y volver incompatible este `--replay`. Ejecutar este escenario con las fixtures originales respaldadas antes de regenerar.

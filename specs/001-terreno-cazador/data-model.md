@@ -155,6 +155,8 @@ stateDiagram-v2
     VALIDO --> INVALIDO : Jugador abre puerta (_abrir)\n[nueva arista abierta]
     VALIDO --> INVALIDO : Puerta se cierra automáticamente (_cerrar)\n[arista eliminada]
     VALIDO --> INVALIDO : Uso de pergamino (_usar_pergamino)\n[reversión de estado]
+    VALIDO --> INVALIDO : Activación de cazador con rango mayor a R_max calculado\n[alcance insuficiente]
+    VALIDO --> INVALIDO : Carga de partida guardada\n[estado completo distinto]
 
     note right of VALIDO
         Equivalencia observable garantizada:

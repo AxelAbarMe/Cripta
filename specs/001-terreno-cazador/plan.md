@@ -117,9 +117,12 @@ tests/
 │   ├── test_salida_dto.py       # Nuevo: Pruebas de costo por defecto y validación
 │   ├── test_enemigo_dto.py      # Nuevo: Pruebas de rango obligatorio para cazador
 │   └── test_llave_ubicacion_dto.py # Nuevo: Pruebas del DTO de llaves
+├── controlador/
+│   └── test_controlador_errores.py # Modificado: FR-TER-023, desplazamiento rechazado (T019b)
 ├── infraestructura/
 │   ├── test_cliente_offline_llaves.py # Nuevo: Pruebas de cliente offline y presupuesto
-│   └── test_cache_llaves.py     # Nuevo: Pruebas de invalidación por versión
+│   ├── test_cache_llaves.py     # Nuevo: Pruebas de invalidación por versión
+│   └── test_partida_log.py      # Modificado: FR-TER-021, los cazadores no escriben en partida.log (T035)
 ├── modelo/
 │   ├── test_reloj.py            # Nuevo: Pruebas de intervalo, reprogramación y desempate por secuencia (FR-TER-004, 005 y 022)
 │   ├── test_buscador_rutas.py   # Nuevo: Pruebas unitarias de Dijkstra, poda por rango y desempate
@@ -280,6 +283,9 @@ tests/
 | `cripta/modelo/historial_retroceso.py` | **Sin cambios** | Se mantiene el historial de la Parte I. Ver el riesgo a medir en la sección de revisión de decisiones de la Parte I. |
 | `cripta/infraestructura/guardado_binario.py` | **Sin cambios** | Compatible con el formato actual (la versión nueva corresponde a la capacidad 004). |
 | `cripta/infraestructura/partida_log.py` | **Sin cambios** | Mantiene registro exclusivo de acciones del jugador. |
+| `cripta/modelo/reloj.py` | **Sin cambios** | Se reutilizan `calcular_intervalo`, `calcular_tiempo_reprogramado` y `RelojEventos.reprogramar`. Se verifica con T020 y T025, y solo se corrige si esas pruebas fallan. |
+| `cripta/modelo/cripta_mapa.py` | **Sin cambios** | La simetría del costo (FR-TER-002) está garantizada por los datos del servicio en `SalidaDTO`; `CriptaMapa` no requiere cambios para esta funcionalidad. |
+| `tests/infraestructura/test_partida_log.py` | **Modificado** | Ampliar con la prueba de FR-TER-021: movimiento, espera y ataque de cazadores, errantes y rastreadores no generan líneas en `partida.log` (T035). |
 
 ---
 
@@ -353,7 +359,7 @@ tests/
 | Requisito Funcional | Componente de Software | Escenario de Prueba / Medición `--bench` |
 |---|---|---|
 | **FR-TER-001** (costo entero $\ge 1$, por defecto 100) | `cripta/dto/salida_dto.py` | `tests.dto.test_salida_dto` / Escenario Quickstart 1 |
-| **FR-TER-002** (costo estrictamente simétrico) | `cripta/modelo/cripta_mapa.py` | `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
+| **FR-TER-002** (costo estrictamente simétrico) | `cripta/modelo/cripta_mapa.py` (Sin cambios) | `tests.aceptacion.test_terreno_costos` (T019, escenario Simetría) / Escenario Quickstart 2 |
 | **FR-TER-003** (costo de movimiento = costo de salida) | `cripta/modelo/partida.py` (`_mover`) | `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
 | **FR-TER-004** (intervalo $\max(1, c \cdot 100 // v)$) | `cripta/modelo/reloj.py` | `tests.modelo.test_reloj` (Nuevo) y `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
 | **FR-TER-005** (escalado de tiempo ante cambio velocidad) | `cripta/modelo/reloj.py` (`calcular_tiempo_reprogramado`, `reprogramar`), `cripta/modelo/efectos.py` (`EfectoCambioVelocidad`) | `tests.modelo.test_reloj` (Nuevo) y `tests.aceptacion.test_terreno_costos` / Escenario Quickstart 2 |
@@ -367,8 +373,8 @@ tests/
 | **FR-TER-013** (desempate obligatorio por menor ID de vecina) | `cripta/modelo/buscador_rutas.py` | `tests.aceptacion.test_cazador_persecucion` / Escenario Quickstart 3 |
 | **FR-TER-014** (conoce esqueleto y puertas, sin niebla) | `cripta/modelo/buscador_rutas.py` | `tests.aceptacion.test_cazador_persecucion` / Escenario Quickstart 3 |
 | **FR-TER-015** (equivalencia observable con recálculo cero) | `cripta/modelo/buscador_rutas.py` | `tests.aceptacion.test_cazador_persecucion` / Escenario Quickstart 3 |
-| **FR-TER-016** (lectura de costo de esqueleto en servicio) | `cripta/infraestructura/serializacion.py` | `tests.infraestructura.test_cliente_offline_llaves` |
-| **FR-TER-017** (lectura y validación de cazador en catálogo) | `cripta/infraestructura/serializacion.py` | `tests.dto.test_enemigo_dto` |
+| **FR-TER-016** (lectura de costo de esqueleto en servicio) | `cripta/dto/salida_dto.py`, `cripta/infraestructura/serializacion.py` | `tests.infraestructura.test_cliente_offline_llaves` |
+| **FR-TER-017** (lectura y validación de cazador en catálogo) | `cripta/dto/enemigo_dto.py`, `cripta/infraestructura/serializacion.py` | `tests.dto.test_enemigo_dto` |
 | **FR-TER-018** (consulta `/llaves`, presupuesto y portador) | `cripta/infraestructura/cliente_http.py` | `tests.infraestructura.test_cliente_offline_llaves` |
 | **FR-TER-019** (invalidación formal por versión de cripta) | `cripta/infraestructura/cache.py` | `tests.infraestructura.test_cache_llaves` |
 | **FR-TER-020** (ciclo de eventos $< 20\text{ ms}$ con cazadores) | `cripta/modelo/buscador_rutas.py` | `--bench --solo ruta_cazador ciclo` / Escenario Quickstart 5 |

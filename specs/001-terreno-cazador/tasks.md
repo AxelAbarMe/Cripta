@@ -14,7 +14,7 @@
 
 ## Pull Requests previstos
 
-1. **PR de documentación**: spec, clarificaciones, plan y tasks. Se abre cuando `/speckit-analyze` quede limpio.
+1. **PR de documentación**: spec, clarificaciones, plan y tasks. Se abre cuando el análisis de consistencia quede limpio.
 2. **PR de la Fase A** (contrato de datos): rama nueva desde `main`, después de fusionar el PR de documentación.
 3. **PR de las Fases B a E**: rama nueva desde `main`, después de fusionar el PR de la Fase A.
 
@@ -132,6 +132,8 @@
   - US3-5: el cazador no abre puertas y no le afecta la niebla (FR-TER-014)
   - Activaciones simultáneas al entrar a una sala: sus primeros turnos se programan en orden ascendente de identificador de instancia (FR-TER-022)
 
+- [ ] T035 [P] [US3] Ampliar `tests/infraestructura/test_partida_log.py` (Modificado): tras un turno completo de un cazador (movimiento, espera y ataque) no se escribe ninguna línea en `partida.log`; `cripta/infraestructura/partida_log.py` no debería requerir cambios (FR-TER-021)
+
 ### C.2 — Estructuras auxiliares
 
 - [ ] T029 [P] [US2] Modificar `cripta/estructuras/heap_min.py` (Modificado): añadir `esta_vacio(self) -> bool` y `__len__(self) -> int` sobre la estructura interna existente, sin `heapq` ni otras bibliotecas prohibidas; hoy `HeapMinimo` solo tiene `insertar` y `eliminar_minimo` (FR-TER-010)
@@ -146,7 +148,6 @@
 - [ ] T032 [US2] Modificar `cripta/modelo/comportamiento_enemigo.py` (Modificado): añadir `_decidir_cazador` que (1) ataca si comparte sala con el jugador, (2) consulta `BuscadorRutas.decidir_paso` si no, (3) espera si no hay ruta o `d > rango`; enlazarlo en `decidir_accion_enemigo` para el comportamiento `"cazador"`. Como hoy la decisión devuelve solo `(tipo, direccion)`, la decisión del cazador debe devolver también el costo, sin alterar el resultado de errantes y rastreadores (FR-TER-009, FR-TER-010, FR-TER-011, FR-TER-012, FR-TER-013)
 - [ ] T033 [US2] [US3] Modificar `cripta/modelo/partida.py` y `cripta/modelo/efectos.py` (Modificado): instanciar `BuscadorRutas` y usarlo en el turno del cazador; invalidar la tabla en `_mover` (el jugador cambia de sala), `_abrir` (puerta abierta), `EfectoCierrePuerta` (puerta cerrada), `_usar_pergamino` (retroceso), la activación de un cazador con `rango > _rango_max_calculado` y la carga de una partida guardada; conservar la tabla ante turnos de cazadores, muerte de enemigos y cambios de velocidad (FR-TER-015)
 - [ ] T034 [US3] Verificar `cripta/modelo/partida.py` (Modificado si hace falta) → `_activar_enemigos_de`: confirmar con la prueba de T028 que las activaciones simultáneas programan sus primeros turnos en orden ascendente de identificador de instancia (FR-TER-022)
-- [ ] T035 [US3] Ampliar `tests/infraestructura/test_partida_log.py` (Modificado): tras un turno completo de un cazador (movimiento, espera y ataque) no se escribe ninguna línea en `partida.log`; `cripta/infraestructura/partida_log.py` no debería requerir cambios (FR-TER-021)
 
 **Punto de verificación Fase C**: `py -m unittest tests.modelo.test_buscador_rutas tests.modelo.test_cazador_decisiones tests.aceptacion.test_cazador_persecucion tests.infraestructura.test_partida_log` → todos en `OK`.
 
@@ -173,7 +174,7 @@
 
 ### D.2 — Cargas de regresión de la Parte I
 
-- [ ] T039 Ejecutar las mediciones de regresión con los cazadores activos y anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
+- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con el resultado de `ruta_cazador` para `H=30`, comparándolo con el límite de 20 ms, y anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
 
   ```powershell
   py -m cripta --bench --solo ciclo
@@ -200,7 +201,7 @@
 - [ ] T041 [P] Auditar importaciones prohibidas (Principio I):
 
   ```powershell
-  Select-String -Path cripta\modelo\*.py, cripta\estructuras\*.py -Pattern "heapq|bisect|collections|networkx"
+  Select-String -Path (Get-ChildItem cripta -Recurse -Filter *.py).FullName -Pattern "heapq|bisect|collections|networkx"
   ```
   Resultado esperado: sin coincidencias. Los usos de `dict` y `set` como índice o caché se revisan a mano en el Pull Request, porque la búsqueda de texto no distingue los usos permitidos.
 
@@ -242,7 +243,7 @@ Fase A ──► Fase B ──► Fase C ──► Fase D ──► Fase E
 
 - Fase A: T001 → T002–T006 (pruebas en paralelo) → T007–T015 (implementación, algunos en paralelo) → T016 → T017
 - Fase B: T018 → T019, T019b, T020 (pruebas) → T021 → T022 → T023 → T024 → T025 → T025b
-- Fase C: T026–T028 (pruebas en paralelo) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034 → T035
+- Fase C: T026–T028 y T035 (pruebas en paralelo) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
 - Fase D: T036–T037 (en paralelo) → T038 → T039
 - Fase E: T040–T041 (en paralelo) → T042 → T043 → T044
 
@@ -251,7 +252,7 @@ Fase A ──► Fase B ──► Fase C ──► Fase D ──► Fase E
 ```text
 Fase A, pruebas (archivos distintos): T002, T003, T004, T005, T006
 Fase A, implementación: T007, T008, T009, T011, T012, T014, T015
-Fase C, pruebas: T026, T027, T028
+Fase C, pruebas: T026, T027, T028, T035
 Fase C, auxiliares: T029, T030
 Fase D, cargas: T036, T037
 Fase E, auditoría y suite: T040, T041

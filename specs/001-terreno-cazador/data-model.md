@@ -121,9 +121,9 @@ classDiagram
         -int _rango_max_calculado
         -bool _valido
         +invalidar()
-        +obtener_distancia(sala_id) int
-        +calcular_si_necesario(mapa, sala_jugador, rango_max)
-        +decidir_paso_cazador(enemigo, sala_jugador, mapa) tuple
+        +distancia(sala_id) int
+        +calcular_o_reutilizar(mapa, sala_jugador_id, rango_max)
+        +decidir_paso(cazador, sala_jugador_id, mapa) tuple
     }
 
     class LlaveUbicacionDTO {

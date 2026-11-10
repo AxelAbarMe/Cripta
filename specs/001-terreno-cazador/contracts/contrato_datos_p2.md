@@ -12,7 +12,7 @@ Este documento define formalmente los contratos externos e internos para la Part
 - **Propósito**: Obtener la ubicación inicial de las llaves de una cripta para verificación y juego.
 - **Cabeceras obligatorias**:
   - `X-Cripta-Client-Id`: UUID v4 generado una vez por ejecución.
-- **Presupuesto de Red**: Cada llamada (incluyendo reintentos por 429) descuenta exactamente 1 unidad del `presupuesto_solicitudes` de la cripta.
+- **Presupuesto de Red**: Cada solicitud HTTP cuenta como una en `presupuesto_solicitudes`, reintentos por 429 incluidos (cada reintento es otra solicitud). Sin reintentos, la consulta usa exactamente una.
 - **Respuestas**:
   - `200 OK`:
     ```json
@@ -53,7 +53,7 @@ Este documento define formalmente los contratos externos e internos para la Part
     }
   }
   ```
-- **Regla**: Si `costo` está ausente o es `null`, se asume `100`. Si está presente, debe ser un entero $\ge 1$.
+- **Regla**: Si está presente, `costo` debe ser un entero $\ge 1$. El costo de una conexión es el declarado en cualquiera de sus dos lados; si ningún lado lo declara (ausente o `null`), vale `100`. Si los dos lados declaran costos distintos, el dato es inválido.
 
 ---
 
@@ -73,7 +73,7 @@ Este documento define formalmente los contratos externos e internos para la Part
     "suelta": ["itm_pocion_vida"]
   }
   ```
-- **Regla**: Si `comportamiento == "cazador"`, `rango` es obligatorio y debe ser entero $\ge 1$. Si está ausente o no es válido, al tratarse de datos externos se rechaza con `CriptaDatosInvalidosError` (en modo `--offline`) o `CriptaApiError` (en API REST), incluyendo el ID de la ficha en el mensaje de error. Se reserva `ValueError` exclusivamente para errores de programación interna.
+- **Regla**: Si `comportamiento == "cazador"`, `rango` debe ser un entero $\ge 1$. Si el rango es nulo, falta, no es entero o es menor que 1, no se lanza excepción: `rango` queda en `None` y el cazador se trata de forma pasiva (ataca si comparte sala con el jugador y si no espera con costo 100; nunca persigue), con un aviso a la bitácora de mensajes al activarse (FR-TER-008).
 
 ---
 
@@ -105,7 +105,7 @@ class SalidaDTO:
     cerrada: bool = False
     llave: str | None = None
     cierre_automatico: int | None = None
-    costo: int = 100
+    costo: int | None = None  # None si este lado no declara costo. CriptaMapa resuelve el de la conexión (100 si ningún lado lo declara)
 
 @dataclass(frozen=True, slots=True)
 class LlaveUbicacionDTO:
@@ -115,12 +115,14 @@ class LlaveUbicacionDTO:
 
     @classmethod
     def desde_json(cls, datos: dict) -> "LlaveUbicacionDTO":
-        # Ante datos externos incompletos, se lanza CriptaDatosInvalidosError o CriptaApiError.
+        # Ante datos externos incompletos se lanza CriptaDatosInvalidosError, con cualquier fuente.
         if "id" not in datos or "sala" not in datos:
             raise CriptaDatosInvalidosError("desde_json", "llaves.json", "Faltan campos obligatorios 'id' o 'sala'")
+        if not str(datos["id"]) or not isinstance(datos["sala"], int) or datos["sala"] < 1:
+            raise CriptaDatosInvalidosError("desde_json", "llaves.json", "'id' vacío o 'sala' no es un entero >= 1")
         return cls(
             id=str(datos["id"]),
-            sala=int(datos["sala"]),
+            sala=datos["sala"],
             enemigo=str(datos["enemigo"]) if datos.get("enemigo") else None
         )
 ```
@@ -144,6 +146,6 @@ class BuscadorRutas:
         ...
 
     def decidir_paso(self, cazador: Enemigo, sala_jugador_id: int, mapa: CriptaMapa) -> tuple[str, str | None, int]:
-        """Devuelve tupla (accion, direccion, costo) donde accion es 'atacar'|'mover'|'esperar'."""
+        """Devuelve (accion, direccion, costo) con accion 'mover' o 'esperar'. El ataque se decide antes, en _decidir_cazador."""
         ...
 ```

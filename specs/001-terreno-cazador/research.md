@@ -6,6 +6,8 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 
 ---
 
+> Las complejidades de este documento son análisis teórico, no mediciones. Su efecto real se mide con las cargas de `--bench` del plan (`ruta_cazador`, `invalidacion`).
+
 ## 1. Algoritmo de Búsqueda de Ruta de Costo Mínimo y Estructuras Auxiliares
 
 ### Contexto y Requisitos
@@ -75,7 +77,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 #### Alternativa 3 (Elegida): Cálculo Compartido desde el Objetivo (Single-Source Dijkstra Inverso)
 - **Decisión**: Ejecutar una **única** búsqueda de Dijkstra teniendo como nodo origen la sala actual del jugador $S_J$, explorando hacia afuera sobre las salidas abiertas.
 - **Justificación y Equivalencia**:
-  - Las conexiones del laberinto son simétricas en costo (FR-TER-002) y transitabilidad de puertas (si una puerta está abierta, lo está en ambos sentidos).
+  - Las conexiones del laberinto son simétricas en costo (FR-TER-002) y transitabilidad de puertas (si una puerta está abierta, lo está en ambos sentidos). `CriptaMapa` resuelve el costo desde ambos lados de la conexión: si solo un lado lo declara, rige para ambos; si difieren, el dato es inválido.
   - Por simetría de grafos no dirigidos ponderados, la distancia mínima de $u$ a $S_J$ es idéntica a la distancia mínima de $S_J$ a $u$:
     $$\text{dist}(u, S_J) = \text{dist}(S_J, u)$$
   - Un único recorrido calcula simultáneamente $\text{dist}(S_J, v)$ para todas las salas $v$ dentro del alcance.
@@ -110,7 +112,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 |---|---|---|---|
 | **Movimiento del jugador** | Sí (cambia el nodo origen $S_J$) | **INVALIDAR** | Las distancias relativas al jugador cambian por completo. |
 | **Apertura de puerta** (jugador con llave) | Sí (se añade una arista transitable) | **INVALIDAR** | Pueden aparecer nuevas rutas más cortas. |
-| **Cierre de puerta** (`cierre_automatico` o trampa) | Sí (se elimina una arista transitable) | **INVALIDAR** | Las rutas que cruzaban dicha puerta quedan bloqueadas. |
+| **Cierre de puerta** (`cierre_automatico`) | Sí (se elimina una arista transitable) | **INVALIDAR** | Las rutas que cruzaban dicha puerta quedan bloqueadas. |
 | **Pergamino de retroceso** | Sí (revierte movimientos del jugador y estados de puertas) | **INVALIDAR** | Se restaura el estado previo, requiriendo sincronización limpia. |
 | **Activación de un cazador con rango mayor al $R_{\max}$ calculado** | Sí (el alcance de la búsqueda era insuficiente) | **INVALIDAR (recalcular con el nuevo $R_{\max}$)** | La tabla no cubre la región que el nuevo cazador necesita. |
 | **Carga de una partida guardada** | Sí (cambia el estado completo) | **INVALIDAR** | No hay garantía de que la tabla corresponda al estado cargado. |
@@ -170,7 +172,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 ### Contexto y Requisitos
 - Costos de movimiento variables: $c = \text{costo\_salida} \ge 1$.
 - Intervalo virtual: $\text{intervalo} = \max(1, c \cdot 100 // \text{velocidad})$.
-- Cambio de velocidad en tránsito:
+- Cambio de velocidad mientras está programada la próxima acción que siguió a un movimiento (el actor ya está en la sala destino):
   $$\text{restante\_nuevo} = \max(1, (t_{\text{sig}} - t) \cdot v_{\text{ant}} // v_{\text{nueva}})$$
 
 ### Decisión Técnica
@@ -190,11 +192,11 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 
 ### Componentes del Contrato de Datos
 1. **`SalidaDTO` (`cripta/dto/salida_dto.py`)**:
-   - Atributo inmutable `costo: int = 100`.
-   - `desde_json`: si `"costo"` está presente, validar entero $\ge 1$; si es nulo o ausente, asignar 100.
+   - Atributo inmutable `costo: int | None = None`.
+   - `desde_json`: si `"costo"` está presente, validar entero $\ge 1$; si es nulo o ausente, dejar `None` (no declarado en este lado). El valor 100 por defecto lo aplica `CriptaMapa` al resolver la conexión, porque el costo puede venir declarado en un solo lado.
 2. **`EnemigoDTO` (`cripta/dto/enemigo_dto.py`)**:
    - Atributo inmutable `rango: int | None = None`.
-   - `desde_json`: si `comportamiento == "cazador"`, exigir que `"rango"` sea un entero positivo $\ge 1$. Si es nulo o ausente, al tratarse de datos externos provenientes del catálogo, lanzar la excepción correspondiente (`CriptaDatosInvalidosError` en `--offline` o `CriptaApiError` en HTTP) con el ID de la ficha en el mensaje de error. Se reserva `ValueError` exclusivamente para errores de programación interna.
+   - `desde_json`: si `comportamiento == "cazador"` y `"rango"` es un entero positivo $\ge 1$, se conserva. Si el rango es nulo, falta, no es entero o es menor que 1, no se lanza excepción: `rango` queda en `None` y el cazador se trata de forma pasiva (ataca si comparte sala con el jugador y si no espera con costo 100; nunca persigue), con un aviso a la bitácora de mensajes al activarse (FR-TER-008).
 3. **`LlaveUbicacionDTO` (`cripta/dto/llave_ubicacion_dto.py` — Nuevo)**:
    - Nuevo DTO inmutable `(id: str, sala: int, enemigo: str | None = None)`.
    - Si `enemigo` es nulo o ausente, la llave está en el suelo de la sala. Si está presente, la porta el enemigo indicado.

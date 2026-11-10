@@ -40,8 +40,8 @@ py -m unittest tests.infraestructura.test_cliente_offline_llaves
 ```
 **Resultado Esperado**:
 - Fixtures actualizados en `fixtures/` con salidas ponderadas, fichas con rango y `llaves.json`.
-- Salidas sin costo asignan `100`; salidas con costo conservan su valor entero $\ge 1$.
-- Fichas de cazador sin rango o con rango $\le 0$ lanzan `CriptaDatosInvalidosError` (o `CriptaApiError`) indicando el ID de la ficha en el mensaje de error.
+- En el DTO, una salida sin costo queda con `costo` en `None` y una con costo conserva su valor entero $\ge 1$. En el mapa, una conexión sin costo en ningún lado vale `100` y una con costo en un solo lado usa ese valor en ambos sentidos.
+- Fichas de cazador con rango nulo, ausente, no entero o menor que 1 se cargan sin error, con `rango` en `None`; en el juego ese cazador es pasivo y al activarse aparece un aviso con el ID de la ficha (FR-TER-008).
 - `obtener_llaves()` retorna las tuplas con `(id, sala, enemigo)` correctamente.
 
 ---
@@ -57,7 +57,7 @@ py -m unittest tests.aceptacion.test_terreno_costos
 **Resultado Esperado**:
 - Movimiento sobre salida de costo 250 con velocidad 100 produce intervalo 250 (tanto en ida como en vuelta).
 - Movimiento sobre salida de costo 1 con velocidad 200 produce intervalo $\ge 1$ (nunca 0).
-- Cambio de velocidad en tránsito escala el tiempo restante según P1 §2.3.
+- Un cambio de velocidad después de un movimiento escala el tiempo restante hasta la próxima acción según P1 §2.3.
 - Esperar y atacar conservan costo 100 sin importar las salidas adyacentes.
 
 ---
@@ -83,9 +83,9 @@ py -m unittest tests.aceptacion.test_cazador_persecucion
 
 **Comando**:
 ```powershell
-Select-String -Path cripta\modelo\*.py, cripta\estructuras\*.py -Pattern "heapq|bisect|collections|networkx"
+Select-String -Path (Get-ChildItem cripta -Recurse -Filter *.py).FullName -Pattern "heapq|bisect|collections|networkx|sorted\(|\.sort\("
 ```
-**Resultado Esperado**: Sin coincidencias. El uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request, porque una búsqueda de texto no distingue los usos permitidos.
+**Resultado Esperado**: Sin importaciones prohibidas. Cada `sorted(` o `.sort(` que aparezca se revisa a mano: solo se permite fuera de los ordenamientos evaluados. El uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request, porque una búsqueda de texto no distingue los usos permitidos.
 
 ---
 
@@ -96,12 +96,14 @@ Select-String -Path cripta\modelo\*.py, cripta\estructuras\*.py -Pattern "heapq|
 ```powershell
 py -m cripta --bench --solo ruta_cazador
 py -m cripta --bench --solo invalidacion
-py -m cripta --bench --solo ciclo agenda
+py -m cripta --bench --solo ciclo
+py -m cripta --bench --solo agenda
+py -m cripta --bench --solo historial
 ```
 **Resultado Esperado**:
 - `ruta_cazador`: hipótesis a confirmar: el cálculo compartido mantiene el ciclo por debajo de 20 ms con 30 cazadores, y el individual crece con el número de cazadores. Incluir un caso de rangos heterogéneos.
 - `invalidacion`: hipótesis: con puertas estables, reutilizar la tabla reduce las búsquedas frente a recalcular siempre; con puertas inestables se mide a partir de qué frecuencia de cambios deja de convenir. Se reportan los resultados tal como salgan.
-- `ciclo`: el ciclo de eventos permanece $< 20$ ms en la cripta de referencia.
+- `ciclo`, `agenda` e `historial`: regresión de la Parte I (sin cazadores). Hipótesis a confirmar: el ciclo sigue por debajo de 20 ms con los costos variables. FR-TER-020 con cazadores se verifica con `ruta_cazador` (`H=30`) mientras no se publique la cripta de referencia.
 
 ---
 

@@ -28,34 +28,37 @@
 
 **Objetivo**: Implementar y verificar todos los cambios al contrato de datos de la Parte II de forma autónoma, incluyendo sus pruebas, antes de cualquier lógica de terreno o cazador.
 
-**Prueba independiente**: `py -m unittest tests.dto.test_salida_dto tests.dto.test_enemigo_dto tests.dto.test_llave_ubicacion_dto tests.infraestructura.test_cliente_offline_llaves tests.infraestructura.test_cache_llaves`
+**Prueba independiente**: `py -m unittest tests.dto.test_salida_dto tests.dto.test_enemigo_dto tests.dto.test_llave_ubicacion_dto tests.infraestructura.test_cliente_offline_llaves tests.infraestructura.test_cache_llaves tests.modelo.test_cripta_mapa_costos`
 
 ### A.0 — Infraestructura de pruebas de la Fase A
 
 - [ ] T001 [US4] Crear `tests/dto/__init__.py` (Nuevo) para habilitar el descubrimiento de pruebas `unittest` en la carpeta `tests/dto/` (FR-TER-001, FR-TER-008, FR-TER-018)
+- [ ] T001b [US4] Modificar `tests/cliente_falso.py` (Modificado): implementar `obtener_llaves(id_cripta)` para cumplir el protocolo `ClienteCripta` ampliado en T010, devolviendo una tupla de `LlaveUbicacionDTO` configurable en el constructor y registrando la llamada como una solicitud, para que T005 pueda comprobar el presupuesto (FR-TER-018)
 
 ### A.1 — Pruebas del contrato de datos (escribir antes que el código)
 
 > [!NOTE]
 > Estas pruebas se escriben primero y se confirma que fallan antes de implementar los DTOs.
 
-- [ ] T002 [P] [US4] Crear `tests/dto/test_salida_dto.py` (Nuevo): prueba que salidas sin campo `costo` o con `costo` nulo en JSON asignan `100`; prueba que `costo >= 1` se conserva; prueba que `costo < 1` o no entero lanza `CriptaDatosInvalidosError` o `CriptaApiError` con el id de la sala en el mensaje (FR-TER-001, FR-TER-016)
-- [ ] T003 [P] [US4] Crear `tests/dto/test_enemigo_dto.py` (Nuevo): prueba que ficha con `comportamiento == "cazador"` y `rango` nulo, ausente o menor que 1 lanza `CriptaDatosInvalidosError` (en `--offline`) o `CriptaApiError` (en HTTP) con el `id` de la ficha en el mensaje; prueba que `rango >= 1` se almacena; prueba que ficha no cazadora tolera `rango` nulo (FR-TER-008, FR-TER-017)
-- [ ] T004 [P] [US4] Crear `tests/dto/test_llave_ubicacion_dto.py` (Nuevo): prueba que `LlaveUbicacionDTO.desde_json` construye correctamente el DTO con `enemigo` nulo o presente; prueba que campos `id` o `sala` ausentes lanzan `CriptaDatosInvalidosError`; prueba que `enemigo` nulo implica llave en el suelo (FR-TER-018)
-- [ ] T005 [P] [US4] Crear `tests/infraestructura/test_cliente_offline_llaves.py` (Nuevo): prueba que `ClienteOffline.obtener_llaves()` lee `fixtures/<id>/llaves.json` y retorna una tupla de `LlaveUbicacionDTO`; prueba que `costo` en salidas del esqueleto se lee desde fixtures; prueba, con el cliente falso de `tests/`, que la consulta de llaves cuenta como una solicitud del presupuesto (FR-TER-016, FR-TER-018)
-- [ ] T006 [P] [US4] Crear `tests/infraestructura/test_cache_llaves.py` (Nuevo): prueba que datos persistidos con versión de cripta distinta son detectados como incompatibles y rechazados sin borrar archivos; prueba que datos con versión correcta se recuperan (FR-TER-019)
+- [ ] T002 [P] [US4] Crear `tests/dto/test_salida_dto.py` (Nuevo): prueba que salidas sin campo `costo` o con `costo` nulo en JSON quedan con `costo` en `None` (no declarado); prueba que `costo >= 1` se conserva; prueba que `costo < 1` o no entero lanza `CriptaDatosInvalidosError` con la sala y la dirección de la salida en el mensaje (FR-TER-001, FR-TER-016)
+- [ ] T003 [P] [US4] Crear `tests/dto/test_enemigo_dto.py` (Nuevo): prueba que ficha con `comportamiento == "cazador"` y `rango` nulo, ausente, no entero o menor que 1 se construye sin lanzar excepción y con `rango` en `None`; prueba que `rango >= 1` se almacena; prueba que ficha no cazadora tolera `rango` nulo (FR-TER-008, FR-TER-017)
+- [ ] T004 [P] [US4] Crear `tests/dto/test_llave_ubicacion_dto.py` (Nuevo): prueba que `LlaveUbicacionDTO.desde_json` construye correctamente el DTO con `enemigo` nulo o presente; prueba que campos `id` o `sala` ausentes, `id` vacío o `sala` menor que 1 lanzan `CriptaDatosInvalidosError`; prueba que `enemigo` nulo implica llave en el suelo (FR-TER-018)
+- [ ] T005 [P] [US4] Crear `tests/infraestructura/test_cliente_offline_llaves.py` (Nuevo): prueba, con una carpeta de fixtures temporal creada por la propia prueba (no los fixtures reales, que se regeneran en T017), que `ClienteOffline.obtener_llaves()` lee `<carpeta>/<id>/llaves.json` y retorna una tupla de `LlaveUbicacionDTO`; prueba que `costo` en salidas del esqueleto se lee desde fixtures; prueba, con el cliente falso de `tests/`, que la consulta de llaves cuenta como una solicitud del presupuesto (FR-TER-016, FR-TER-018)
+- [ ] T006 [P] [US4] Crear `tests/infraestructura/test_cache_llaves.py` (Nuevo): prueba que la ubicación de llaves, el esqueleto y el contenido persistidos con una versión de cripta distinta, y las fichas de catálogo persistidas con una versión de catálogo distinta, se tratan como ausentes sin borrar archivos; prueba que los datos con la versión correcta se recuperan; si las pruebas de la Parte I (`tests/infraestructura/test_cache_disco.py`) ya cubren esqueleto, contenido o catálogo, se citan aquí en lugar de duplicarlas (FR-TER-019)
+- [ ] T006b [P] [US4] Crear `tests/modelo/test_cripta_mapa_costos.py` (Nuevo): con un esqueleto armado en la prueba, verificar que una conexión sin costo en ningún lado vale 100, que una con costo en un solo lado (por ejemplo 250 y nada) vale 250 en ambos sentidos, y que dos costos distintos lanzan `CriptaDatosInvalidosError` con las salas de la conexión en el mensaje; cubre el escenario US4-1 (FR-TER-001, FR-TER-002, FR-TER-016)
 
 ### A.2 — Implementación del contrato de datos
 
-- [ ] T007 [P] [US4] Modificar `cripta/dto/salida_dto.py` (Modificado): agregar campo `costo: int = 100`; en `desde_json`, si `"costo"` está ausente o es nulo asignar `100`; si está presente validar entero `>= 1`, lanzando la excepción externa apropiada con el id de la sala en el mensaje ante dato inválido (FR-TER-001, FR-TER-016)
-- [ ] T008 [P] [US4] Modificar `cripta/dto/enemigo_dto.py` (Modificado): agregar campo `rango: int | None = None`; en `desde_json`, si `comportamiento == "cazador"` exigir `rango` entero `>= 1`, lanzando `CriptaDatosInvalidosError` (en `--offline`) o `CriptaApiError` (en HTTP) con el `id` de la ficha en el mensaje si es nulo, ausente o inválido; para otros comportamientos tolerarlo nulo (FR-TER-008, FR-TER-017)
-- [ ] T009 [P] [US4] Crear `cripta/dto/llave_ubicacion_dto.py` (Nuevo): dataclass `frozen=True, slots=True` con campos `id: str`, `sala: int`, `enemigo: str | None = None` y método de clase `desde_json` que lanza `CriptaDatosInvalidosError` si faltan `id` o `sala`; si `enemigo` es nulo o ausente, se asigna `None` (FR-TER-018)
+- [ ] T007 [P] [US4] Modificar `cripta/dto/salida_dto.py` (Modificado): agregar campo `costo: int | None = None`; en `desde_json`, si `"costo"` está ausente o es nulo dejar `None` (no declarado en este lado; el 100 por defecto lo aplica `CriptaMapa`, T021b); si está presente validar entero `>= 1`, lanzando `CriptaDatosInvalidosError` con la sala y la dirección de la salida en el mensaje ante dato inválido (FR-TER-001, FR-TER-016)
+- [ ] T008 [P] [US4] Modificar `cripta/dto/enemigo_dto.py` (Modificado): agregar campo `rango: int | None = None`; en `desde_json`, si `comportamiento == "cazador"` conservar `rango` si es un entero `>= 1` y dejarlo en `None` si es nulo, ausente o no válido, sin lanzar excepción (el tratamiento pasivo es de T032, FR-TER-008); para otros comportamientos tolerarlo nulo (FR-TER-008, FR-TER-017)
+- [ ] T009 [P] [US4] Crear `cripta/dto/llave_ubicacion_dto.py` (Nuevo): dataclass `frozen=True, slots=True` con campos `id: str`, `sala: int`, `enemigo: str | None = None` y método de clase `desde_json` que lanza `CriptaDatosInvalidosError` si faltan `id` o `sala`, si `id` es vacío o si `sala` es menor que 1; si `enemigo` es nulo o ausente, se asigna `None` (FR-TER-018)
 - [ ] T010 [US4] Modificar `cripta/infraestructura/puertos.py` (Modificado): añadir `obtener_llaves(self, id_cripta: str) -> tuple[LlaveUbicacionDTO, ...]` al protocolo `ClienteCripta`, importando `LlaveUbicacionDTO` desde `cripta/dto/llave_ubicacion_dto.py` (FR-TER-018)
-- [ ] T011 [P] [US4] Modificar `cripta/infraestructura/cliente_http.py` (Modificado): implementar `obtener_llaves` con `GET /criptas/{id}/llaves`, cabecera `X-Cripta-Client-Id`, conteo de la solicitud en el presupuesto, tiempo de espera explícito y reintento ante HTTP 429 respetando `reintentar_en`, contando cada reintento; retornar tupla de `LlaveUbicacionDTO` (FR-TER-018)
-- [ ] T012 [P] [US4] Modificar `cripta/infraestructura/cliente_offline.py` (Modificado): implementar `obtener_llaves` leyendo `fixtures/<id>/llaves.json` y construyendo la tupla con `LlaveUbicacionDTO.desde_json` (FR-TER-018)
+- [ ] T011 [US4] Modificar `cripta/infraestructura/cliente_http.py` (Modificado): implementar `obtener_llaves` con `GET /criptas/{id}/llaves`, cabecera `X-Cripta-Client-Id`, conteo de la solicitud en el presupuesto, tiempo de espera explícito y reintento ante HTTP 429 respetando `reintentar_en`, contando cada reintento; retornar tupla de `LlaveUbicacionDTO` (FR-TER-018)
+- [ ] T012 [US4] Modificar `cripta/infraestructura/cliente_offline.py` (Modificado): implementar `obtener_llaves` leyendo `fixtures/<id>/llaves.json` y construyendo la tupla con `LlaveUbicacionDTO.desde_json` (FR-TER-018)
 - [ ] T013 [US4] Modificar `cripta/infraestructura/cliente_general.py` (Modificado): añadir delegación sincronizada de `obtener_llaves` hacia el cliente subyacente (FR-TER-018)
 - [ ] T014 [P] [US4] Modificar `cripta/infraestructura/cache.py` (Modificado): agregar persistencia y recuperación de las llaves bajo una clave que incluya la versión de la cripta, siguiendo el esquema de claves versionadas existente; si la versión de cripta o de catálogo no coincide, tratarlo como fallo de caché sin borrado manual de archivos (FR-TER-019)
 - [ ] T015 [P] [US4] Modificar `cripta/infraestructura/serializacion.py` (Modificado): incluir el campo `costo` al serializar salidas del esqueleto y el campo `rango` al serializar fichas del catálogo (FR-TER-016, FR-TER-017)
+- [ ] T021b [US4] Modificar `cripta/modelo/cripta_mapa.py` (Modificado): resolver el costo de cada conexión desde ambos lados, como `datos_de_puerta` hace con la llave y el cierre automático; si ningún lado declara costo, la conexión vale 100; si solo un lado lo declara, rige para ambos sentidos; si los dos lados declaran costos distintos, lanzar `CriptaDatosInvalidosError` al construir el mapa con las salas de la conexión en el mensaje; `_mover` (T021) y `_turno_enemigo` (T023) obtienen el costo desde aquí; corregir hasta que pase T006b. Va en la Fase A porque `CriptaMapa` no depende de las Fases B a E y las capacidades 002 a 004 necesitan el costo ya resuelto (FR-TER-002)
 
 ### A.3 — Fixtures y documentación de ejemplos
 
@@ -91,7 +94,7 @@
   - US1-4 / Apéndice B caso 7: actor de velocidad 100 inicia cruce de salida de costo 400 en t=0, la velocidad cambia a 200 en t=100 → reprogramación a t=250 (FR-TER-005)
   - US1-5: esperar y atacar conservan costo 100 sin importar las salidas adyacentes (FR-TER-006)
   - US1-6: errante y rastreador usan el costo de la salida que cruzan (FR-TER-007)
-  - Simetría: el costo de una salida es igual en ambos sentidos en la cripta de referencia (FR-TER-002; Límite Conocido 4 del plan)
+  - Simetría: el costo de una salida es igual en ambos sentidos; si ningún lado declara costo, la conexión vale 100; si el costo se declara en un solo lado de la conexión (por ejemplo 250 de un lado y nada del otro), rige para ambos sentidos; si los dos lados declaran costos distintos, construir el mapa lanza `CriptaDatosInvalidosError` con las salas de la conexión en el mensaje (FR-TER-002; Límite Conocido 4 del plan)
 - [ ] T019b [US1] Ampliar `tests/controlador/test_controlador_errores.py` (Modificado) con la prueba de FR-TER-023: ante un desplazamiento rechazado (puerta cerrada o dirección sin salida), (a) se emite un mensaje descriptivo de rechazo observable, (b) el reloj virtual no avanza, (c) no cambian el estado del juego ni el historial de retroceso y (d) no se escribe ninguna línea en `partida.log`; la prueba cita FR-TER-023 (FR-TER-023)
 - [ ] T020 [P] [US1] Crear `tests/modelo/test_reloj.py` (Nuevo): prueba que `calcular_intervalo` con costo 1 y velocidad alta produce `>= 1`; prueba que `calcular_tiempo_reprogramado` escala el tiempo restante (se reutiliza la función existente de `cripta/modelo/reloj.py`, P1 §2.3, sin fórmula nueva); prueba el desempate por menor número de secuencia para dos eventos en el mismo instante en `RelojEventos` (FR-TER-004, FR-TER-005, FR-TER-022)
 
@@ -115,12 +118,13 @@
 
 **Objetivo**: Implementar el comportamiento del enemigo cazador: búsqueda de ruta compartida con estructuras propias, decisiones (ataque, movimiento, espera), desempate determinista, límite por rango, invalidación por eventos y ausencia de entradas de cazadores en `partida.log`.
 
-**Prueba independiente**: `py -m unittest tests.aceptacion.test_cazador_persecucion tests.modelo.test_buscador_rutas tests.modelo.test_cazador_decisiones tests.infraestructura.test_partida_log`
+**Prueba independiente**: `py -m unittest tests.aceptacion.test_cazador_persecucion tests.modelo.test_buscador_rutas tests.modelo.test_equivalencia_rutas tests.modelo.test_cazador_decisiones tests.infraestructura.test_partida_log`
 
 ### C.1 — Pruebas del cazador (escribir antes que el código)
 
-- [ ] T026 [P] [US2] [US3] Crear `tests/modelo/test_buscador_rutas.py` (Nuevo): prueba la búsqueda sobre un grafo simple de 5 salas con costos heterogéneos; prueba la poda por `rango_max` (salas fuera de rango retornan `None`); prueba que si dos vecinas tienen el mismo `costo(u,v) + dist(v, S_J)` se elige la de menor `id`; prueba que la tabla se reutiliza sin recalcular si no fue invalidada; prueba que `invalidar()` fuerza el recálculo en la siguiente consulta; prueba que una activación con rango mayor al calculado recalcula (FR-TER-010, FR-TER-013, FR-TER-015)
-- [ ] T027 [P] [US2] [US3] Crear `tests/modelo/test_cazador_decisiones.py` (Nuevo): prueba que el cazador en la misma sala ataca con costo 100 (FR-TER-009); que con ruta abierta y `d <= rango` se mueve con el costo de la salida (FR-TER-012); que sin ruta abierta espera con costo 100 (FR-TER-011); que con `d > rango` espera con costo 100 (FR-TER-011); que no le afecta la niebla (FR-TER-014)
+- [ ] T026 [P] [US2] [US3] Crear `tests/modelo/test_buscador_rutas.py` (Nuevo): prueba la búsqueda sobre un grafo simple de 5 salas con costos heterogéneos; prueba la poda por `rango_max` (ninguna sala con distancia `<= rango_max` se pierde; las demás pueden quedar en `None` o con una distancia tentativa mayor); prueba que si dos vecinas tienen el mismo `costo(u,v) + dist(v, S_J)` se elige la de menor `id`; prueba que la tabla se reutiliza sin recalcular si no fue invalidada; prueba que `invalidar()` fuerza el recálculo en la siguiente consulta; prueba que una activación con rango mayor al calculado recalcula (FR-TER-010, FR-TER-013, FR-TER-015)
+- [ ] T026b [P] [US2] [US3] Crear `tests/modelo/test_equivalencia_rutas.py` (Nuevo): sobre secuencias deterministas por semilla de movimientos del jugador, aperturas y cierres de puertas, activaciones y muertes de cazadores, comparar en cada turno de cada cazador la decisión del `BuscadorRutas` con reutilización contra la de un buscador nuevo que calcula desde cero; ninguna decisión puede diferir. Es la evidencia de equivalencia que exige P2 §5.2 (FR-TER-015)
+- [ ] T027 [P] [US2] [US3] Crear `tests/modelo/test_cazador_decisiones.py` (Nuevo): prueba que el cazador en la misma sala ataca con costo 100 (FR-TER-009); que con ruta abierta y `d <= rango` se mueve con el costo de la salida (FR-TER-012); que sin ruta abierta espera con costo 100 (FR-TER-011); que con `d > rango` espera con costo 100 (FR-TER-011); que no le afecta la niebla (FR-TER-014); que un cazador con `rango` en `None` no persigue: ataca si comparte sala y si no espera con costo 100, y que al activarse se agrega a la bitácora de mensajes un aviso con el id de la ficha (FR-TER-008)
 - [ ] T028 [P] [US2] [US3] Crear `tests/aceptacion/test_cazador_persecucion.py` (Nuevo) con los escenarios de aceptación de US2 y US3 y los casos del Apéndice B:
   - US2-1: cazador comparte sala → ataca, costo 100 (FR-TER-009)
   - US2-2 / Apéndice B caso 3: ruta directa de costo 300 contra ruta de 3 salas de costo 150 → elige la de 150, primer paso de costo 50 (FR-TER-010, FR-TER-012)
@@ -131,8 +135,13 @@
   - US3-4 / Apéndice B caso 5: una puerta de la ruta se cierra entre dos turnos → decide como desde cero (FR-TER-015)
   - US3-5: el cazador no abre puertas y no le afecta la niebla (FR-TER-014)
   - Activaciones simultáneas al entrar a una sala: sus primeros turnos se programan en orden ascendente de identificador de instancia (FR-TER-022)
+  - Cazador en una sala que el jugador no ha visitado: permanece dormido y no persigue hasta que el jugador entra a su sala (supuesto de activación de la spec, P1 §2.4)
+  - `d == rango`: el cazador se mueve, porque la espera exige `d > rango` (FR-TER-011, FR-TER-012)
+  - Cazador que muere con su próximo turno programado: ese turno no produce ninguna acción (FR-TER-015)
+  - Cazador en la misma sala que el jugador aunque la distancia por el mapa supere su rango: ataca (FR-TER-009)
 
-- [ ] T035 [P] [US3] Ampliar `tests/infraestructura/test_partida_log.py` (Modificado): tras un turno completo de un cazador (movimiento, espera y ataque) no se escribe ninguna línea en `partida.log`; `cripta/infraestructura/partida_log.py` no debería requerir cambios (FR-TER-021)
+- [ ] T028b [P] [US2] Ampliar `tests/estructuras/test_heap_min.py` (Modificado): prueba que `esta_vacio()` es verdadero en un montículo nuevo y falso tras insertar, y que `__len__` sigue las inserciones y extracciones (FR-TER-010)
+- [ ] T035 [P] [US3] Ampliar `tests/infraestructura/test_partida_log.py` (Modificado): tras turnos completos de un cazador, un errante y un rastreador (movimiento, espera y ataque) no se escribe ninguna línea en `partida.log`; `cripta/infraestructura/partida_log.py` no debería requerir cambios (FR-TER-021)
 
 ### C.2 — Estructuras auxiliares
 
@@ -141,15 +150,15 @@
 
 ### C.3 — BuscadorRutas
 
-- [ ] T031 [US2] Crear `cripta/modelo/buscador_rutas.py` (Nuevo): clase `BuscadorRutas` con `_distancias: list[int | None]`, `_sala_objetivo`, `_rango_max_calculado` y `_valido`; implementar `invalidar()`, `calcular_o_reutilizar(mapa, sala_jugador_id, rango_max)` con búsqueda de costo mínimo desde la sala del jugador usando `HeapMinimo` y tabla plana indexada por `sala_id` (sin `heapq`, `bisect`, `collections`, `dict` ni `set`), con poda al extraer un nodo de distancia `> rango_max`, solo por salidas abiertas en ese instante; implementar `distancia(sala_id)` y `decidir_paso(cazador, sala_jugador_id, mapa)`, que devuelve acción, dirección y costo de la salida, con desempate por `min(v.id)` (FR-TER-010, FR-TER-011, FR-TER-012, FR-TER-013, FR-TER-014, FR-TER-015)
+- [ ] T031 [US2] Crear `cripta/modelo/buscador_rutas.py` (Nuevo): clase `BuscadorRutas` con `_distancias: list[int | None]`, `_cerrados: list[bool]`, `_sala_objetivo`, `_rango_max_calculado` y `_valido`; implementar `invalidar()`, `calcular_o_reutilizar(mapa, sala_jugador_id, rango_max)` con búsqueda de costo mínimo desde la sala del jugador usando `HeapMinimo` y tabla plana indexada por `sala_id` (sin `heapq`, `bisect`, `collections`, `dict` ni `set`), con poda al extraer un nodo de distancia `> rango_max`, solo por salidas abiertas en ese instante; implementar `distancia(sala_id)` y `decidir_paso(cazador, sala_jugador_id, mapa)`, que devuelve acción, dirección y costo de la salida, con desempate por `min(v.id)` (FR-TER-010, FR-TER-011, FR-TER-012, FR-TER-013, FR-TER-014, FR-TER-015)
 
 ### C.4 — Comportamiento del cazador en el motor
 
-- [ ] T032 [US2] Modificar `cripta/modelo/comportamiento_enemigo.py` (Modificado): añadir `_decidir_cazador` que (1) ataca si comparte sala con el jugador, (2) consulta `BuscadorRutas.decidir_paso` si no, (3) espera si no hay ruta o `d > rango`; enlazarlo en `decidir_accion_enemigo` para el comportamiento `"cazador"`. Como hoy la decisión devuelve solo `(tipo, direccion)`, la decisión del cazador debe devolver también el costo, sin alterar el resultado de errantes y rastreadores (FR-TER-009, FR-TER-010, FR-TER-011, FR-TER-012, FR-TER-013)
+- [ ] T032 [US2] Modificar `cripta/modelo/comportamiento_enemigo.py` y `cripta/modelo/partida.py` → `_activar_enemigos_de` (Modificado): añadir `_decidir_cazador` que (1) ataca si comparte sala con el jugador, (2) consulta `BuscadorRutas.decidir_paso` si no, (3) espera si no hay ruta o `d > rango`; enlazarlo en `decidir_accion_enemigo` para el comportamiento `"cazador"`. Como hoy la decisión devuelve solo `(tipo, direccion)`, la decisión del cazador debe devolver también el costo, sin alterar el resultado de errantes y rastreadores. Un cazador con `rango` en `None` no consulta `BuscadorRutas`: ataca si comparte sala y si no espera con costo 100; el aviso a la bitácora de mensajes se agrega al activarlo, en `Partida._activar_enemigos_de` (solo el aviso: el primer turno sigue programándose con costo 100, ver T023) (FR-TER-008, FR-TER-009, FR-TER-010, FR-TER-011, FR-TER-012, FR-TER-013)
 - [ ] T033 [US2] [US3] Modificar `cripta/modelo/partida.py` y `cripta/modelo/efectos.py` (Modificado): instanciar `BuscadorRutas` y usarlo en el turno del cazador; invalidar la tabla en `_mover` (el jugador cambia de sala), `_abrir` (puerta abierta), `EfectoCierrePuerta` (puerta cerrada), `_usar_pergamino` (retroceso), la activación de un cazador con `rango > _rango_max_calculado` y la carga de una partida guardada; conservar la tabla ante turnos de cazadores, muerte de enemigos y cambios de velocidad (FR-TER-015)
 - [ ] T034 [US3] Verificar `cripta/modelo/partida.py` (Modificado si hace falta) → `_activar_enemigos_de`: confirmar con la prueba de T028 que las activaciones simultáneas programan sus primeros turnos en orden ascendente de identificador de instancia (FR-TER-022)
 
-**Punto de verificación Fase C**: `py -m unittest tests.modelo.test_buscador_rutas tests.modelo.test_cazador_decisiones tests.aceptacion.test_cazador_persecucion tests.infraestructura.test_partida_log` → todos en `OK`.
+**Punto de verificación Fase C**: `py -m unittest tests.modelo.test_buscador_rutas tests.modelo.test_equivalencia_rutas tests.modelo.test_cazador_decisiones tests.aceptacion.test_cazador_persecucion tests.infraestructura.test_partida_log` → todos en `OK`.
 
 ---
 
@@ -162,11 +171,11 @@
 
 ### D.1 — Cargas nuevas
 
-- [ ] T036 [P] [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ruta_cazador` con una cripta sintética determinista de 400 salas generada con `random.Random(42)`, costos de salida entre 10 y 250, escenarios `H=1, 10, 30` y rangos `R=100` y `R=500`, más el caso de rangos heterogéneos (un cazador de `R=500` y el resto de `R=100`; Límite Conocido 2 del plan); implementar también la alternativa descartada (cálculo individual desde cada cazador) en la misma carga (FR-TER-020)
+- [ ] T036 [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ruta_cazador`, que mide ciclos completos de `Partida` entre dos decisiones del jugador (agenda, turnos de enemigos, búsqueda e invalidación), sin red ni vista, como `bench_partida_real` de la Parte I, y reporta aparte el tiempo de la búsqueda sola; usa una cripta sintética determinista de 400 salas (una muestra de la escala de diseño de hasta 1 000 salas) generada con `random.Random(42)`, costos de salida entre 10 y 250, escenarios `H=1, 10, 30` y rangos `R=100` y `R=500`, más el caso de rangos heterogéneos (un cazador de `R=500` y el resto de `R=100`; Límite Conocido 2 del plan); implementar también la alternativa descartada (cálculo individual desde cada cazador) en la misma carga (FR-TER-020)
 
   Comando exacto: `py -m cripta --bench --solo ruta_cazador`
 
-- [ ] T037 [P] [US2] [US3] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `invalidacion` con 20 cazadores durante 100 ticks en dos escenarios, puertas estables y 5 puertas con cierre automático cada 15 ticks; implementar también la alternativa descartada (recalcular siempre en cada turno de cazador) (FR-TER-020)
+- [ ] T037 [US2] [US3] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `invalidacion` con 20 cazadores durante 100 ticks en dos escenarios, puertas estables y 5 puertas con cierre automático cada 15 ticks; implementar también la alternativa descartada (recalcular siempre en cada turno de cazador) (FR-TER-020)
 
   Comando exacto: `py -m cripta --bench --solo invalidacion`
 
@@ -174,7 +183,7 @@
 
 ### D.2 — Cargas de regresión de la Parte I
 
-- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con el resultado de `ruta_cazador` para `H=30`, comparándolo con el límite de 20 ms, y anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
+- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con el resultado de `ruta_cazador` para `H=30` (mientras no se publique la cripta de referencia de P2 §6.1; cuando exista, repetir con ella), comparándolo con el límite de 20 ms, y anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
 
   ```powershell
   py -m cripta --bench --solo ciclo
@@ -201,9 +210,9 @@
 - [ ] T041 [P] Auditar importaciones prohibidas (Principio I):
 
   ```powershell
-  Select-String -Path (Get-ChildItem cripta -Recurse -Filter *.py).FullName -Pattern "heapq|bisect|collections|networkx"
+  Select-String -Path (Get-ChildItem cripta -Recurse -Filter *.py).FullName -Pattern "heapq|bisect|collections|networkx|sorted\(|\.sort\("
   ```
-  Resultado esperado: sin coincidencias. Los usos de `dict` y `set` como índice o caché se revisan a mano en el Pull Request, porque la búsqueda de texto no distingue los usos permitidos.
+  Resultado esperado: sin importaciones prohibidas; cada `sorted(` o `.sort(` se revisa a mano y solo se permite fuera de los ordenamientos evaluados. Los usos de `dict` y `set` como índice o caché se revisan a mano en el Pull Request, porque la búsqueda de texto no distingue los usos permitidos.
 
 - [ ] T042 Reproducir la partida de ejemplo con `--replay` (Principio VIII):
 
@@ -241,20 +250,19 @@ Fase A ──► Fase B ──► Fase C ──► Fase D ──► Fase E
 
 ### Dependencias dentro de cada fase
 
-- Fase A: T001 → T002–T006 (pruebas en paralelo) → T007–T015 (implementación, algunos en paralelo) → T016 → T017
+- Fase A: T001 → T001b → T002–T006 y T006b (pruebas en paralelo) → T007, T008, T009, T014, T015 y T021b (en paralelo) → T010 → T011 y T012 → T013 → T016 → T017
 - Fase B: T018 → T019, T019b, T020 (pruebas) → T021 → T022 → T023 → T024 → T025 → T025b
-- Fase C: T026–T028 y T035 (pruebas en paralelo) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
-- Fase D: T036–T037 (en paralelo) → T038 → T039
+- Fase C: T026, T026b, T027, T028, T028b y T035 (pruebas en paralelo) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
+- Fase D: T036 → T037 (mismo archivo) → T038 → T039
 - Fase E: T040–T041 (en paralelo) → T042 → T043 → T044
 
 ### Oportunidades de paralelización
 
 ```text
-Fase A, pruebas (archivos distintos): T002, T003, T004, T005, T006
-Fase A, implementación: T007, T008, T009, T011, T012, T014, T015
-Fase C, pruebas: T026, T027, T028, T035
+Fase A, pruebas (archivos distintos): T002, T003, T004, T005, T006, T006b
+Fase A, implementación: T007, T008, T009, T014, T015, T021b (T010 a T013 van en orden después de T009, porque usan `LlaveUbicacionDTO`)
+Fase C, pruebas: T026, T026b, T027, T028, T028b, T035
 Fase C, auxiliares: T029, T030
-Fase D, cargas: T036, T037
 Fase E, auditoría y suite: T040, T041
 ```
 
@@ -288,6 +296,6 @@ Fase E, auditoría y suite: T040, T041
 - Las tareas **[P]** tocan archivos distintos y no dependen entre sí dentro de su bloque.
 - Ninguna tarea incluye `git commit` ni `git push`. Los hacen las personas.
 - Las prohibiciones de la Constitución aplican a toda tarea: sin `heapq`, `bisect`, `collections`, `networkx`, `set` ni `dict` como índice o caché, y sin `list.sort()` ni `sorted()` en los ordenamientos evaluados.
-- Los errores de programación interna heredan de `IndexError` o `ValueError` en su propio módulo. `CriptaDatosInvalidosError` y `CriptaApiError` se reservan para datos externos.
+- Los errores de programación interna heredan de `IndexError` o `ValueError` en su propio módulo. `CriptaDatosInvalidosError` se usa para datos externos inválidos, con cualquier fuente, y `CriptaApiError` para fallos de la comunicación HTTP.
 - Las carpetas nuevas de pruebas (`tests/dto/`, `tests/aceptacion/`) requieren un `__init__.py` explícito (T001, T018).
 - La invocación de `/speckit-tasks` y sus correcciones se registran en `PROMPTS_LLM.md` al ejecutarlas, fuera de esta lista.

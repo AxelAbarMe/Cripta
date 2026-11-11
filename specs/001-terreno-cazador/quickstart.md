@@ -103,7 +103,7 @@ py -m cripta --bench --solo historial
 **Resultado Esperado**:
 - `ruta_cazador`: hipótesis a confirmar: el cálculo compartido mantiene el ciclo por debajo de 20 ms con 30 cazadores, y el individual crece con el número de cazadores. Incluir un caso de rangos heterogéneos.
 - `invalidacion`: hipótesis: con puertas estables, reutilizar la tabla reduce las búsquedas frente a recalcular siempre; con puertas inestables se mide a partir de qué frecuencia de cambios deja de convenir. Se reportan los resultados tal como salgan.
-- `ciclo`, `agenda` e `historial`: regresión de la Parte I (sin cazadores). Hipótesis a confirmar: el ciclo sigue por debajo de 20 ms con los costos variables. FR-TER-020 con cazadores se verifica con `ruta_cazador` (`H=30`) mientras no se publique la cripta de referencia.
+- `ciclo`, `agenda` e `historial`: regresión de la Parte I (sin cazadores). Hipótesis a confirmar: el ciclo sigue por debajo de 20 ms con los costos variables. FR-TER-020 se verifica con cripta-06 (300 salas) cargada desde `fixtures/`, con decenas de cazadores activos. `ruta_cazador` (`H=30`) y la carga sintética de 400 salas quedan para comparar alternativas.
 
 ---
 
@@ -112,8 +112,8 @@ py -m cripta --bench --solo historial
 
 **Comando**:
 ```powershell
-py -m cripta --offline --replay docs/ejemplos/partida_cripta-02.log
+py -m cripta --offline --replay docs/ejemplos/partida_cripta-06.log
 ```
-**Resultado Esperado**: Termina con código de salida `0`.
+**Resultado Esperado**: Termina con código de salida `0`. El archivo es uno de los ejemplos nuevos de terreno y cazador grabados en T042 (los anteriores se eliminan).
 
-**Riesgo**: regenerar fixtures (Escenario 1) puede cambiar la versión de la cripta y volver incompatible este `--replay`. Ejecutar este escenario con las fixtures originales respaldadas antes de regenerar.
+**Nota**: los ejemplos anteriores guardaban el catálogo be68d322d2f5 y ya no se reproducen con el catálogo actual 4b9e75a42be5. Los ejemplos nuevos se graban después de regenerar fixtures (Escenario 1).

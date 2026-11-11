@@ -1,4 +1,4 @@
-"""Pruebas de ServicioPartida (arma la partida, escribe la bitácora, reporta), con la cripta real de fixtures/.
+"""Pruebas de ServicioPartida (arma la partida, escribe la bitácora, reporta), con la cripta congelada de tests/datos/.
 
 El ClienteOffline no cuenta solicitudes, así que se envuelve en un cliente que las cuenta y respeta el
 presupuesto igual que ClienteHttp. Se ejecuta desde la raíz del proyecto con:
@@ -28,7 +28,7 @@ class ClienteContado:
     """Cuenta cada llamada como una solicitud de red y lanza CriptaLimiteError al pasarse del presupuesto."""
 
     def __init__(self, contador, falla_en=None):
-        self._base = ClienteOffline("fixtures")
+        self._base = ClienteOffline("tests/datos")
         self._contador = contador
         self._falla_en = falla_en
         self.llamadas = []

@@ -28,10 +28,15 @@ from cripta.dto.contenido_sala_respuesta_dto import ContenidoSalaRespuestaDTO
 from cripta.dto.cripta_general_dto import CriptaGeneralDTO
 from cripta.dto.cripta_resumen_dto import CriptaResumenDTO
 from cripta.dto.entidad_dto import entidad_desde_json
+from cripta.dto.llave_ubicacion_dto import LlaveUbicacionDTO
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.version_dto import VersionCatalogoDTO, VersionCriptaDTO
 from cripta.excepciones import CriptaDatosInvalidosError, CriptaDatosNoEncontradosError
 from cripta.infraestructura.lotes import validar_lote
+
+
+def _llaves_desde_json(datos):
+    return tuple(LlaveUbicacionDTO.desde_json(llave) for llave in datos["llaves"])
 
 
 class ClienteOffline:
@@ -85,6 +90,11 @@ class ClienteOffline:
         # Lee catalogo/version.json: versión del catálogo (como GET /catalogo/version)
         return self._leer(self._raiz / "catalogo" / "version.json",
                           "versión de catálogo", VersionCatalogoDTO.desde_json)
+
+    def obtener_llaves(self, id_cripta: str) -> tuple[LlaveUbicacionDTO, ...]:
+        # Lee <cripta>/llaves.json: dónde está cada llave (como GET /criptas/{id}/llaves)
+        return self._leer(self._raiz / id_cripta / "llaves.json",
+                          f"llaves de {id_cripta}", _llaves_desde_json)
 
     @staticmethod
     def _leer(ruta: Path, operacion: str, conversor):

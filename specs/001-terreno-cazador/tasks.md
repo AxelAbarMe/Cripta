@@ -32,38 +32,38 @@
 
 ### A.0 — Infraestructura de pruebas de la Fase A
 
-- [ ] T001 [US4] Crear `tests/dto/__init__.py` (Nuevo) para habilitar el descubrimiento de pruebas `unittest` en la carpeta `tests/dto/` (FR-TER-001, FR-TER-008, FR-TER-018)
-- [ ] T001b [US4] Modificar `tests/cliente_falso.py` (Modificado): implementar `obtener_llaves(id_cripta)` para cumplir el protocolo `ClienteCripta` ampliado en T010, devolviendo una tupla de `LlaveUbicacionDTO` configurable en el constructor y registrando la llamada como una solicitud, para que T005 pueda comprobar el presupuesto (FR-TER-018)
+- [X] T001 [US4] Crear `tests/dto/__init__.py` (Nuevo) para habilitar el descubrimiento de pruebas `unittest` en la carpeta `tests/dto/` (FR-TER-001, FR-TER-008, FR-TER-018)
+- [X] T001b [US4] Modificar `tests/cliente_falso.py` (Modificado): implementar `obtener_llaves(id_cripta)` para cumplir el protocolo `ClienteCripta` ampliado en T010, devolviendo una tupla de `LlaveUbicacionDTO` configurable en el constructor y registrando la llamada como una solicitud, para que T005 pueda comprobar el presupuesto (FR-TER-018)
 
 ### A.1 — Pruebas del contrato de datos (escribir antes que el código)
 
 > [!NOTE]
 > Estas pruebas se escriben primero y se confirma que fallan antes de implementar los DTOs.
 
-- [ ] T002 [P] [US4] Crear `tests/dto/test_salida_dto.py` (Nuevo): prueba que salidas sin campo `costo` o con `costo` nulo en JSON quedan con `costo` en `None` (no declarado); prueba que `costo >= 1` se conserva; prueba que `costo < 1` o no entero lanza `ValueError` con la salida afectada en el mensaje, y que al construir la sala el mensaje incluye la sala y la dirección (FR-TER-001, FR-TER-016)
-- [ ] T003 [P] [US4] Crear `tests/dto/test_enemigo_dto.py` (Nuevo): prueba que ficha con `comportamiento == "cazador"` y `rango` nulo, ausente, no entero o menor que 1 se construye sin lanzar excepción y con `rango` en `None`; prueba que `rango >= 1` se almacena; prueba que ficha no cazadora tolera `rango` nulo (FR-TER-008, FR-TER-017)
-- [ ] T004 [P] [US4] Crear `tests/dto/test_llave_ubicacion_dto.py` (Nuevo): prueba que `LlaveUbicacionDTO.desde_json` construye correctamente el DTO con `enemigo` nulo o presente; prueba que campos `id` o `sala` ausentes, `id` vacío o `sala` menor que 1 lanzan `ValueError` con el dato afectado en el mensaje; prueba que `enemigo` nulo implica llave en el suelo (FR-TER-018)
-- [ ] T005 [P] [US4] Crear `tests/infraestructura/test_cliente_offline_llaves.py` (Nuevo): prueba, con una carpeta de fixtures temporal creada por la propia prueba (no los fixtures reales, que se regeneran en T017), que `ClienteOffline.obtener_llaves()` lee `<carpeta>/<id>/llaves.json` y retorna una tupla de `LlaveUbicacionDTO`; prueba que `costo` en salidas del esqueleto se lee desde fixtures; prueba, con el cliente falso de `tests/`, que la consulta de llaves cuenta como una solicitud del presupuesto (FR-TER-016, FR-TER-018)
-- [ ] T006 [P] [US4] Crear `tests/infraestructura/test_cache_llaves.py` (Nuevo): prueba que la ubicación de llaves, el esqueleto y el contenido persistidos con una versión de cripta distinta, y las fichas de catálogo persistidas con una versión de catálogo distinta, se tratan como ausentes sin borrar archivos; prueba que los datos con la versión correcta se recuperan; si las pruebas de la Parte I (`tests/infraestructura/test_cache_disco.py`) ya cubren esqueleto, contenido o catálogo, se citan aquí en lugar de duplicarlas (FR-TER-019)
-- [ ] T006b [P] [US4] Crear `tests/modelo/test_cripta_mapa_costos.py` (Nuevo): con un esqueleto armado en la prueba, verificar que una conexión sin costo en ningún lado vale 100, que una con costo en un solo lado (por ejemplo 250 y nada) vale 250 en ambos sentidos, y que dos costos distintos lanzan `CriptaDatosInvalidosError` con las salas de la conexión en el mensaje; cubre el escenario US4-1 (FR-TER-001, FR-TER-002, FR-TER-016)
+- [X] T002 [P] [US4] Crear `tests/dto/test_salida_dto.py` (Nuevo): prueba que salidas sin campo `costo` o con `costo` nulo en JSON quedan con `costo` en `None` (no declarado); prueba que `costo >= 1` se conserva; prueba que `costo < 1` o no entero lanza `ValueError` con la salida afectada en el mensaje, y que al construir la sala el mensaje incluye la sala y la dirección (FR-TER-001, FR-TER-016)
+- [X] T003 [P] [US4] Crear `tests/dto/test_enemigo_dto.py` (Nuevo): prueba que ficha con `comportamiento == "cazador"` y `rango` nulo, ausente, no entero o menor que 1 se construye sin lanzar excepción y con `rango` en `None`; prueba que `rango >= 1` se almacena; prueba que ficha no cazadora tolera `rango` nulo (FR-TER-008, FR-TER-017)
+- [X] T004 [P] [US4] Crear `tests/dto/test_llave_ubicacion_dto.py` (Nuevo): prueba que `LlaveUbicacionDTO.desde_json` construye correctamente el DTO con `enemigo` nulo o presente; prueba que campos `id` o `sala` ausentes, `id` vacío o `sala` menor que 1 lanzan `ValueError` con el dato afectado en el mensaje; prueba que `enemigo` nulo implica llave en el suelo (FR-TER-018)
+- [X] T005 [P] [US4] Crear `tests/infraestructura/test_cliente_offline_llaves.py` (Nuevo): prueba, con una carpeta de fixtures temporal creada por la propia prueba (no los fixtures reales, que se regeneran en T017), que `ClienteOffline.obtener_llaves()` lee `<carpeta>/<id>/llaves.json` y retorna una tupla de `LlaveUbicacionDTO`; prueba que `costo` en salidas del esqueleto se lee desde fixtures; prueba, con el cliente falso de `tests/`, que la consulta de llaves cuenta como una solicitud del presupuesto (FR-TER-016, FR-TER-018)
+- [X] T006 [P] [US4] Crear `tests/infraestructura/test_cache_llaves.py` (Nuevo): prueba que la ubicación de llaves, el esqueleto y el contenido persistidos con una versión de cripta distinta, y las fichas de catálogo persistidas con una versión de catálogo distinta, se tratan como ausentes sin borrar archivos; prueba que los datos con la versión correcta se recuperan; si las pruebas de la Parte I (`tests/infraestructura/test_cache_disco.py`) ya cubren esqueleto, contenido o catálogo, se citan aquí en lugar de duplicarlas (FR-TER-019)
+- [X] T006b [P] [US4] Crear `tests/modelo/test_cripta_mapa_costos.py` (Nuevo): con un esqueleto armado en la prueba, verificar que una conexión sin costo en ningún lado vale 100, que una con costo en un solo lado (por ejemplo 250 y nada) vale 250 en ambos sentidos, y que dos costos distintos lanzan `CriptaDatosInvalidosError` con las salas de la conexión en el mensaje; cubre el escenario US4-1 (FR-TER-001, FR-TER-002, FR-TER-016)
 
 ### A.2 — Implementación del contrato de datos
 
-- [ ] T007 [P] [US4] Modificar `cripta/dto/salida_dto.py` (Modificado): agregar campo `costo: int | None = None`; en `desde_json`, si `"costo"` está ausente o es nulo dejar `None` (no declarado en este lado; el 100 por defecto lo aplica `CriptaMapa`, T021b); si está presente validar entero `>= 1`, lanzando `ValueError` con la salida afectada en el mensaje ante dato inválido; `SalaDTO.desde_json` agrega la sala y la dirección. El cliente lo convierte, como en la Parte I (FR-TER-001, FR-TER-016)
-- [ ] T008 [P] [US4] Modificar `cripta/dto/enemigo_dto.py` (Modificado): agregar campo `rango: int | None = None`; en `desde_json`, si `comportamiento == "cazador"` conservar `rango` si es un entero `>= 1` y dejarlo en `None` si es nulo, ausente o no válido, sin lanzar excepción (el tratamiento pasivo es de T032, FR-TER-008); para otros comportamientos tolerarlo nulo (FR-TER-008, FR-TER-017)
-- [ ] T009 [P] [US4] Crear `cripta/dto/llave_ubicacion_dto.py` (Nuevo): dataclass `frozen=True, slots=True` con campos `id: str`, `sala: int`, `enemigo: str | None = None` y método de clase `desde_json` que lanza `ValueError` con el dato afectado si faltan `id` o `sala`, si `id` es vacío o si `sala` es menor que 1 (el cliente lo convierte, como en la Parte I); si `enemigo` es nulo o ausente, se asigna `None` (FR-TER-018)
-- [ ] T010 [US4] Modificar `cripta/infraestructura/puertos.py` (Modificado): añadir `obtener_llaves(self, id_cripta: str) -> tuple[LlaveUbicacionDTO, ...]` al protocolo `ClienteCripta`, importando `LlaveUbicacionDTO` desde `cripta/dto/llave_ubicacion_dto.py` (FR-TER-018)
-- [ ] T011 [US4] Modificar `cripta/infraestructura/cliente_http.py` (Modificado): implementar `obtener_llaves` con `GET /criptas/{id}/llaves`, cabecera `X-Cripta-Client-Id`, conteo de la solicitud en el presupuesto, tiempo de espera explícito y reintento ante HTTP 429 respetando `reintentar_en`, contando cada reintento; retornar tupla de `LlaveUbicacionDTO` (FR-TER-018)
-- [ ] T012 [US4] Modificar `cripta/infraestructura/cliente_offline.py` (Modificado): implementar `obtener_llaves` leyendo `fixtures/<id>/llaves.json` y construyendo la tupla con `LlaveUbicacionDTO.desde_json` (FR-TER-018)
-- [ ] T013 [US4] Modificar `cripta/infraestructura/cliente_general.py` (Modificado): añadir delegación sincronizada de `obtener_llaves` hacia el cliente subyacente (FR-TER-018)
-- [ ] T014 [P] [US4] Modificar `cripta/infraestructura/cache.py` (Modificado): agregar persistencia y recuperación de las llaves bajo una clave que incluya la versión de la cripta, siguiendo el esquema de claves versionadas existente; si la versión de cripta o de catálogo no coincide, tratarlo como fallo de caché sin borrado manual de archivos (FR-TER-019)
-- [ ] T015 [P] [US4] Modificar `cripta/infraestructura/serializacion.py` (Modificado): incluir el campo `costo` al serializar salidas del esqueleto y el campo `rango` al serializar fichas del catálogo (FR-TER-016, FR-TER-017)
-- [ ] T021b [US4] Modificar `cripta/modelo/cripta_mapa.py` (Modificado): resolver el costo de cada conexión desde ambos lados, como `datos_de_puerta` hace con la llave y el cierre automático; si ningún lado declara costo, la conexión vale 100; si solo un lado lo declara, rige para ambos sentidos; si los dos lados declaran costos distintos, lanzar `CriptaDatosInvalidosError` con operación «construir el mapa», ruta «esqueleto de la cripta» y las salas de la conexión en el detalle; `_mover` (T021) y `_turno_enemigo` (T023) obtienen el costo desde aquí; corregir hasta que pase T006b. Va en la Fase A porque `CriptaMapa` no depende de las Fases B a E y las capacidades 002 a 004 necesitan el costo ya resuelto (FR-TER-002)
+- [X] T007 [P] [US4] Modificar `cripta/dto/salida_dto.py` (Modificado): agregar campo `costo: int | None = None`; en `desde_json`, si `"costo"` está ausente o es nulo dejar `None` (no declarado en este lado; el 100 por defecto lo aplica `CriptaMapa`, T021b); si está presente validar entero `>= 1`, lanzando `ValueError` con la salida afectada en el mensaje ante dato inválido; `SalaDTO.desde_json` agrega la sala y la dirección. El cliente lo convierte, como en la Parte I (FR-TER-001, FR-TER-016)
+- [X] T008 [P] [US4] Modificar `cripta/dto/enemigo_dto.py` (Modificado): agregar campo `rango: int | None = None`; en `desde_json`, si `comportamiento == "cazador"` conservar `rango` si es un entero `>= 1` y dejarlo en `None` si es nulo, ausente o no válido, sin lanzar excepción (el tratamiento pasivo es de T032, FR-TER-008); para otros comportamientos tolerarlo nulo (FR-TER-008, FR-TER-017)
+- [X] T009 [P] [US4] Crear `cripta/dto/llave_ubicacion_dto.py` (Nuevo): dataclass `frozen=True, slots=True` con campos `id: str`, `sala: int`, `enemigo: str | None = None` y método de clase `desde_json` que lanza `ValueError` con el dato afectado si faltan `id` o `sala`, si `id` es vacío o si `sala` es menor que 1 (el cliente lo convierte, como en la Parte I); si `enemigo` es nulo o ausente, se asigna `None` (FR-TER-018)
+- [X] T010 [US4] Modificar `cripta/infraestructura/puertos.py` (Modificado): añadir `obtener_llaves(self, id_cripta: str) -> tuple[LlaveUbicacionDTO, ...]` al protocolo `ClienteCripta`, importando `LlaveUbicacionDTO` desde `cripta/dto/llave_ubicacion_dto.py` (FR-TER-018)
+- [X] T011 [US4] Modificar `cripta/infraestructura/cliente_http.py` (Modificado): implementar `obtener_llaves` con `GET /criptas/{id}/llaves`, cabecera `X-Cripta-Client-Id`, conteo de la solicitud en el presupuesto, tiempo de espera explícito y reintento ante HTTP 429 respetando `reintentar_en`, contando cada reintento; retornar tupla de `LlaveUbicacionDTO` (FR-TER-018)
+- [X] T012 [US4] Modificar `cripta/infraestructura/cliente_offline.py` (Modificado): implementar `obtener_llaves` leyendo `fixtures/<id>/llaves.json` y construyendo la tupla con `LlaveUbicacionDTO.desde_json` (FR-TER-018)
+- [X] T013 [US4] Modificar `cripta/infraestructura/cliente_general.py` (Modificado): añadir delegación sincronizada de `obtener_llaves` hacia el cliente subyacente (FR-TER-018)
+- [X] T014 [P] [US4] Modificar `cripta/infraestructura/cache.py` (Modificado): agregar persistencia y recuperación de las llaves bajo una clave que incluya la versión de la cripta, siguiendo el esquema de claves versionadas existente; si la versión de cripta o de catálogo no coincide, tratarlo como fallo de caché sin borrado manual de archivos (FR-TER-019)
+- [X] T015 [P] [US4] Modificar `cripta/infraestructura/serializacion.py` (Modificado): incluir el campo `costo` al serializar salidas del esqueleto y el campo `rango` al serializar fichas del catálogo (FR-TER-016, FR-TER-017)
+- [X] T021b [US4] Modificar `cripta/modelo/cripta_mapa.py` (Modificado): resolver el costo de cada conexión desde ambos lados, como `datos_de_puerta` hace con la llave y el cierre automático; si ningún lado declara costo, la conexión vale 100; si solo un lado lo declara, rige para ambos sentidos; si los dos lados declaran costos distintos, lanzar `CriptaDatosInvalidosError` con operación «construir el mapa», ruta «esqueleto de la cripta» y las salas de la conexión en el detalle; `_mover` (T021) y `_turno_enemigo` (T023) obtienen el costo desde aquí; corregir hasta que pase T006b. Va en la Fase A porque `CriptaMapa` no depende de las Fases B a E y las capacidades 002 a 004 necesitan el costo ya resuelto (FR-TER-002)
 
 ### A.3 — Fixtures y documentación de ejemplos
 
-- [ ] T016 [US4] Respaldar los fixtures actuales de `fixtures/` antes de regenerarlos y revisar qué registros de `docs/ejemplos/` dejarían de ser reproducibles con `--replay` si cambia la versión de la cripta (FR-TER-019; Límite Conocido 5 del plan)
-- [ ] T017 [US4] Modificar `scripts/generar_fixtures.py` (Modificado): regenerar fixtures con `costo` en salidas, `rango` en fichas de catálogo y `llaves.json` consultando `/llaves`; verificar que los fixtures generados pasan las pruebas de los DTOs (FR-TER-001, FR-TER-008, FR-TER-018)
+- [X] T016 [US4] Respaldar y reubicar los datos anteriores al servidor actual (FR-TER-019; Límite Conocido 5 del plan): el respaldo de los fixtures actuales es el commit e6d52ac. Mover `fixtures/cripta-01/`, el catálogo anterior (`fixtures/catalogo/`) y `fixtures/criptas.json` a `tests/datos/` como datos de prueba congelados, y cambiar `ClienteOffline("fixtures")` por `ClienteOffline("tests/datos")` en `tests/modelo/test_guardado_ida.py`, `tests/modelo/test_guardado_vuelta.py`, `tests/modelo/test_pergamino.py` y `tests/servicios/test_servicio_partida.py`, actualizando el docstring de cada una. Confirmar que esas pruebas siguen en `OK`
+- [X] T017 [US4] Modificar `scripts/generar_fixtures.py` (Modificado): regenerar `fixtures/` para que quede igual al servidor actual (cripta-02 a cripta-06, con `costo` en salidas, `rango` en fichas de catálogo, `llaves.json` consultando `/llaves` y el catálogo 4b9e75a42be5); verificar que los fixtures generados pasan las pruebas de los DTOs; actualizar `docs/FORMATO_OFFLINE.md` y la sección de fixtures del `README.md` (criptas incluidas y ubicación de los datos congelados en `tests/datos/`) (FR-TER-001, FR-TER-008, FR-TER-018)
 
 **Punto de corte del primer Pull Request de código**: Fase A completada y verificada → abrir PR a `main`.
 
@@ -167,7 +167,7 @@
 > [!NOTE]
 > Depende de que las Fases B y C estén completas.
 
-**Objetivo**: Implementar las cargas sintéticas `ruta_cazador` e `invalidacion` con sus alternativas descartadas, medir las cargas de regresión `ciclo`, `agenda` e `historial` y documentar los resultados tal como salgan.
+**Objetivo**: Implementar las cargas sintéticas `ruta_cazador` e `invalidacion` con sus alternativas descartadas, la carga `ciclo_referencia` sobre cripta-06, medir las cargas de regresión `ciclo`, `agenda` e `historial` y documentar los resultados tal como salgan.
 
 ### D.1 — Cargas nuevas
 
@@ -175,17 +175,22 @@
 
   Comando exacto: `py -m cripta --bench --solo ruta_cazador`
 
+- [ ] T036b [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ciclo_referencia`, que carga cripta-06 desde `fixtures/` con `ClienteOffline` (sin red ni vista), arma la partida y mide el ciclo de eventos completo entre dos decisiones del jugador con decenas de cazadores activos persiguiendo al mismo objetivo; si cripta-06 no trae suficientes cazadores, la carga activa más instancias de cazador con una semilla fija (`random.Random(42)`) y reporta cuántas agregó; ninguna cifra de cripta-06 se escribe en el código, todo sale de los fixtures (FR-TER-020)
+
+  Comando exacto: `py -m cripta --bench --solo ciclo_referencia`
+
 - [ ] T037 [US2] [US3] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `invalidacion` con 20 cazadores durante 100 ticks en dos escenarios, puertas estables y 5 puertas con cierre automático cada 15 ticks; implementar también la alternativa descartada (recalcular siempre en cada turno de cazador) (FR-TER-020)
 
   Comando exacto: `py -m cripta --bench --solo invalidacion`
 
-- [ ] T038 [US2] Modificar `cripta/servicios/servicio_bench.py` (Modificado): habilitar las cargas `ruta_cazador` e `invalidacion` y reportar las métricas del plan (tiempo por ciclo, número de búsquedas, razón individual/compartido) (FR-TER-020)
+- [ ] T038 [US2] Modificar `cripta/servicios/servicio_bench.py` (Modificado): habilitar las cargas `ruta_cazador`, `invalidacion` y `ciclo_referencia` y reportar las métricas del plan (tiempo por ciclo, número de búsquedas, razón individual/compartido) (FR-TER-020)
 
 ### D.2 — Cargas de regresión de la Parte I
 
-- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con el resultado de `ruta_cazador` para `H=30` (mientras no se publique la cripta de referencia de P2 §6.1; cuando exista, repetir con ella), comparándolo con el límite de 20 ms, y anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
+- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con la carga `ciclo_referencia` (cripta-06, 300 salas, desde `fixtures/`, con decenas de cazadores activos), comparándola con el límite de 20 ms. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar alternativas. Anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
 
   ```powershell
+  py -m cripta --bench --solo ciclo_referencia
   py -m cripta --bench --solo ciclo
   py -m cripta --bench --solo agenda
   py -m cripta --bench --solo historial
@@ -214,13 +219,13 @@
   ```
   Resultado esperado: sin importaciones prohibidas; cada `sorted(` o `.sort(` se revisa a mano y solo se permite fuera de los ordenamientos evaluados. Los usos de `dict` y `set` como índice o caché se revisan a mano en el Pull Request, porque la búsqueda de texto no distingue los usos permitidos.
 
-- [ ] T042 Reproducir la partida de ejemplo con `--replay` (Principio VIII):
+- [ ] T042 Grabar ejemplos nuevos que muestren terreno con costo y cazadores (con los fixtures regenerados en T017), reemplazar los tres de `docs/ejemplos/` (que guardan el catálogo anterior y ya no se reproducen), actualizar la tabla de bitácoras de ejemplo del `README.md` y reproducir cada uno con `--replay` (Principio VIII):
 
-  Comando exacto: `py -m cripta --offline --replay docs/ejemplos/partida_cripta-02.log`
+  Comando exacto: `py -m cripta --offline --replay docs/ejemplos/partida_cripta-06.log`
 
-  Resultado esperado: código de salida `0`, usando los fixtures originales respaldados en T016 si se regeneraron en T017.
+  Resultado esperado: código de salida `0` para cada ejemplo nuevo, sin ejemplos con el catálogo be68d322d2f5.
 
-- [ ] T043 Ampliar `DECISIONES.md` (raíz) con la sección de la capacidad 001: problema, alternativas y razón de descarte, decisión, complejidad, resultados de `--bench` de T036, T037 y T039 con el comando exacto, límites conocidos y enlaces a `spec.md` y `plan.md` (Principio VI)
+- [ ] T043 Ampliar `DECISIONES.md` (raíz) con la sección de la capacidad 001: problema, alternativas y razón de descarte, decisión, complejidad, resultados de `--bench` de T036, T036b, T037 y T039 con el comando exacto, límites conocidos y enlaces a `spec.md` y `plan.md` (Principio VI)
 - [ ] T044 Registrar en `PROMPTS_LLM.md` las invocaciones de la implementación (por ejemplo `/speckit-implement`), con fecha, herramienta, prompt textual y para qué se usó (Flujo de Trabajo de la Constitución)
 
 ---
@@ -253,7 +258,7 @@ Fase A ──► Fase B ──► Fase C ──► Fase D ──► Fase E
 - Fase A: T001 → T001b → T002–T006 y T006b (pruebas en paralelo) → T007, T008, T009, T014, T015 y T021b (en paralelo) → T010 → T011 y T012 → T013 → T016 → T017
 - Fase B: T018 → T019, T019b, T020 (pruebas) → T021 → T022 → T023 → T024 → T025 → T025b
 - Fase C: T026, T026b, T027, T028, T028b y T035 (pruebas en paralelo) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
-- Fase D: T036 → T037 (mismo archivo) → T038 → T039
+- Fase D: T036 → T036b → T037 (mismo archivo) → T038 → T039
 - Fase E: T040–T041 (en paralelo) → T042 → T043 → T044
 
 ### Oportunidades de paralelización

@@ -29,15 +29,18 @@ class SalaDTO:
         return SalaDTO(
             id=datos["id"],
             nombre=datos["nombre"],
-            norte=_leer_salida(salidas, "N"),
-            sur=_leer_salida(salidas, "S"),
-            este=_leer_salida(salidas, "E"),
-            oeste=_leer_salida(salidas, "O"),
+            norte=_leer_salida(datos["id"], salidas, "N"),
+            sur=_leer_salida(datos["id"], salidas, "S"),
+            este=_leer_salida(datos["id"], salidas, "E"),
+            oeste=_leer_salida(datos["id"], salidas, "O"),
         )
 
 
-def _leer_salida(salidas, direccion):
+def _leer_salida(sala_id, salidas, direccion):
     # Si esa dirección no viene en el JSON, la sala no tiene salida por ahí
     if direccion not in salidas:
         return None
-    return SalidaDTO.desde_json(salidas[direccion])
+    try:
+        return SalidaDTO.desde_json(salidas[direccion])
+    except ValueError as error:
+        raise ValueError(f"sala {sala_id}, dirección {direccion}: {error}") from error

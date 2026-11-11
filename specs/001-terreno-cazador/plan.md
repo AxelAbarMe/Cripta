@@ -332,7 +332,7 @@ tests/
 
 ### 3. Mediciones de Regresión de la Parte I
 - **Comandos**:
-  - `py -m cripta --bench --solo ciclo` (regresión de la Parte I, sin cazadores: verificar que sigue por debajo de $20\text{ ms}$ con los costos variables). FR-TER-020 con cazadores se verifica con `ruta_cazador` (`H=30`) mientras no se publique la cripta de referencia de P2 §6.1; cuando exista, se repite la medición con ella.
+  - `py -m cripta --bench --solo ciclo` (regresión de la Parte I, sin cazadores: verificar que sigue por debajo de $20\text{ ms}$ con los costos variables). FR-TER-020 se verifica con cripta-06 (300 salas, P2 §6.1) cargada desde `fixtures/`, con decenas de cazadores activos. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar alternativas.
   - `py -m cripta --bench --solo agenda` (verificar el rendimiento de `HeapMinimo` con intervalos variables y reprogramaciones frecuentes).
   - `py -m cripta --bench --solo historial` (verificar el costo de registrar y revertir acciones cuando hay muchos cazadores moviéndose).
 
@@ -349,7 +349,7 @@ tests/
 4. **Simetría de Costos**:
    - El diseño usa que $\text{dist}(u, S_J) = \text{dist}(S_J, u)$ porque FR-TER-002 establece costos simétricos. `CriptaMapa` la garantiza resolviendo el costo desde ambos lados de la conexión y rechazando como dato inválido dos costos distintos. Con los fixtures regenerados se comprueba en qué lado declara el servicio el costo.
 5. **Regeneración de Fixtures y Reproducción de Registros Existentes**:
-   - `scripts/generar_fixtures.py` descarga datos del servicio y sobrescribe `fixtures/`. Si cambia la versión de una cripta, los registros de ejemplo en `docs/ejemplos/` que guardan esa versión podrían dejar de ser reproducibles con `--replay` (se reportaría incompatibilidad). Antes de regenerar se respaldan las fixtures actuales y se revisa el efecto sobre `docs/ejemplos/`.
+   - `scripts/generar_fixtures.py` descarga datos del servicio y sobrescribe `fixtures/`. El servidor ya cambió: cripta-01 no existe, hay cripta-05 y cripta-06, y el catálogo pasó de be68d322d2f5 a 4b9e75a42be5. Por eso los tres registros de `docs/ejemplos/` (que guardan el catálogo anterior) ya no se reproducen con `--replay` y se reemplazan en la Fase E por ejemplos nuevos de terreno y cazador. El respaldo de los fixtures anteriores es el commit e6d52ac. cripta-01, el catálogo anterior y `criptas.json` se mueven a `tests/datos/` como datos de prueba congelados, y las 4 pruebas que los usan leen de allí.
 
 ---
 

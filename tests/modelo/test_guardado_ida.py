@@ -1,4 +1,4 @@
-"""Pruebas de a_estado_guardado (J9, etapa 1: de la partida viva a EstadoPartida), con la cripta real de fixtures/.
+"""Pruebas de a_estado_guardado (J9, etapa 1: de la partida viva a EstadoPartida), con la cripta congelada de tests/datos/.
 
 Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.modelo.test_guardado_ida -v
 """
@@ -22,7 +22,7 @@ VERSION_CATALOGO = "cat-prueba"
 
 
 def crear_partida(semilla=5):
-    cliente = ClienteOffline("fixtures")
+    cliente = ClienteOffline("tests/datos")
     general = cliente.obtener_general("cripta-01")
     mapa, catalogo = CriptaMapa(), ServicioCatalogo(cliente)
     precarga = ServicioPrecarga(cliente, "cripta-01", mapa, servicio_catalogo=catalogo, asincrono=False)

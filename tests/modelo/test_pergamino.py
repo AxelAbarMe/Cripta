@@ -1,4 +1,4 @@
-"""Pruebas del retroceso con el pergamino (J8b), con la cripta real de fixtures/.
+"""Pruebas del retroceso con el pergamino (J8b), con la cripta congelada de tests/datos/.
 
 Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.modelo.test_pergamino -v
 """
@@ -17,7 +17,7 @@ PERGAMINO = N(id="itm_pergamino", clase="pergamino_retroceso", nombre="Pergamino
 
 
 def crear_partida(pergaminos=1, semilla=5, suelo_pergamino=False):
-    cliente = ClienteOffline("fixtures")
+    cliente = ClienteOffline("tests/datos")
     general = cliente.obtener_general("cripta-01")
     mapa, catalogo = CriptaMapa(), ServicioCatalogo(cliente)
     precarga = ServicioPrecarga(cliente, "cripta-01", mapa, servicio_catalogo=catalogo, asincrono=False)

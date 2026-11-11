@@ -40,3 +40,6 @@ class ClienteGeneral:
 
     def obtener_version_catalogo(self):
         return self._llamar(self._cliente.obtener_version_catalogo)
+
+    def obtener_llaves(self, id_cripta):
+        return self._llamar(self._cliente.obtener_llaves, id_cripta)

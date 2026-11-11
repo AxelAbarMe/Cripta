@@ -10,11 +10,11 @@
 
 La capacidad de **Verificación de Resolubilidad** introduce un mecanismo formal de análisis estático previo al inicio de una partida para determinar deterministamente si una cripta puede completarse bajo las reglas del juego. Una cripta es resoluble si y solo si el jugador, partiendo de la `sala_inicial`, puede obtener la `llave_salida` y acceder a la `sala_salida` atravesando una puerta que requiera explícitamente dicha llave (FR-RES-001).
 
-Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta publicada más grande (SC-001) con un costo total aproximadamente lineal en salas, salidas y llaves ($O(V + E + K)$, SC-002) y en pleno cumplimiento de las prohibiciones constitucionales (`heapq`, `bisect`, `collections`, `networkx`, `set`, `dict` como índice/tabla y `list.sort()`/`sorted()`), el diseño adopta:
+Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta publicada más grande (SC-001) con un costo total aproximadamente lineal en salas, salidas y llaves ($O(V + E + K \log K)$, SC-002) y en pleno cumplimiento de las prohibiciones constitucionales (`heapq`, `bisect`, `collections`, `networkx`, `set`, `dict` como índice/tabla y `list.sort()`/`sorted()`), el diseño adopta:
 1. **Recorrido Incremental Único**: Un algoritmo de avance integrado sobre el grafo mediante una `Cola` FIFO propia (`cripta/estructuras/cola.py`). La adquisición de una llave desbloquea y encola directamente las puertas que estaban esperando por ella sin retroceder ni reiniciar el recorrido desde la sala inicial (FR-RES-018).
 2. **Pre-Indexación y Tablas Contiguas Directas sin `dict` ni `set`**: Un catálogo compacto de identificadores de llaves ordenado con ordenamiento propio (`catalogo_llaves: list[str]`), resolución `id_llave -> indice_entero` mediante búsqueda binaria manual en $O(\log K)$ (sin `bisect`), y arreglos planos contiguos `list` indexados por entero en $O(1)$ para posesión de llaves, puertas pendientes, llaves por sala y salas visitadas.
 3. **Detección Determinista de Ciclos de Dependencia por DFS Tricolor**: Construcción en tiempo lineal de un grafo reducido de dependencias de llaves $G_{dep} = (K_{no}, E_{dep})$ mediante flood-fill desde la frontera bloqueada sobre las salas inalcanzables ($O(V_{unreach} + E_{unreach})$), seguido de una búsqueda en profundidad (DFS) con estados tricolores (blanco, gris, negro) y pila ancestral. Aísla de forma determinista exactamente un ciclo concreto representativo por cada grupo de llaves que se bloquean entre sí, normalizado al menor identificador léxico de llave (FR-RES-012).
-4. **Desempate Determinista Estricto**: Resolución causal en rondas donde las llaves alcanzables simultáneas se activan priorizando el menor identificador léxico mediante el selector propio `ordenar_auto` (`cripta/estructuras/ordenamiento_selector.py`) o `merge_sort` propio (FR-RES-008, SC-003). Las puertas de la frontera y los ciclos se ordenan deterministamente bajo el mismo criterio.
+4. **Desempate Determinista Estricto**: Resolución causal en rondas donde las llaves alcanzables simultáneas se activan priorizando el menor identificador léxico mediante `HeapMinimo` (`cripta/estructuras/heap_min.py`, Parte I) cargado con los índices enteros del catálogo ordenado, de modo que el menor índice es el menor identificador (FR-RES-008, SC-003). Las puertas de la frontera y los ciclos se ordenan deterministamente bajo el mismo criterio.
 5. **Aislamiento Arquitectónico MVC**: Un modelo de dominio puro `VerificadorResolubilidad` (`cripta/modelo/resolubilidad.py`) desacoplado de la red y el disco, orquestado por `ServicioResolubilidad` (`cripta/servicios/servicio_resolubilidad.py`). La opción CLI `--verificar <cripta>` y la opción `--bench` se ejecutan sin instanciar la vista (SC-005, Principio III). Al iniciar una partida interactiva, el reporte se muestra a través de `VistaConsola`, impidiendo el inicio sin `--forzar` ante criptas no resolubles (FR-RES-014, FR-RES-015).
 6. **Medición Comparativa en `--bench`**: Implementación de la carga `resolubilidad` que compara empíricamente el recorrido incremental contra la alternativa ingenua descartada de repetir el recorrido completo por llave sobre criptas sintéticas con cadenas largas de llaves encadenadas, reproducibles por semilla (FR-RES-020, SC-007).
 7. **Reutilización de Contratos de la Capacidad 001**: Aprovechamiento directo de `obtener_llaves`, `LlaveUbicacionDTO`, la persistencia versionada en `CacheDisco`, `ClienteFalso` y `CriptaMapa` (validación de costos contradictorios con `CriptaDatosInvalidosError` y resolución bilateral de puertas y llaves).
@@ -36,8 +36,8 @@ Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta p
 **Tipo de Proyecto**: Juego de mazmorra por turnos y simulador de eventos discretos en arquitectura MVC desacoplada con modo `--offline` y verificación por línea de comandos.
 
 **Objetivos de Rendimiento**:
-- Tiempo de verificación $< 200\text{ ms}$ en la cripta publicada más grande (`cripta-04`, 50 salas) en el equipo local de referencia (SC-001).
-- Costo total de tiempo aproximadamente lineal en función de $V$ (salas), $E$ (salidas) y $K$ (llaves): $O(V + E + K)$ (SC-002).
+- Tiempo de verificación $< 200\text{ ms}$ en la cripta publicada más grande (hoy `cripta-06`, 300 salas) en el equipo local de referencia (SC-001).
+- Costo total de tiempo aproximadamente lineal en función de $V$ (salas), $E$ (salidas) y $K$ (llaves): $O(V + E + K \log K)$ (SC-002).
 - Sobrecosto marginal en memoria lineal $O(V + K)$ sobre listas contiguas indexadas por entero.
 
 **Restricciones Constitucionales**:
@@ -62,8 +62,8 @@ Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta p
 | **II. Determinismo** | **PASÓ** | Desempate por menor identificador léxico en orden de llaves obtenibles (FR-RES-008), tupla de orden ascendente en puertas de frontera (`sala_origen`, `direccion`, `llave`), y normalización de ciclos iniciados en la llave menor y ordenados entre grupos (SC-003). |
 | **III. MVC y adaptadores** | **PASÓ** | `VerificadorResolubilidad` es un módulo puro en `cripta/modelo/resolubilidad.py` sin llamadas HTTP, sin lectura de disco y sin vista. `--verificar` imprime directamente a `sys.stdout` sin instanciar `VistaConsola` (SC-005). La vista interactiva solo se instancia en el controlador de juego. |
 | **IV. Sin datos de cripta concreta** | **PASÓ** | Ningún número de sala, nombre de llave ni conexión está fijo en el código. Toda la información se lee dinámicamente del esqueleto y del endpoint `/llaves` o fixtures offline. |
-| **V. Presupuesto de red** | **PASÓ** | La consulta `GET /criptas/{id}/llaves` descuenta una solicitud de `ContadorSolicitudes`, soporta reintentos por 429 y se persiste en `CacheDisco`. Si el presupuesto se agota, aborta informando el error sin reporte parcial (FR-RES-023, SC-008). |
-| **VI. Rendimiento con --bench** | **PASÓ** | Se planifica e implementa la carga sintética `resolubilidad` en `cripta/bench/cargas_bench.py`, contrastando el recorrido incremental frente a la alternativa ingenua reiniciada sobre criptas sintéticas con cadenas de llaves dependientes de `SEMILLA_BENCH` (FR-RES-020, SC-007). Cota $< 200\text{ ms}$ verificada sobre `cripta-04` (SC-001). |
+| **V. Presupuesto de red** | **PASÓ** | La consulta `GET /v1/criptas/{dungeon_id}/llaves` descuenta una solicitud de `ContadorSolicitudes`, soporta reintentos por 429 y se persiste en `CacheDisco`. Si el presupuesto se agota, aborta informando el error sin reporte parcial (FR-RES-023, SC-008). |
+| **VI. Rendimiento con --bench** | **PASÓ** | Se planifica e implementa la carga sintética `resolubilidad` en `cripta/bench/cargas_bench.py`, contrastando el recorrido incremental frente a la alternativa ingenua reiniciada sobre criptas sintéticas con cadenas de llaves dependientes de `SEMILLA_BENCH` (FR-RES-020, SC-007). Cota $< 200\text{ ms}$ a medir sobre la cripta publicada más grande (SC-001). |
 | **VII. Especificación antes que código** | **PASÓ** | La especificación formal `spec.md` fue aprobada previamente sin mención de clases ni estructuras. Todas las tareas de diseño y código trazan a requisitos `FR-RES-NNN`. |
 | **VIII. Compatibilidad con Parte I** | **PASÓ** | Las 222 pruebas preexistentes permanecen intactas. `CriptaMapa` reutiliza la validación de costos contradictorios y la unificación bilateral de puertas cerradas. |
 
@@ -159,7 +159,7 @@ tests/
 ### 1.4 Desempate Determinista en Ordenamiento
 - **Problema**: Desempatar llaves obtenibles disponibles simultáneamente, ordenar puertas de la frontera bloqueada y ordenar ciclos de dependencia por menor identificador (FR-RES-008, SC-003).
 - **Operaciones Reales**:
-  - Ordenamiento de llaves candidatas disponibles en cada ronda: $O(k_r \log k_r)$ con $k_r \le K$.
+  - Inserción y extracción de llaves candidatas en `HeapMinimo`: $O(\log K)$ por llave.
   - Ordenamiento de puertas de la frontera bloqueada: $O(E_{frontera} \log E_{frontera})$.
   - Ordenamiento de ciclos representativos: $O(C \log C)$ con $C \le K$.
 - **Frecuencia**: 1 vez durante o al cierre del análisis.
@@ -215,17 +215,20 @@ tests/
    - Búsqueda binaria manual: Función iterativa propia de 10 líneas que devuelve el índice entero $i \in [0, K-1]$ en $O(\log K)$ sin usar `bisect`.
    - Tablas contiguas `list` indexadas por entero: `llave_obtenida` ($O(1)$), `puertas_pendientes` ($O(1)$), `llaves_en_sala` ($O(1)$), y `visitada` ($O(1)$).
 3. **Grafo Reducido de Dependencias y DFS Tricolor**:
-   - Si no es resoluble, se genera $G_{dep} = (K_{no}, E_{dep})$ mediante flood-fill desde las puertas de la frontera bloqueada sobre $V \setminus R$ en $O(V_{unreach} + E_{unreach})$.
+   - Si no es resoluble, un único pase $O(V + E)$ etiqueta las salas inalcanzables en bloques conectados por salidas abiertas (arreglo `bloque_de_sala`), sin visitar ninguna sala más de una vez. Cada puerta cerrada que entra a un bloque aporta una arista bloque -> llave exigida, y cada llave no obtenida aporta una arista llave -> bloque donde está. $G_{dep}$ tiene a lo sumo $K + E$ aristas y el DFS tricolor corre sobre él en tiempo lineal. El ciclo se informa solo con llaves.
    - Se ejecuta DFS con estados tricolores (0=blanco, 1=gris, 2=negro) iterando sobre las llaves en orden alfabético ascendente. Una arista hacia un nodo gris extrae el ciclo desde la pila ancestral.
    - Normalización: El ciclo se rota para iniciar en su llave léxicamente menor y se marcan las llaves del componente como agrupadas para emitir exactamente un ciclo representativo por grupo.
 4. **Desempate Determinista por Menor Identificador**:
-   - En cada ronda de activación, las llaves alcanzables disponibles se ordenan con `ordenar_auto` (`cripta/estructuras/ordenamiento_selector.py`) o `merge_sort` propio.
+   - Las llaves alcanzables disponibles entran una sola vez a un `HeapMinimo` (`cripta/estructuras/heap_min.py`, Parte I) como índices enteros del catálogo ordenado. Al vaciarse la cola de salas se extrae el mínimo, que es la llave de menor identificador, en $O(\log K)$. Se descartó reordenar la lista de candidatas en cada ronda: costaría hasta $O(K^2 \log K)$.
    - Las puertas de la frontera bloqueada y los ciclos se ordenan mediante ordenamiento propio aplicando comparadores en tuplas.
 5. **Servicio y CLI Desacoplados**:
    - `VerificadorResolubilidad` (modelo puro en `cripta/modelo/resolubilidad.py`) devuelve `ResultadoResolubilidad`.
    - `ServicioResolubilidad` (`cripta/servicios/servicio_resolubilidad.py`) gestiona `ClienteCripta`, `CacheDisco` y `ContadorSolicitudes`.
    - `__main__.py` despacha `--verificar` imprimiendo el reporte por `sys.stdout` sin vista.
    - `ControladorCripta` gestiona `--forzar` e interactúa con `VistaConsola.mostrar_reporte_resolubilidad()`.
+6. **Condición de victoria (FR-RES-001)**:
+   - Se mantiene la bandera `entro_por_llave_salida`. Se activa cuando una sala alcanzada tiene una puerta cerrada que exige `llave_salida`, esa llave ya está obtenida y el destino de la puerta es `sala_salida`. Se evalúa al examinar la puerta (si la llave ya se posee) y al drenar `puertas_pendientes` (si la llave llega después).
+   - La cripta es resoluble si `llave_salida` fue obtenida y la bandera está activa. Entrar a `sala_salida` por una puerta abierta o por una puerta de otra llave no activa la bandera.
 
 ### 3.2 Complejidad de las Operaciones Más Frecuentes
 
@@ -239,7 +242,7 @@ tests/
 | Registro y liberación de puertas pendientes | $O(E_p)$ puertas | `list[list[tuple]]` contiguo | $O(1)$ inserción / drenado | $O(E_p)$ |
 | Flood-fill sobre salas inalcanzables | 1 vez (solo si no es resoluble) | `Cola` / arreglo `visitada_unreach` | $O(V_{unreach} + E_{unreach})$ | $O(V)$ |
 | Detección de ciclos por DFS tricolor | 1 vez (solo si no es resoluble) | `list[int]` tricolor + pila contigua | $O(K_{no} + E_{dep})$ | $O(K)$ |
-| **Costo Total del Recorrido Incremental** | **1 vez por verificación** | **Estructuras integradas** | **$O(V + E + K \log K)$** | **$O(V + E + K)$** |
+| **Costo Total del Recorrido Incremental** | **1 vez por verificación** | **Estructuras integradas** | **$O(V + E + K \log K)$** | **$O(V + E + K \log K)$** |
 
 > Como $K \le 100$ en criptas reales, $K \log_2 K \le 700$ operaciones elementales, por lo que el costo total es efectivamente lineal en $V$ y $E$, cumpliendo holgadamente el criterio SC-002 y la cota de 200 ms (SC-001).
 
@@ -278,7 +281,7 @@ tests/
 ## 5. Mediciones `--bench` Previstas (Incluida la Alternativa Descartada)
 
 ### 5.1 Carga Sintética `resolubilidad`: Recorrido Incremental vs Recorrido Ingenuo Reiniciado
-- **Objetivo**: Demostrar empíricamente que el recorrido incremental único ($O(V + E + K)$) supera ampliamente a la alternativa ingenua descartada de repetir el recorrido completo por cada llave descubierta ($O(K \cdot (V + E))$) sobre criptas sintéticas con muchas llaves encadenadas (FR-RES-020, SC-007).
+- **Objetivo**: Demostrar empíricamente que el recorrido incremental único ($O(V + E + K \log K)$) supera ampliamente a la alternativa ingenua descartada de repetir el recorrido completo por cada llave descubierta ($O(K \cdot (V + E))$) sobre criptas sintéticas con muchas llaves encadenadas (FR-RES-020, SC-007).
 - **Diseño de la Carga Sintética**:
   - Función generadora determinista regida por `SEMILLA_BENCH = 20260928`.
   - Construye una cripta de $K = 40$ llaves encadenadas en serie a través de $V = 800$ salas ($20$ salas por segmento).
@@ -291,23 +294,23 @@ tests/
   ```powershell
   python -m cripta --bench --solo resolubilidad
   ```
-- **Salida Prevista**:
+- **Formato de salida (los valores se obtienen al medir)**:   [2 coincidencias]
   ```text
-  === RESOLUBILIDAD  (0.08 s) ===
-    40 llaves encadenadas, 800 salas: recorrido incremental: 2.150 ms
-        -> recorrido_ingenuo_reiniciado es 18.6x más lento que recorrido_incremental
+  === RESOLUBILIDAD  (X.XX s) ===
+    40 llaves encadenadas, 800 salas: recorrido incremental: X.XXX ms
+        -> recorrido_ingenuo_reiniciado es N.Nx más lento que recorrido_incremental
   ```
 
 ### 5.2 Medición de la Cota de 200 ms en la Cripta Publicada más Grande
-- **Objetivo**: Verificar que la verificación sobre la cripta publicada más grande (`cripta-04`, 50 salas) se ejecute en un tiempo estrictamente inferior a 200 ms (SC-001).
+- **Objetivo**: Verificar que la verificación sobre la cripta publicada más grande (hoy `cripta-06`, 300 salas; la carga la elige por el mayor total de salas del listado, sin fijar su id en el código, Principio IV) se ejecute en un tiempo estrictamente inferior a 200 ms (SC-001).
 - **Comando Exacto para Reproducir**:
   ```powershell
   python -m cripta --bench --solo resolubilidad_cota
   ```
-- **Salida Prevista**:
+- **Formato de salida (los valores se obtienen al medir)**:   [2 coincidencias]
   ```text
-  === RESOLUBILIDAD_COTA  (0.01 s) ===
-    verificación cripta-04 (50 salas): 1.120 ms  (límite 200.0 ms: CUMPLE)
+  === RESOLUBILIDAD_COTA  (X.XX s) ===
+    verificación cripta-06 (300 salas): X.XXX ms  (límite 200.0 ms: CUMPLE)
   ```
 
 ---
@@ -317,7 +320,7 @@ tests/
 1. **Escalamiento con Identificadores de Sala Dispersos**:
    - El arreglo `visitada = [False] * (max_sala_id + 1)` y `llaves_en_sala` asumen que `max_sala_id` es proporcional al número de salas $V$. Si una cripta maliciosa o patológica utilizara identificadores astronómicos (p. ej. `sala_id = 10_000_000` con solo 10 salas), la asignación de memoria crecería innecesariamente. Dado que el catálogo del API numera las salas de forma correlativa desde 1 hasta $V$, esta decisión es óptima en tiempo y espacio para las escalas de diseño del curso ($V \le 1\,000$).
 2. **Escala del Catálogo de Llaves**:
-   - La búsqueda binaria manual en `catalogo_llaves` es $O(\log K)$. Para los valores normales de una mazmorra ($K \le 50$), $\log_2 K \le 6$, por lo que la búsqueda toma $< 100\text{ ns}$. Si una cripta presentara más de $100\,000$ llaves únicas, el pre-ordenamiento inicial $O(K \log K)$ tomaría decenas de milisegundos, aunque seguiría estando dentro de la cota global.
+   - La búsqueda binaria manual en `catalogo_llaves` es $O(\log K)$. Para los valores normales de una mazmorra ($K \le 50$), $\log_2 K \le 6$, es decir, a lo sumo 6 comparaciones por búsqueda. Si una cripta presentara más de $100\,000$ llaves únicas, el pre-ordenamiento inicial $O(K \log K)$ tendría un costo que solo `--bench` puede confirmar.
 3. **Representatividad de Ciclos**:
    - Por mandato expreso de FR-RES-012 y la Aclaración 2026-11-11, el algoritmo reporta exactamente *un ciclo concreto representativo por cada grupo de llaves interdependientes* y no todos los ciclos combinatorios posibles. En un laberinto donde un grupo de 4 llaves admita 6 ciclos elementales entrelazados, el reporte presentará uno solo de ellos (el que comience con la llave léxicamente menor del grupo), lo cual satisface la especificación pero no enumera exhaustivamente las dependencias redundantes.
 
@@ -327,10 +330,10 @@ tests/
 
 1. **Uso de `VectorOrdenado` para Búsqueda de Salas (`CriptaMapa._salas`)**:
    - En la Parte I, `CriptaMapa` almacena las salas en un `VectorOrdenado` donde `obtener(sala_id)` realiza búsqueda binaria en $O(\log V)$.
-   - *Evaluación bajo la carga nueva*: Durante la verificación de resolubilidad, se examinan las salidas de las salas transitables $O(E)$ veces. Para $V = 1\,000$ salas y $E \le 4\,000$ salidas, realizar consultas a través de `CriptaMapa` implicaría $4\,000 \times \log_2(1\,000) \approx 40\,000$ comparaciones, lo que toma $\approx 1.5\text{ ms}$, holgadamente por debajo de los 200 ms.
+   - *Evaluación bajo la carga nueva*: Durante la verificación de resolubilidad, se examinan las salidas de las salas transitables $O(E)$ veces. Para $V = 1\,000$ salas y $E \le 4\,000$ salidas, realizar consultas a través de `CriptaMapa` implicaría $4\,000 \times \log_2(1\,000) \approx 40\,000$ comparaciones, un costo que se confirmará con la medición de la cota (`resolubilidad_cota`).
    - *Decisión*: Se mantiene `CriptaMapa` intacto. No obstante, para el estado de exploración de resolubilidad (salas visitadas y llaves en sala), **NO se utiliza `VectorOrdenado`**, sino listas contiguas indexadas por entero en $O(1)$, evitando duplicar búsquedas binarias.
 2. **Presupuesto de Solicitudes y Endpoint `/llaves`**:
-   - En la Parte I, los presupuestos de solicitudes de las 4 criptas de prueba (`cripta-01` a `-04`: 9, 23, 42, 52) fueron calibrados estrictamente para descargar generales, versión de catálogo, páginas de esqueleto y lotes de contenido.
+   - En la Parte I, cada cripta trae su propio `presupuesto_solicitudes` (en su `general.json`), que cuenta los datos generales, las páginas del esqueleto y el contenido de las salas.
    - *Impacto*: Agregar una solicitud remota obligatoria a `/llaves` consume 1 unidad del presupuesto. Si se ejecutara en red viva sin caché, podría agotar el presupuesto en partidas que apuren el límite.
    - *Mitigación y confirmación*: La persistencia en `CacheDisco` (`cripta.<id>.<ver>.llaves.json`) garantiza que en ejecuciones sucesivas, en modo `--offline` y durante `--bench`, la consulta de llaves se resuelva en disco con costo 0 contra el presupuesto, respetando el Principio V.
 
@@ -363,5 +366,5 @@ tests/
 | **FR-RES-021**: Costos contradictorios abortan con `CriptaDatosInvalidosError`| `CriptaMapa._validar_costos` | `test_costos_contradictorios_aborta_sin_reporte`| N/A |
 | **FR-RES-022**: Puertas cerradas sin llave y llaves ausentes en consulta | `VerificadorResolubilidad` | `test_puerta_sin_llave_y_llave_sin_ubicacion` | N/A |
 | **FR-RES-023**: Presupuesto agotado aborta con `CriptaLimiteError` | `ServicioResolubilidad` | `test_presupuesto_agotado_sin_reporte_parcial` (SC-008) | N/A |
-| **SC-001**: Verificación $< 200\text{ ms}$ en la mayor cripta publicada | `VerificadorResolubilidad` | `test_cota_rendimiento_cripta_04` | `bench_resolubilidad_cota` |
+| **SC-001**: Verificación $< 200\text{ ms}$ en la mayor cripta publicada | `VerificadorResolubilidad` | `test_cota_rendimiento_cripta_mayor` | `bench_resolubilidad_cota` |
 | **SC-002**: Costo lineal en salas, salidas y llaves | `VerificadorResolubilidad` | `test_escalabilidad_lineal_sintetica` | `bench_resolubilidad` |

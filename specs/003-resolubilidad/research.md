@@ -37,7 +37,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
   - Cada sala entra a la cola de exploración a lo sumo una vez ($O(V)$).
   - Cada salida se evalúa a lo sumo una vez desde cada extremo ($O(E)$).
   - Cada llave se activa a lo sumo una vez ($O(K)$).
-  - Complejidad temporal estricta de $O(V + E + K)$, cumpliendo el objetivo de costo lineal (SC-002) y la ejecución holgadamente inferior a 200 ms (SC-001).
+  - Complejidad temporal estricta de $O(V + E + K \log K)$, cumpliendo el objetivo de costo lineal (SC-002) y la ejecución holgadamente inferior a 200 ms (SC-001).
 
 ---
 
@@ -95,10 +95,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
 - **Decisión**:
   1. **Construcción del Grafo de Dependencias entre Llaves Inalcanzables $G_{dep} = (K_{no}, E_{dep})$**:
      - Al concluir el recorrido incremental, se identifican las salas no alcanzadas $V \setminus R$.
-     - Desde cada puerta de la frontera bloqueada que exige una llave no obtenida $K_{frontera}$, se realiza una propagación (flood-fill) por las salas inalcanzables atravesando salidas abiertas o puertas cuyas llaves ya habían sido adquiridas en $R$.
-     - Toda llave no obtenida $K_{destino}$ ubicada en una sala alcanzada por esta propagación genera una arista dirigida de dependencia: $K_{destino} \xrightarrow{\text{requiere}} K_{frontera}$.
-     - Si la propagación encuentra otra puerta cerrada inalcanzable exigiendo $K_{intermedia}$, se registra la dependencia $K_{intermedia} \xrightarrow{\text{requiere}} K_{frontera}$ y se continúa la propagación desde dicha puerta.
-     - Esta propagación visita cada sala y salida inalcanzable a lo sumo una vez, con costo $O(V_{unreach} + E_{unreach}) \le O(V + E)$.
+     - Un único pase O(V + E) etiqueta las salas inalcanzables en bloques conectados por salidas abiertas. Cada puerta cerrada que entra a un bloque aporta una arista bloque -> llave exigida, y cada llave no obtenida aporta una arista llave -> bloque donde está. El grafo tiene a lo sumo K + E aristas y ninguna sala se visita más de una vez.
   2. **Detección Tricolor de Ciclos Representativos**:
      - Sobre el grafo de llaves $G_{dep}$, se ejecuta una búsqueda en profundidad utilizando un arreglo de estados `color: list[int]` de tamaño $K_{no}$ con tres valores:
        - `0 (BLANCO)`: nodo no visitado.
@@ -139,7 +136,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
   1. **Secuencia de Obtención de Llaves**:
      - La exploración incremental avanza expandiendo salas transitables hasta vaciar la cola inicial.
      - Al agotarse la cola, se recopilan todas las llaves disponibles en las salas visitadas que aún no han sido activadas.
-     - Si hay varias llaves disponibles, se ordenan alfabéticamente empleando `ordenar_auto` (`cripta/estructuras/ordenamiento_selector.py`) o `Ordenamiento.merge_sort` (`cripta/estructuras/ordenamientos.py`) de la Parte I.
+     - Si hay varias llaves disponibles, se cargan en un `HeapMinimo` (`cripta/estructuras/heap_min.py`, Parte I) como índices enteros del catálogo ordenado y se extrae el mínimo, que es la llave de menor identificador.
      - Se toma la llave con menor identificador léxico, se incorpora a `llaves_obtenidas_orden`, se activa, se desbloquean sus puertas y se reanuda la exploración. Este proceso en rondas asegura que siempre se obtenga primero la llave de menor identificador entre todas las disponibles causalmente.
   2. **Puertas de la Frontera Bloqueada**:
      - Se representan como tuplas normalizadas `(sala_origen_id, direccion, llave_id_o_vacio, sala_destino_id)`.
@@ -208,7 +205,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
   - La última cámara contiene la `sala_salida` precedida por una puerta que exige `llave_salida`.
 - **Comparación Empírica**:
   - La carga ejecuta la verificación con el método incremental elegido (`VerificadorResolubilidad.verificar`) frente al método ingenuo reiniciado (`VerificadorResolubilidad.verificar_ingenuo_reiniciado`).
-  - Emplea la función estándar `_comparar` de `cargas_bench.py` para reportar textualmente la aceleración lograda (p. ej. `recorrido_ingenuo es 18.4x más lento que recorrido_incremental`).
+  - Emplea la función estándar `_comparar` de `cargas_bench.py` para reportar textualmente la aceleración lograda (p. ej. `recorrido_ingenuo es N.Nx más lento que recorrido_incremental`).
   - Se registra en `CARGAS` bajo el nombre `"resolubilidad"`.
 - **Comando Exacto para Reproducción**:
   ```powershell
@@ -216,9 +213,9 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
   ```
 - **Medición de Cota sobre Cripta Publicada**:
   ```powershell
-  python -m cripta --offline --verificar cripta-04
+  python -m cripta --bench --solo resolubilidad_cota
   ```
-  La ejecución sobre la cripta publicada más grande (`cripta-04`, 50 salas) toma típicamente menos de 5 ms, muy por debajo de la cota máxima estipulada de 200 ms.
+  La carga elige la cripta publicada más grande por su total de salas (hoy `cripta-06`, 300 salas), sin fijar su id en el código, y el tiempo medido se registra tras implementar.
 
 ---
 

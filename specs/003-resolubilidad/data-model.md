@@ -106,6 +106,7 @@ Para dar cumplimiento estricto al Principio I de la Constitución (sin `dict`, s
 | `ubicaciones_por_llave` | `list[list[LlaveUbicacionDTO]]`| Arreglo contiguo de tamaño $K$ con las ubicaciones registradas para la llave $i$ | Acceso directo $O(1)$ |
 | `llaves_en_sala` | `list[list[int]]` | Arreglo contiguo de tamaño `max_sala_id + 1` con los índices enteros de llaves en cada sala | Acceso directo $O(1)$ |
 | `visitada` | `list[bool]` | Arreglo contiguo de tamaño `max_sala_id + 1` de salas alcanzadas | Acceso directo $O(1)$ |
+| `candidatas` | `HeapMinimo` (`cripta/estructuras/heap_min.py`) | Índices enteros de llaves alcanzables aún no activadas; el mínimo es la de menor identificador | Inserción y extracción $O(\log K)$ |
 | `cola` | `Cola` (`cripta/estructuras/cola.py`) | Cola FIFO propia para recorrido incremental | Encolar/desencolar en $O(1)$ |
 
 ---

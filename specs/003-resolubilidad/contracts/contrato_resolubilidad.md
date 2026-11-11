@@ -66,7 +66,7 @@ class VerificadorResolubilidad:
         ...
 
     def verificar(self) -> ResultadoResolubilidad:
-        """Ejecuta el recorrido incremental único en O(V + E + K) y retorna el resultado."""
+        """Ejecuta el recorrido incremental único en O(V + E + K log K) y retorna el resultado."""
         ...
 
     def verificar_ingenuo_reiniciado(self) -> ResultadoResolubilidad:

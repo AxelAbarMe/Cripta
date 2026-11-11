@@ -35,9 +35,9 @@ python -m cripta --offline --verificar cripta-02
 ```
 - **Resultado esperado**: Código de salida `0`. Emite en `sys.stdout` el reporte con `Estado: RESOLUBLE` y la secuencia determinista de llaves obtenibles. No se abre interfaz ni se solicita entrada al usuario.
 
-#### 2.2 Cripta No Resoluble
+#### 2.2 Cripta No Resoluble (se valida con una cripta sintética de prueba)
 ```powershell
-python -m cripta --offline --verificar cripta-no-resoluble
+python -m unittest tests.modelo.test_resolubilidad -k NoResoluble
 ```
 - **Resultado esperado**: Código de salida `0`. Emite el reporte con `Estado: NO RESOLUBLE`, detallando llaves inalcanzables, puertas de la frontera bloqueada y ciclos de dependencia encontrados.
 
@@ -81,7 +81,7 @@ Verifica que el tiempo cronológico en el entorno de referencia sea estrictament
 ```powershell
 python -m cripta --bench --solo resolubilidad_cota
 ```
-- **Resultado esperado**: La verificación de resolubilidad sobre la cripta publicada de mayor tamaño (`cripta-04`, 50 salas) se ejecuta en un tiempo $< 200\text{ ms}$ (típicamente $< 5\text{ ms}$).
+- **Resultado esperado**: La verificación de resolubilidad sobre la cripta publicada de mayor tamaño (hoy `cripta-06`, 300 salas) se ejecuta en un tiempo $< 200\text{ ms}$.
 
 ---
 

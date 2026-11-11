@@ -536,3 +536,42 @@ Al terminar, muestra un resumen breve de lo cambiado.
 **Prompt (resumido):** Se pidió corregir la redacción de la especificación según la revisión hecha con apoyo de Claude y resolver las ambigüedades restantes con un máximo de cuatro preguntas, cada una con una recomendación.
 
 **Para qué se usó:** Dejar la especificación en español, coherente con el contrato de datos de la capacidad de terreno y cazador y sin ambigüedades antes de pasar al plan.
+
+
+### 2026-11-11 — Antigravity CLI 1.5.4 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-plan
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Contexto: ya estoy en la rama 003-resolubilidad. No crees ni cambies de rama y no hagas commit. Redacta todo en español. Solo crea o modifica archivos dentro de specs/003-resolubilidad/. No modifiques spec.md ni checklists/requirements.md y no ejecutes tasks. Puedes LEER (sin modificar) docs/MAPA_CODIGO.md, specs/001-terreno-cazador/ (plan.md, tasks.md y contracts/contrato_datos_p2.md) y el código de cripta/ para citar rutas reales.
+
+Restricciones obligatorias (constitución): implementar a mano las estructuras; PROHIBIDO heapq, bisect, collections, networkx, set y dict como índice, caché o tabla de búsqueda, y list.sort()/sorted() donde aplique. Permitido list como almacenamiento contiguo indexado por posición entera. Reutiliza estructuras de la Parte I cuando sean adecuadas y cita el archivo. Clases, métodos y atributos nuevos en español. Errores de programación heredan de IndexError o ValueError; CriptaError solo para fallos externos. El modelo no importa red ni archivos; --verificar, --replay y --bench no instancian la vista.
+
+El plan debe incluir:
+1. Problema y operaciones reales con su frecuencia esperada.
+2. Al menos DOS alternativas por problema y la razón concreta de descarte de cada una.
+3. Decisión (estructura y estrategia) y complejidad de las operaciones más frecuentes.
+4. Impacto en código existente: archivo por archivo (ruta real) o "sin cambios".
+5. Mediciones --bench previstas, incluida la de la alternativa descartada, con el comando exacto para reproducirlas.
+6. Límites conocidos de la decisión.
+7. Revisión de decisiones de la Parte I que esta carga pueda invalidar.
+8. Trazabilidad: tabla FR-RES -> componente -> medición/prueba. Incluye los SC-001 a SC-008 y los casos del Apéndice B.
+No agregues reglas del juego que no estén en spec.md. Si falta una regla, detente y pregunta.
+
+Aspectos que el plan debe resolver para resolubilidad:
+- Recorrido incremental único: obtener una llave desbloquea regiones sin reiniciar el recorrido. La frontera bloqueada, las llaves no obtenibles y las dependencias salen de ese mismo recorrido, sin recorridos adicionales por llave.
+- Cómo asociar puertas cerradas pendientes con su llave y cómo identificar llaves (ids de texto) sin dict ni set ni bisect.
+- Cómo garantizar el desempate por menor identificador en el orden de llaves, en las puertas de la frontera y en los ciclos.
+- Detección determinista de un ciclo concreto por grupo de llaves, con costo aproximadamente lineal.
+- Alternativa ingenua (repetir el recorrido por llave) implementada y medida con --bench sobre criptas sintéticas de muchas llaves encadenadas, deterministas por semilla.
+- Reutilizar lo ya definido por la capacidad 001: obtener_llaves, LlaveUbicacionDTO, la caché de llaves por versión, el cliente falso (tests/cliente_falso.py) y CriptaMapa para resolver puertas declaradas en un solo lado y costos contradictorios (CriptaDatosInvalidosError). No redefinirlos.
+- Flujo de --verificar y de inicio de partida (--forzar), adaptadores y presupuesto de solicitudes, sin que el modelo conozca red ni disco.
+- Dónde se muestra el reporte (vista) sin que --verificar ni --bench la instancien.
+- Medición de la cota de 200 ms en la cripta publicada más grande.
+
+Al terminar, muestra un resumen breve de los archivos creados.
+```
+
+**Prompt (resumido):** Se pidió generar el plan técnico de la capacidad de resolubilidad con problema, al menos dos alternativas por decisión, complejidad, impacto en el código existente, mediciones con --bench y trazabilidad, respetando las restricciones de la constitución y reutilizando el contrato de datos de la capacidad de terreno y cazador.
+
+**Para qué se usó:** Generar plan.md y sus artefactos asociados para la capacidad de resolubilidad, a revisar antes de pasar a las tareas.

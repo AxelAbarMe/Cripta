@@ -427,3 +427,38 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 **Prompt (resumido):** Verificación de las correcciones de la primera ejecución (segunda ejecución).
 
 **Para qué se usó:** Confirmó las correcciones anteriores y detectó 18 hallazgos nuevos, 2 de gravedad alta. Se corrigieron los altos, los medios y los bajos rápidos antes de hacer los commits.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo los bloques A.0 y A.1 de la Fase A: T001, T001b, T002, T003, T004, T005, T006 y T006b. Solo pruebas y el cliente falso de tests/, nada de código en cripta/. Las pruebas nuevas deben fallar porque el código aún no existe. Al terminar, corre py -m unittest completo, dime cuáles fallan y por qué, y marca las casillas de esas tareas en tasks.md. No sigas con A.2."
+
+**Prompt (resumido):** Escritura de las pruebas del contrato de datos (Fase A) antes del código.
+
+**Para qué se usó:** Crear las pruebas de T001 a T006b. Fallaron solo las nuevas, como se esperaba. Se pidió además que el error por costos contradictorios se exija en agregar_pagina, con las dos salas en páginas distintas.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo el bloque A.2 de la Fase A: T007 a T015 y T021b. El objetivo es que pasen las pruebas escritas en A.0 y A.1 sin modificarlas. Si una prueba te parece contradictoria con la spec, detente y explícamelo en vez de cambiarla. Al terminar, corre py -m unittest completo y marca las casillas en tasks.md. No sigas con A.3. Para editar archivos usa tu herramienta de edición, no sed -i, porque cambia los finales de línea CRLF."
+
+**Prompt (resumido):** Implementación del contrato de datos (Fase A) contra las pruebas ya escritas.
+
+**Para qué se usó:** Implementar costo, rango, LlaveUbicacionDTO, obtener_llaves en los clientes, la caché de llaves y la resolución de costos en CriptaMapa. Pasaron las 247 pruebas.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "Corrige solo documentos de specs/001-terreno-cazador/ según el estado actual del servidor. (El texto completo, con el seguimiento que agregó T036b, está en prompts/p2/08-estado-servidor-001.md.)"
+
+**Prompt (resumido):** Ajuste de la spec, el plan, el quickstart y las tareas de 001 a los cambios del servidor (cripta-01 retirada, cripta-05 y cripta-06 nuevas, catálogo nuevo).
+
+**Para qué se usó:** Actualizar T016, T017, T039 y T042, registrar los hechos como sesión de aclaraciones y agregar T036b para medir FR-TER-020 con cripta-06. Se hizo antes del código, en un commit aparte.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T016. Ya moví con git mv fixtures/cripta-01, fixtures/catalogo y fixtures/criptas.json a tests/datos/, así que no muevas ni copies archivos. Falta solo esto: en tests/modelo/test_guardado_ida.py, tests/modelo/test_guardado_vuelta.py, tests/modelo/test_pergamino.py y tests/servicios/test_servicio_partida.py cambia ClienteOffline("fixtures") por ClienteOffline("tests/datos"), y en la primera línea del docstring de esos 4 archivos y de tests/controlador/test_controlador_cripta.py cambia "la cripta real de fixtures/" por "la cripta congelada de tests/datos/". Usa tu herramienta de edición, no sed -i. Corre py -m unittest y marca T016 en tasks.md. No sigas con T017."
+
+**Prompt (resumido):** Paso de las pruebas de la Parte I a los datos congelados de cripta-01.
+
+**Para qué se usó:** Cambiar la ruta de ClienteOffline en cuatro pruebas y los docstrings de siete. Las 247 pruebas siguieron pasando.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T017, sin ejecutar el script ni usar la red. Cambios: 1. scripts/generar_fixtures.py: en descargar, guardar también GET /criptas/{id}/llaves como <cripta>/llaves.json tal como llega del API, igual que los demás archivos. En verificar, leer también las llaves con ClienteOffline.obtener_llaves y mostrar cuántas leyó. Que el script siga recibiendo una cripta por ejecución. 2. docs/FORMATO_OFFLINE.md: documentar llaves.json, el campo costo de las salidas (opcional) y el campo rango de las fichas de enemigo (opcional), y aclarar que tests/datos/ guarda cripta-01 con el catálogo anterior como datos de prueba congelados que no se regeneran. 3. README.md: actualizar solo la sección de fixtures y la línea del árbol de carpetas para que digan que fixtures/ tiene cripta-02 a cripta-06 del servidor actual y que tests/datos/ tiene cripta-01 congelada. No toques la sección de bitácoras de ejemplo, eso es de T042. Usa tu herramienta de edición, no sed -i, y respeta los finales de línea de cada archivo. No marques T017 todavía, falta correr el script."
+
+**Prompt (resumido):** Descarga de las llaves en el script de fixtures y documentación del formato.
+
+**Para qué se usó:** Agregar llaves.json al script y documentar los campos nuevos. El script se ejecutó a mano para cripta-02 a cripta-06.

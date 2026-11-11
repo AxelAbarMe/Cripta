@@ -45,7 +45,7 @@ Las banderas se pueden combinar, por ejemplo `py -m cripta --offline --cache-siz
 **Términos:**
 
 - **Catálogo:** la lista de "fichas" del juego (cada tipo de objeto, enemigo o trampa, con sus estadísticas). El juego las pide al API por lotes y las guarda en una **caché**: una copia local para no volver a pedirlas.
-- **Fixtures:** archivos JSON con respuestas reales del API, guardados tal como llegaron, para jugar y probar sin red. Incluyen las cuatro criptas publicadas: `cripta-01` ("Osario menor", 6 salas), `cripta-02` (20 salas), `cripta-03` (40 salas) y `cripta-04` (50 salas). El formato está en `docs/FORMATO_OFFLINE.md`; para regenerar una cripta con internet: `py -m scripts.generar_fixtures cripta-02` (cambiando el id).
+- **Fixtures:** archivos JSON con respuestas reales del API, guardados tal como llegaron, para jugar y probar sin red. `fixtures/` tiene de `cripta-02` a `cripta-06` del servidor actual; `cripta-01` ("Osario menor", 6 salas) queda congelada con el catálogo anterior en `tests/datos/` y no se regenera. El formato está en `docs/FORMATO_OFFLINE.md`; para regenerar una cripta con internet: `py -m scripts.generar_fixtures cripta-02` (cambiando el id).
 - Al salir del juego se imprime un **reporte final**: solicitudes usadas contra el presupuesto, aciertos y fallos de la caché del catálogo, y cuántas salas se trajeron por red o desde disco.
 
 ## 4. Cómo se juega
@@ -168,7 +168,7 @@ cripta/
 ├── estructuras/       estructuras de datos y ordenamientos propios
 ├── dto/               conversión de las respuestas JSON del API a objetos
 └── bench/             cargas sintéticas de --bench
-fixtures/              respuestas del API guardadas para --offline (las 4 criptas publicadas)
+fixtures/              respuestas del API para --offline (cripta-02 a cripta-06). tests/datos/ tiene cripta-01 congelada
 scripts/               generar_fixtures.py y prueba_api.py (prueba rápida del API)
 tests/                 pruebas, por capa
 docs/                  Documento de Decisiones, bitácora, contrato de la partida, formato offline

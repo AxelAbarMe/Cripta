@@ -575,3 +575,33 @@ Al terminar, muestra un resumen breve de los archivos creados.
 **Prompt (resumido):** Se pidió generar el plan técnico de la capacidad de resolubilidad con problema, al menos dos alternativas por decisión, complejidad, impacto en el código existente, mediciones con --bench y trazabilidad, respetando las restricciones de la constitución y reutilizando el contrato de datos de la capacidad de terreno y cazador.
 
 **Para qué se usó:** Generar plan.md y sus artefactos asociados para la capacidad de resolubilidad, a revisar antes de pasar a las tareas.
+
+### 2026-11-11 — Antigravity CLI 1.5.4 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-tasks
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Contexto: ya estoy en la rama 003-resolubilidad. No crees ni cambies de rama y no hagas commit. Redacta todo en español, incluidos los títulos de las fases y secciones de la plantilla. Solo crea o modifica specs/003-resolubilidad/tasks.md. Usa solo spec.md, plan.md, research.md, data-model.md, quickstart.md y contracts/ de esa carpeta, y puedes LEER (sin modificar) el código de cripta/ y tests/ para citar rutas reales. No agregues reglas del juego ni decisiones de diseño que no estén en esos documentos. Si falta algo, detente y pregunta.
+
+Reglas de la constitución que las tareas deben cumplir:
+- Cada tarea cita los identificadores FR-RES-NNN que atiende, la ruta real del archivo que toca (marca "Nuevo" o "Modificado" según exista, comprobándolo en el repositorio), el comando de prueba que la valida y su criterio de "hecho". Máximo unos 90 minutos por tarea y ninguna tarea sin requisito.
+- Cada escenario de aceptación de spec.md, incluidos los cuatro casos del Apéndice B, y cada SC-001 a SC-008 tiene al menos una tarea de prueba automatizada con unittest que cita el requisito. Las pruebas van antes que el código que las hace pasar. Las carpetas de pruebas nuevas llevan su __init__.py.
+- Ninguna tarea usa heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Se reutilizan las estructuras propias de la Parte I citadas en plan.md (Cola, HeapMinimo, ordenamientos) y list solo como almacenamiento contiguo indexado por entero.
+- Los errores de programación heredan de IndexError o ValueError; CriptaError solo para fallos externos. Se reutilizan CriptaDatosInvalidosError y CriptaLimiteError sin redefinirlos.
+- El modelo no importa red ni archivos. --verificar y --bench no instancian la vista.
+- Ninguna tarea contiene commits ni push, ni códigos de tarea ni nombres de personas en mensajes de commit.
+- Ninguna tarea escribe cifras de rendimiento antes de medirlas. La cota de 200 ms se mide sobre la cripta publicada más grande, elegida por el mayor total de salas del listado y sin fijar su id en el código.
+
+Organización obligatoria:
+1. Fase A, dominio puro: pruebas primero y luego cripta/modelo/resolubilidad.py (catálogo de llaves ordenado con búsqueda binaria manual, recorrido incremental con Cola y HeapMinimo, condición de entrada a la sala de salida por una puerta que exige llave_salida, frontera bloqueada, ubicaciones, ciclos por DFS tricolor y alternativa ingenua verificar_ingenuo_reiniciado).
+2. Fase B, servicio: ServicioResolubilidad con ClienteCripta, CacheDisco y presupuesto de solicitudes, costos contradictorios y presupuesto agotado sin reporte parcial.
+3. Fase C, CLI y vista: --verificar sin vista, --forzar, compuerta al iniciar partida en el controlador y mostrar_reporte_resolubilidad en la vista.
+4. Fase D, mediciones --bench: carga resolubilidad (incremental frente a la alternativa ingenua, criptas sintéticas encadenadas por semilla) y carga resolubilidad_cota, cada tarea con el comando exacto.
+5. Fase E, cierre: las 222 pruebas de la Parte I en OK, auditoría de importaciones prohibidas con el Select-String del quickstart de la 001 y una tarea final "Sección de DECISIONES.md".
+
+Marca [P] solo las tareas que tocan archivos distintos y no dependen entre sí. Indica el orden de dependencias entre fases y el punto de corte de cada Pull Request. El registro de este comando en PROMPTS_LLM.md se hace fuera de las tareas.
+```
+
+**Prompt (resumido):** Se pidió generar la lista de tareas de la capacidad de resolubilidad en cinco fases (dominio, servicio, CLI y vista, mediciones --bench, cierre), con cada tarea citando sus requisitos FR-RES, la ruta real del archivo y su prueba, y con las pruebas antes del código.
+
+**Para qué se usó:** Generar tasks.md en specs/003-resolubilidad/, a revisar contra spec.md y plan.md antes de /speckit-analyze.

@@ -6,6 +6,7 @@ from cripta.dto.version_dto import VersionCriptaDTO
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.contenido_sala_respuesta_dto import ContenidoSalaRespuestaDTO
 from cripta.dto.catalogo_dto import CatalogoDTO
+from cripta.dto.llave_ubicacion_dto import LlaveUbicacionDTO
 from cripta.dto.version_dto import VersionCatalogoDTO
 
 @runtime_checkable
@@ -37,6 +38,10 @@ class ClienteCripta(Protocol):
  
     def obtener_version_catalogo(self) -> VersionCatalogoDTO:
         """GET /catalogo/version"""
+        ...
+
+    def obtener_llaves(self, id_cripta: str) -> tuple[LlaveUbicacionDTO, ...]:
+        """GET /criptas/{id_cripta}/llaves"""
         ...
 
 @runtime_checkable

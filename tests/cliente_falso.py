@@ -13,7 +13,7 @@ from cripta.infraestructura.lotes import validar_lote
 
 class ClienteFalso:
     def __init__(self, fichas_json=(), contenido_json=(), paginas_json=(), general_json=None,
-                 version_catalogo="cat-1", version_cripta="v1", latencia=0.0, latencias_por_llamada=None):
+                 version_catalogo="cat-1", version_cripta="v1", latencia=0.0, latencias_por_llamada=None, llaves=()):
         self.fichas_json = list(fichas_json)
         self.contenido_json = list(contenido_json)
         self.paginas_json = list(paginas_json)
@@ -22,6 +22,7 @@ class ClienteFalso:
         self.version_cripta = version_cripta
         self.latencia = latencia
         self.latencias_por_llamada = latencias_por_llamada  # lista consumida en orden (para probar determinismo)
+        self.llaves = tuple(llaves)  # LlaveUbicacionDTO que devuelve obtener_llaves
         self.llamadas = []  # (metodo, argumentos)
 
     def _registrar(self, metodo, arg=None):
@@ -68,3 +69,7 @@ class ClienteFalso:
     def obtener_version_catalogo(self):
         self._registrar("obtener_version_catalogo")
         return VersionCatalogoDTO(version=self.version_catalogo)
+
+    def obtener_llaves(self, id_cripta):
+        self._registrar("obtener_llaves", id_cripta)
+        return self.llaves

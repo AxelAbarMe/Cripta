@@ -3,7 +3,8 @@ Usa VectorOrdenado: búsqueda por id en O(log n) por búsqueda binaria.
 """
 from cripta.estructuras.vector import VectorOrdenado
 from cripta.modelo.sala import Sala
-from cripta.constantes import direccion_opuesta
+from cripta.constantes import COSTO_MOVER, direccion_opuesta
+from cripta.excepciones import CriptaDatosInvalidosError
 
 class CriptaMapa:
     def __init__(self):
@@ -15,6 +16,34 @@ class CriptaMapa:
             if self._salas.contiene(sala_dto.id):
                 continue   # página repetida (por ejemplo, un reintento): se ignora
             self._salas.insertar(Sala(sala_dto))
+            self._validar_costos(sala_dto)
+
+    def _validar_costos(self, sala_dto) -> None:
+        # Si la sala vecina ya está y declara otro costo para la misma conexión, el esqueleto es inválido
+        for direccion, destino in self.vecinos(sala_dto.id):
+            propio = sala_dto.salida(direccion).costo
+            otra = self.obtener(destino)
+            opuesta = otra.esqueleto.salida(direccion_opuesta(direccion)) if otra is not None else None
+            if propio is None or opuesta is None or opuesta.costo is None or propio == opuesta.costo:
+                continue
+            raise CriptaDatosInvalidosError(
+                "construir el mapa", "esqueleto de la cripta",
+                f"la conexión entre las salas {sala_dto.id} y {destino} declara costos distintos "
+                f"({propio} y {opuesta.costo})")
+
+    def costo_de_conexion(self, sala_id: int, direccion: str) -> int:
+        """Costo de cruzar la salida mirando los dos lados: el declarado, o 100 si ninguno lo declara."""
+        sala = self.obtener(sala_id)
+        salida = sala.esqueleto.salida(direccion) if sala is not None else None
+        if salida is None:
+            raise ValueError(f"La sala {sala_id} no tiene salida hacia {direccion}")
+        costo = salida.costo
+        otra = self.obtener(salida.sala_destino)
+        if costo is None and otra is not None:
+            salida_opuesta = otra.esqueleto.salida(direccion_opuesta(direccion))
+            if salida_opuesta is not None:
+                costo = salida_opuesta.costo
+        return costo if costo is not None else COSTO_MOVER
 
     def todas_las_salas(self) -> tuple:
         """Todas las salas, en orden ascendente de id."""

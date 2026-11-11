@@ -1,4 +1,4 @@
-"""Pruebas de ControladorCripta con una vista falsa y la cripta real de fixtures/ (sin red ni teclado).
+"""Pruebas de ControladorCripta con una vista falsa y la cripta congelada de tests/datos/ (sin red ni teclado).
 
 La vista falsa devuelve opciones y órdenes de una lista y anota todo lo que el controlador le muestra.
 Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.controlador.test_controlador_cripta -v

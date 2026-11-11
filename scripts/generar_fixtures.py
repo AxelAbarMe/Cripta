@@ -43,6 +43,7 @@ def descargar(cliente: ClienteHttp, id_cripta: str | None) -> str:
     general = cliente._get(f"/criptas/{id_cripta}", f"datos generales de {id_cripta}")
     guardar(carpeta / "general.json", general)
     guardar(carpeta / "version.json", cliente._get(f"/criptas/{id_cripta}/version", f"versión de {id_cripta}"))
+    guardar(carpeta / "llaves.json", cliente._get(f"/criptas/{id_cripta}/llaves", f"llaves de {id_cripta}"))
 
     # Esqueleto: un archivo por página. Se juntan los ids de sala y las llaves de las puertas.
     ids_salas = []
@@ -92,6 +93,7 @@ def verificar(id_cripta: str) -> None:
     offline.listar_criptas()
     general = offline.obtener_general(id_cripta)
     offline.obtener_version_cripta(id_cripta)
+    llaves = offline.obtener_llaves(id_cripta)
     ids_salas = []
     for pagina in range(1, general.paginas + 1):
         ids_salas.extend(sala.id for sala in offline.obtener_pagina_esqueleto(id_cripta, pagina).salas)
@@ -108,7 +110,7 @@ def verificar(id_cripta: str) -> None:
     for lote in en_lotes(ids_catalogo):
         fichas += len(offline.obtener_catalogo(lote).entidades)
     offline.obtener_version_catalogo()
-    print(f"Verificación offline OK: {len(ids_salas)} salas, {fichas} fichas del contenido leídas sin errores")
+    print(f"Verificación offline OK: {len(ids_salas)} salas, {len(llaves)} llaves, {fichas} fichas del contenido leídas sin errores")
 
 
 def main() -> None:

@@ -1,5 +1,5 @@
 """Pruebas de ServicioPartida parte 2: guardar, cargar (con su bitácora), puntaje final y ranking.
-Usan la cripta real de fixtures/. Se ejecutan desde la raíz del proyecto con:
+Usan la cripta congelada de tests/datos/. Se ejecutan desde la raíz del proyecto con:
     python -m unittest tests.servicios.test_servicio_partida_guardado -v
 """
 import dataclasses

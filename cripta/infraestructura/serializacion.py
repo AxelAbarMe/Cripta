@@ -16,8 +16,8 @@ def desde_bytes(datos: bytes):
 
 def ficha_a_json(ficha) -> dict:
     """Ficha de catálogo (cualquiera de las 9 clases). Los nombres de campo de los DTO
-    coinciden con las claves del API (incluido `daño` en TrampaDTO), así que asdict
-    produce directamente el JSON original."""
+    coinciden con las claves del API (incluido `daño` en TrampaDTO y `rango` en EnemigoDTO),
+    así que asdict produce directamente el JSON original."""
     return dataclasses.asdict(ficha)
 
 
@@ -29,7 +29,13 @@ def salida_a_json(salida) -> dict:
         datos["llave"] = salida.llave
     if salida.cierre_automatico is not None:
         datos["cierre_automatico"] = salida.cierre_automatico
+    if salida.costo is not None:
+        datos["costo"] = salida.costo
     return datos
+
+
+def llaves_a_json(llaves) -> dict:
+    return {"llaves": [{"id": l.id, "sala": l.sala, "enemigo": l.enemigo} for l in llaves]}
 
 
 def sala_a_json(sala) -> dict:

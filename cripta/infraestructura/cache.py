@@ -13,9 +13,10 @@ de caché (se volverá a pedir), nunca como excepción que tumbe la partida.
 """
 from cripta.dto.contenido_sala_dto import ContenidoSalaDTO
 from cripta.dto.entidad_dto import entidad_desde_json
+from cripta.dto.llave_ubicacion_dto import LlaveUbicacionDTO
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.infraestructura.serializacion import (
-    a_bytes, contenido_sala_a_json, desde_bytes, ficha_a_json, pagina_esqueleto_a_json,
+    a_bytes, contenido_sala_a_json, desde_bytes, ficha_a_json, llaves_a_json, pagina_esqueleto_a_json,
 )
 
 
@@ -70,6 +71,18 @@ class CacheDisco:
             self._clave_contenido(cripta_id, version, contenido_dto.id),
             a_bytes(contenido_sala_a_json(contenido_dto)),
         )
+
+    # ---- llaves (versión de la cripta) ----
+    @staticmethod
+    def _clave_llaves(cripta_id: str, version: str) -> str:
+        return f"cripta.{cripta_id}.{version}.llaves.json"
+
+    def leer_llaves(self, cripta_id: str, version: str):
+        return self._leer(self._clave_llaves(cripta_id, version),
+                          lambda datos: tuple(LlaveUbicacionDTO.desde_json(l) for l in datos["llaves"]))
+
+    def guardar_llaves(self, cripta_id: str, version: str, llaves) -> None:
+        self._almacen.escribir(self._clave_llaves(cripta_id, version), a_bytes(llaves_a_json(llaves)))
 
     def _leer(self, clave: str, construir):
         crudo = self._almacen.leer(clave)

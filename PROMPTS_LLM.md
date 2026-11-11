@@ -277,3 +277,188 @@ un log de ejemplo reproducible para la defensa de --replay (§4.11, §9).
 **Prompt (resumido):** Se pidió generar la constitución de la segunda parte con los ocho principios acordados por el grupo, las restricciones, el flujo de trabajo y la gobernanza.
 
 **Para qué se usó:** Generar el borrador de .specify/memory/constitution.md, que el grupo revisó y ajustó a mano antes de confirmarlo.
+
+
+
+### 2026-11-09 — Claude (Sonnet 5.5, claude.ai)
+**Prompt:** "Te paso el contexto de la segunda parte, el mapa del código, el contrato del API y los enunciados. Si quiero empezar desde cero, dime en pasos simples y directos qué debo instalar y qué hacer antes de empezar con la constitución. Después ayúdame con el setup de spec-kit con Antigravity (init, AGENTS.md, ramas, Pull Request y borrado de ramas), revisa la constitución que generó el agente contra el enunciado, y dime los pasos siguientes ahora que la constitución está aprobada. Para mi capacidad (001 terreno y cazador) dame el prompt de /speckit-specify y dime si es suficiente o necesita cambios."
+
+**Prompt (resumido):** Se pidió una guía de instalación y setup de spec-kit con Antigravity, la revisión de la constitución contra el enunciado, los pasos siguientes y el prompt de especificación de la capacidad 001 con su verificación.
+
+**Para qué se usó:** Instalar y configurar spec-kit, crear AGENTS.md, ordenar el trabajo con ramas y Pull Requests, corregir la constitución (retroceso sin copias completas, migración explícita, errores HTTP con contexto) y preparar prompts/p2/02-specify-001.md, al que se agregó el contrato de /llaves.
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Gemini 3.8 Flash)
+**Prompt:** "/speckit-specify Capacidad: terreno y cazador de Cripta Parte II. Cada salida puede declarar un costo entero >= 1 (por defecto 100, igual en ambos sentidos) y moverse cuesta ese costo, con intervalo max(1, costo * 100 // velocidad). El cazador es un cuarto comportamiento con rango: ataca si comparte sala con el jugador, calcula el costo mínimo d por salidas abiertas, espera si no hay ruta o d > rango y si no se mueve un paso por una ruta de costo d, con desempate por menor id. Conoce el esqueleto completo, no le afecta la niebla, no abre puertas y su decisión equivale a calcular desde cero en cada turno. El servicio trae costo por salida, comportamiento cazador con rango y la ubicación de llaves. Rendimiento: ciclo de eventos < 20 ms con decenas de cazadores. Incluye los 7 casos del Apéndice B de terreno y cazador como escenarios de aceptación, con prefijo FR-TER-NNN y sin mencionar estructuras, clases ni módulos." (El texto completo está en prompts/p2/02-specify-001.md.)
+
+**Prompt (resumido):** Se pidió generar la especificación de la capacidad de terreno y cazador con sus reglas, el contrato de datos y los escenarios del Apéndice B.
+
+**Para qué se usó:** Generar specs/001-terreno-cazador/spec.md. Se revisó que no mencionara estructuras de datos, clases ni módulos, y no hizo falta quitar nada.
+
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Gemini 3.8 Flash)
+**Prompt:** "Traduce al español los títulos, etiquetas y palabras clave (Given/When/Then a Dado/Cuando/Entonces) de spec.md y de checklists/requirements.md, sin cambiar el contenido de las reglas. Modifica solo esos dos archivos."
+
+**Prompt (resumido):** Se pidió traducir al español los títulos, etiquetas y palabras clave de la especificación de terreno y cazador y de su lista de verificación, sin alterar las reglas.
+
+**Para qué se usó:** Cumplir la regla de documentación en español de la constitución. Se revisó con git diff que solo cambiaron títulos y etiquetas, y que los requisitos FR-TER-001 a FR-TER-020 y los escenarios del Apéndice B quedaron intactos.
+
+### 2026-11-09 — Claude (Sonnet 5.5, claude.ai)
+**Prompt:** "Te paso lo que generó /speckit-specify para la capacidad 001 (spec.md, la lista de verificación y el resumen del agente), junto con el enunciado y el contrato del API. Revisa la especificación contra el enunciado y dime qué hay que corregir. Después, dime los cambios concretos que debo hacer a mano en spec.md y qué hacer con la suposición del rango nulo."
+
+**Prompt (resumido):** Se pidió revisar la especificación de terreno y cazador contra el enunciado y el contrato del API, y se pidieron los cambios exactos para corregirla. Además se preparó el prompt de /speckit-clarify (prompts/p2/03-clarify.md), con una pregunta explícita sobre el rango nulo del cazador.
+
+**Para qué se usó:** Detectar reglas que el agente había inventado y corregirlas a mano en spec.md: se quitó la regla del "rango ilimitado" y se dejó el caso del rango nulo como pendiente para /speckit-clarify, se reemplazaron "al menos 30 cazadores" y "entre 1 y 500" por "decenas de cazadores" y "cualquier velocidad positiva", y se quitó de FR-TER-019 la mención al formato de la primera parte, que corresponde a la capacidad de línea de tiempo.
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Gemini 3.8 Flash)
+**Prompt:** "/speckit-clarify Prioriza ambigüedades que cambiarían el resultado observable: desempates, orden de eventos simultáneos, qué se guarda en partida.log, mensajes de rechazo y los casos del Apéndice B de esta capacidad. Incluye qué debe hacer un cazador cuando su ficha trae el rango nulo o ausente. Las respuestas deben ser compatibles con el enunciado de las Partes I y II. Si la respuesta está en el enunciado, cítala. No inventes reglas." (El texto completo está en prompts/p2/03-clarify-001.md.)
+
+**Prompt (resumido):** Se pidió a spec-kit formular preguntas de aclaración sobre la especificación de terreno y cazador. Las respuestas las decidió el grupo con base en el enunciado.
+
+**Para qué se usó:** Resolver cinco ambigüedades de spec.md: cazador con rango nulo (ficha inválida), contenido de partida.log (solo acciones aceptadas del jugador), orden de eventos simultáneos (número de secuencia), movimientos rechazados (sin consumir tiempo) y llaves sin enemigo (en el suelo). Se agregaron los requisitos FR-TER-021 a FR-TER-023.
+
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Gemini 3.8 Flash)
+**Prompt:** "/speckit-plan Restricciones obligatorias (ver constitución): implementar a mano las estructuras, prohibido heapq, bisect, collections, networkx, set y dict como índice o caché, y list.sort()/sorted() donde aplica. Reutiliza estructuras de la Parte I y cita el archivo real. El plan debe incluir: problema y operaciones reales con su frecuencia, al menos dos alternativas por problema con la razón de descarte, decisión y complejidad, impacto archivo por archivo, mediciones --bench previstas (incluida la alternativa descartada), límites conocidos, revisión de decisiones de la Parte I que esta carga invalide (agenda, historial) y una tabla de trazabilidad FR, componente y medición. Para esta capacidad debe resolver: búsqueda de ruta de costo mínimo con estructuras propias, límite por rango, cálculo compartido frente a individual, qué eventos invalidan qué cálculo, desempate por menor id, escenarios de --bench con puertas estables e inestables y la alternativa de recalcular siempre, impacto en la agenda y el contrato de datos como bloque separable. No agregues reglas que no estén en spec.md y, si falta una, detente y pregunta." (El texto completo está en prompts/p2/04-plan-001.md.)
+
+**Prompt (resumido):** Se pidió generar el plan técnico de la capacidad de terreno y cazador, con estructuras propias, alternativas descartadas, impacto en el código existente, mediciones previstas y trazabilidad a los requisitos.
+
+**Para qué se usó:** Generar el borrador de plan.md, research.md, data-model.md, quickstart.md y contracts/ en specs/001-terreno-cazador/, que luego se revisó y corrigió contra la constitución y el código de la Parte I.
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Gemini 3.8 Flash)
+**Prompt:** "Corrige estos puntos solo en specs/001-terreno-cazador (plan.md, research.md, data-model.md, quickstart.md y contracts/). No toques spec.md ni otros archivos. 1. Traduce al español los títulos de plan.md. 2. Toda cifra de tiempo o memoria (25 ms, 60 ms, 45-80 ms, 2 ms, 1,3 ms, 50 KB, 50x) escríbela como hipótesis a confirmar con --bench, o quítala. 3. La complejidad con montículo binario es O((V+E) log V). Corrígela en todos los archivos. 4. En 'cálculo compartido vs individual', además de la equivalencia del resultado, explica bajo qué condiciones cambia cuál conviene en rendimiento (pocos cazadores, rangos muy distintos con R_max grande) y que se medirá con --bench. 5. Una ficha de cazador sin rango viene de datos externos: no uses ValueError. Usa la excepción existente CriptaDatosInvalidosError (o CriptaApiError según el origen) con el id de la ficha en el mensaje. ValueError solo para errores de programación. Actualiza la fila de cripta/excepciones.py. 6. Quita del plan los cambios en vista_consola.py y resultado_partida.py, porque ningún FR de spec.md los pide. 7. Agrega la regeneración de fixtures con costo, rango y llaves (scripts/generar_fixtures.py). 8. El comportamiento del catálogo es 'guardián' con tilde. 9. En contracts/contrato_servicio_llaves.json elimina 'additionalProperties': false y 'minimum': 1, y no inventes el texto 'rate_limited'. 10. Presenta lo de los closures y la capacidad de línea de tiempo como riesgo a medir, no como conclusión. 11. No cites archivos que no existan: verifica con Test-Path y márcalos como 'Nuevo' si faltan."
+
+**Prompt (resumido):** Se pidió corregir once puntos del plan de terreno y cazador: idioma de los títulos, cifras de rendimiento sin medir, complejidad del montículo binario, análisis de cuándo conviene el cálculo compartido, excepción para fichas inválidas, cambios sin requisito, fixtures, ortografía del catálogo, contrato de llaves, riesgo sobre la línea de tiempo y archivos citados que no existían.
+
+**Para qué se usó:** Ajustar el plan a la constitución y al código real de la Parte I. Se revisó con git diff que solo cambiaron archivos de specs/001-terreno-cazador/.
+
+### 2026-11-09 — Claude (claude.ai)
+**Prompt:** "Termina estas correcciones solo en specs/001-terreno-cazador (plan.md, research.md, data-model.md, quickstart.md y contracts/). No toques spec.md ni otros archivos. 1. En plan.md traduce "Complexity Tracking" al español. 2. Escribe como "hipótesis a confirmar con --bench", o quita, estas cifras: "superará previsiblemente los 35-50 ms", "> 50x más rápida", "30x más lento, viola límite de 20 ms", "~50 KB", "~1.3 ms", "hasta 10x", "Python 3.12.3" y "113 columnas". 3. En la revisión de decisiones de la Parte I (historial de retroceso), presenta lo de los closures y la capacidad 004 como riesgo a medir con --bench --solo historial, no como conclusión. 4. Agrega tests/modelo/test_reloj.py (Nuevo) y scripts/revisar_prohibidos.py (Nuevo) al árbol del plan, o reemplaza el Escenario 4 del quickstart por un Select-String de heapq, bisect, collections y networkx en cripta/modelo y cripta/estructuras. 5. En "Límites Conocidos", punto 2, elimina la frase que afirma que el cálculo compartido sigue siendo drásticamente menor con rangos heterogéneos. 6. En la matriz de invalidación agrega: activación de un cazador con rango mayor al R_max actual, y carga de una partida guardada. 7. Agrega como tarea los __init__.py de tests/dto y tests/aceptacion. 8. Anota como riesgo que regenerar fixtures cambia la versión de la cripta y puede volver incompatible el --replay de docs/ejemplos/partida_cripta-02.log."
+
+**Prompt (resumido):** Se pidió terminar ocho correcciones pendientes del plan de terreno y cazador: título en español, cifras de rendimiento sin medir, riesgo del historial de retroceso frente a la capacidad 004, auditoría de prohibiciones, límite sobre rangos heterogéneos, matriz de invalidación, __init__.py de las carpetas de pruebas nuevas y riesgo de --replay al regenerar fixtures.
+
+**Para qué se usó:** Completar las correcciones que quedaron a medias en specs/001-terreno-cazador/. El auditor de prohibiciones se resolvió con un Select-String en quickstart.md, sin crear scripts/revisar_prohibidos.py. Se revisó con git diff que solo cambiaron archivos de esa carpeta y PROMPTS_LLM.md.
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Claude Sonnet 4.6)
+**Prompt:** "/speckit-tasks Genera tasks.md en español, incluidos los títulos de las fases y secciones de la plantilla. Usa solo specs/001-terreno-cazador/spec.md, plan.md, data-model.md, research.md, quickstart.md y contracts/. No agregues reglas del juego ni decisiones de diseño que no estén en ellos. Si falta algo, detente y pregunta. Cada tarea cita los identificadores FR-TER-NNN que atiende y la ruta real del archivo que toca (marca Nuevo si no existe). Cada escenario de aceptación de spec.md, incluidos los siete casos del Apéndice B, tiene al menos una tarea de prueba automatizada que cita el requisito, y las pruebas van antes que el código. Las pruebas usan unittest, con un __init__.py en cada carpeta nueva (tests/dto y tests/aceptacion llevan una tarea explícita). Ninguna tarea usa heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted() donde aplica. Ninguna tarea contiene commits ni push. Organización: Fase A bloque de contrato de datos separable y fusionable primero en su propio Pull Request; Fase B terreno; Fase C cazador; Fase D mediciones --bench con la alternativa descartada; Fase E cierre con las 222 pruebas de la Parte I, auditoría de importaciones prohibidas, --replay y entrada en PROMPTS_LLM.md. Marca [P] solo las tareas independientes e indica el orden de dependencias y el punto de corte del primer Pull Request. Modifica solo specs/001-terreno-cazador/tasks.md." (El texto completo está en prompts/p2/05-tasks-001.md.)
+
+**Prompt (resumido):** Se pidió generar la lista de tareas de la capacidad de terreno y cazador, organizada en cinco fases, con cada tarea citando sus requisitos FR-TER y la ruta real del archivo, pruebas antes del código y el contrato de datos como primer bloque fusionable.
+
+**Para qué se usó:** Generar el borrador de tasks.md en specs/001-terreno-cazador/, que luego se revisó contra spec.md y plan.md (cobertura de FR-TER-001 a 023 y de los escenarios del Apéndice B).
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Claude Sonnet 4.6)
+**Prompt:** "Corrige solo specs/001-terreno-cazador/tasks.md (y, si hace falta, la tabla de impacto de plan.md). No toques spec.md ni otros archivos. 1. Agrega una tarea de prueba y, si corresponde, de código para FR-TER-023. Quita FR-TER-023 de T035. 2. En T006 elimina la prueba de rechazo de un archivo de la Parte I. 3. En T020 y T022 reutiliza calcular_tiempo_reprogramado de cripta/modelo/reloj.py en lugar de una fórmula nueva. 4. En T038 y T039 marca Nuevo o Modificado según Test-Path y agrega esos archivos a la tabla de impacto de plan.md. 5. En la estrategia indica que cada fase de código va en una rama nueva desde main. 6. En T036 agrega el caso de rangos heterogéneos, en T002 cambia id de ficha por id de sala y corrige la dependencia entre C y D."
+
+**Prompt (resumido):** Se pidió corregir seis puntos de tasks.md: cobertura de FR-TER-023, una prueba fuera de alcance, una fórmula inventada, archivos no citados en el plan, estrategia de ramas y detalles menores.
+
+**Para qué se usó:** Ajustar tasks.md al plan y a la especificación antes de /speckit-analyze.
+
+### 2026-11-09 — Claude (claude.ai)
+**Prompt:** "Corrige solo specs/001-terreno-cazador/tasks.md y la tabla de trazabilidad de plan.md. No toques
+spec.md ni otros archivos.
+1. En "Estrategia de Implementación" aclara que hay tres Pull Requests: (a) documentación (spec,
+   plan, tasks), (b) Fase A en rama nueva desde main, (c) Fases B a E en otra rama nueva desde main
+   después de fusionar la Fase A. Quita la frase que llama a la Fase A "PR de documentación".
+2. Quita de la Fase B la nota "puede iniciarse en paralelo con Fase C" y de la Fase D la nota
+   "puede iniciarse en paralelo con Fase E". El orden es secuencial A, B, C, D, E.
+3. Elimina T043 de tasks.md. El registro de /speckit-tasks en PROMPTS_LLM.md se hace fuera de las
+   tareas de implementación.
+4. Mueve T035b a la Fase B, en B.1 antes de T021, y agrégale una tarea de código posterior que
+   verifique o corrija cripta/modelo/partida.py (_despachar) para que el desplazamiento rechazado no
+   consuma tiempo ni escriba en partida.log (FR-TER-023). Actualiza las dependencias.
+5. En T007 cambia "id de ficha" por "id de la sala".
+6. En la trazabilidad de plan.md, usa para FR-TER-007 y FR-TER-021 el archivo de prueba que cita
+   cada tarea. En T028 cambia "Ampliar" por "Crear".
+7. Usa en T021, T022 y T025 los nombres reales de cripta/modelo/reloj.py: <pega aquí el resultado
+   de Select-String>."
+
+**Prompt (resumido):** Ramas: quedaron tres Pull Requests: documentación, Fase A y Fases B a E, cada uno desde una rama nueva desde main.
+Paralelismo: quité las notas contradictorias. El orden es A, B, C, D, E.
+FR-TER-023: la prueba pasó a la Fase B, antes del código (T019b), y agregué la tarea de verificación posterior (T025b). La prueba ahora pide mensaje de rechazo, reloj sin avanzar, estado e historial intactos y sin línea en partida.log.
+Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
+
+**Para qué se usó:** Ajustar tasks.md al plan y a la especificación antes de /speckit-analyze.
+
+### 2026-11-09 — Antigravity CLI 1.5.3 (Claude Sonnet 4.6)
+**Prompt:** "Corrige solo la tabla de impacto, el árbol de código fuente y la tabla de trazabilidad de specs/001-terreno-cazador/plan.md, y la tarea T043 de tasks.md. No toques spec.md ni otros archivos. 1. Agrega cripta/modelo/efectos.py como Modificado (EfectoCierrePuerta invalida el BuscadorRutas, T033; se verifica EfectoCambioVelocidad, T022), en la tabla de impacto y en el árbol. 2. Reemplaza la fila docs/DECISIONES.md por DECISIONES.md (raíz), Modificado, sección de la capacidad 001 (T043). En la fila de tests/controlador/test_controlador_errores.py cambia T035b por T019b. En tasks.md T043 cambia verificar con Test-Path y crearlo por ampliar DECISIONES.md. 3. En la trazabilidad, FR-TER-007: la prueba es tests.aceptacion.test_terreno_costos. 4. En la trazabilidad, FR-TER-005: componente reloj.py (calcular_tiempo_reprogramado, reprogramar) y efectos.py (EfectoCambioVelocidad)."
+
+**Prompt (resumido):** Se pidió alinear plan.md con tasks.md: agregar efectos.py al impacto, actualizar la referencia de DECISIONES.md y de T019b, y corregir la prueba de FR-TER-007 y el componente de FR-TER-005 en la trazabilidad.
+
+**Para qué se usó:** Eliminar inconsistencias entre el plan y las tareas antes de /speckit-analyze.
+
+### 2026-11-10 — Antigravity CLI 1.5.3 (Claude Sonnet 4.6)
+**Prompt:** "/speckit-analyze Analiza la consistencia entre specs/001-terreno-cazador/spec.md, plan.md, tasks.md y la constitución. Solo lectura: no modifiques ningún archivo. Verifica en particular: cada FR-TER-001 a 023 tiene al menos una tarea y una prueba que lo cita, y ninguna tarea cita un requisito inexistente; los siete casos del Apéndice B aparecen como escenarios con prueba; plan.md no agrega reglas que no estén en spec.md y spec.md no nombra estructuras, clases ni módulos; ninguna tarea ni decisión usa heapq, bisect, collections, networkx, set ni dict como índice o caché; cada afirmación de rendimiento cita un comando de --bench o está marcada como hipótesis; las rutas de archivo del plan y de las tareas coinciden (Nuevo / Modificado); las pruebas van antes que el código en cada fase y el orden de dependencias entre fases es coherente; el contrato de datos (Fase A) es separable y no depende de B, C, D ni E. Clasifica cada hallazgo por gravedad y señala el archivo y la línea." (El texto completo está en prompts/p2/06-analyze-001.md.)
+
+**Prompt (resumido):** Se pidió un análisis de solo lectura de la consistencia entre la especificación, el plan, las tareas y la constitución de la capacidad de terreno y cazador, con cobertura de requisitos y del Apéndice B, prohibiciones, afirmaciones de rendimiento, rutas de archivo, orden de pruebas y separabilidad del contrato de datos.
+
+**Para qué se usó:** Detectar inconsistencias entre spec.md, plan.md y tasks.md antes de abrir el Pull Request de documentación. Los hallazgos se revisan y se corrigen primero, en commits separados, antes de abrir el Pull Request.
+
+### 2026-11-10 — Antigravity CLI 1.5.3 (Claude Sonnet 4.6)
+**Prompt:** "Corrige solo specs/001-terreno-cazador/plan.md, tasks.md y data-model.md. No toques spec.md ni otros archivos. 1. En la tabla de impacto de plan.md agrega cripta/modelo/cripta_mapa.py como Sin cambios (la simetría del costo viene en los datos del servicio) y en la trazabilidad de FR-TER-002 cita la prueba tests.aceptacion.test_terreno_costos (T019). 2. Agrega tests/infraestructura/test_partida_log.py (Modificado) al árbol de código fuente de plan.md. 3. En tasks.md T035 amplía la prueba para que cubra movimiento, espera y ataque de cazadores, errantes y rastreadores: ninguno escribe líneas en partida.log (FR-TER-021). 4. En la trazabilidad de plan.md, FR-TER-016 cita también cripta/dto/salida_dto.py y FR-TER-017 cita también cripta/dto/enemigo_dto.py. 5. En data-model.md renombra los métodos de BuscadorRutas (tabla y diagrama de clases) a calcular_o_reutilizar, decidir_paso y distancia, igual que plan.md, contrato y T031."
+
+**Prompt (resumido):** Se pidió corregir los hallazgos de /speckit-analyze: una fila faltante en la tabla de impacto, un archivo de prueba ausente del árbol, el alcance de la prueba de partida.log, la trazabilidad de FR-TER-016 y 017 y los nombres de métodos de BuscadorRutas en data-model.md.
+
+**Para qué se usó:** Resolver los hallazgos de gravedad media y los nombres inconsistentes del análisis antes de abrir el Pull Request de documentación.
+
+### 2026-11-10 — Claude (Sonnet 5.5, claude.ai)
+**Prompt:** "Cuando el agente se quedó sin cuota, se pidió a Claude terminar las correcciones de plan.md y research.md de la capacidad 001. Después se subieron spec.md, plan.md, tasks.md y data-model.md con este pedido: Analiza la consistencia entre specs/001-terreno-cazador/spec.md, plan.md, tasks.md y la constitución. Solo lectura: no modifiques ningún archivo. Verifica en particular: que cada FR-TER-001 a 023 tenga al menos una tarea y una prueba que lo cite y que ninguna tarea cite un requisito inexistente, que los siete casos del Apéndice B aparezcan como escenarios con prueba, que plan.md no agregue reglas que no estén en spec.md y que spec.md no nombre estructuras, clases ni módulos, que ninguna tarea ni decisión use heapq, bisect, collections, networkx, set ni dict como índice o caché, que cada afirmación de rendimiento cite un comando de --bench o esté marcada como hipótesis, que las rutas de archivo del plan y de las tareas coincidan (Nuevo / Modificado), que las pruebas vayan antes que el código en cada fase y que el contrato de datos (Fase A) sea separable. Clasifica cada hallazgo por gravedad y señala el archivo y la línea. Después: aplica las correcciones propuestas en los archivos."
+
+**Prompt (resumido):** Se pidió completar las correcciones de plan.md y research.md y hacer un análisis de consistencia de solo lectura entre la especificación, el plan, las tareas y la constitución, con hallazgos por gravedad, y luego aplicar las correcciones.
+
+**Para qué se usó:** Como Antigravity se quedó sin cuota, se corrigieron plan.md y research.md (cifras de rendimiento como hipótesis, complejidad O((V+E) log V), eventos de invalidación, riesgo de fixtures) y se hizo el análisis que habría hecho /speckit-analyze. Se aplicaron cinco ajustes: el rechazo de un costo inválido en FR-TER-016, los nombres de los métodos de BuscadorRutas en data-model.md, las pruebas faltantes en el árbol de plan.md, el orden de T035 en tasks.md (prueba antes del código) y la verificación de FR-TER-020 en T039, además de la auditoría de T041.
+
+
+### 2026-11-10 — Claude Opus 5.5 (app de Claude)
+**Prompt:** Decidimos como grupo que yo iba a aplicar las correcciones de 001, guíame en el proceso.
+
+**Prompt (resumido):** Guía para aplicar las correcciones de la capacidad 001.
+
+**Para qué se usó:** Corregir los documentos de la capacidad 001 (spec, plan, tareas, research, modelo de datos, quickstart y contrato) y el enlace del README según la revisión del PR #3 y los dos análisis de /speckit-analyze. Incluye la decisión del grupo sobre el cazador sin rango, registrada como sesión de aclaraciones del 2026-11-10. Los cambios se revisaron con git diff antes de hacer los commits.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** /speckit-analyze Sigue las instrucciones de prompts/p2/07-analyze-001-revision.md
+
+**Prompt (resumido):** Análisis de solo lectura de la capacidad 001 después de la revisión del PR (primera ejecución).
+
+**Para qué se usó:** Detectó 19 hallazgos, 3 de gravedad alta. Se corrigieron antes de hacer los commits.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** /speckit-analyze Sigue las instrucciones de prompts/p2/07-analyze-001-revision.md
+
+**Prompt (resumido):** Verificación de las correcciones de la primera ejecución (segunda ejecución).
+
+**Para qué se usó:** Confirmó las correcciones anteriores y detectó 18 hallazgos nuevos, 2 de gravedad alta. Se corrigieron los altos, los medios y los bajos rápidos antes de hacer los commits.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo los bloques A.0 y A.1 de la Fase A: T001, T001b, T002, T003, T004, T005, T006 y T006b. Solo pruebas y el cliente falso de tests/, nada de código en cripta/. Las pruebas nuevas deben fallar porque el código aún no existe. Al terminar, corre py -m unittest completo, dime cuáles fallan y por qué, y marca las casillas de esas tareas en tasks.md. No sigas con A.2."
+
+**Prompt (resumido):** Escritura de las pruebas del contrato de datos (Fase A) antes del código.
+
+**Para qué se usó:** Crear las pruebas de T001 a T006b. Fallaron solo las nuevas, como se esperaba. Se pidió además que el error por costos contradictorios se exija en agregar_pagina, con las dos salas en páginas distintas.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo el bloque A.2 de la Fase A: T007 a T015 y T021b. El objetivo es que pasen las pruebas escritas en A.0 y A.1 sin modificarlas. Si una prueba te parece contradictoria con la spec, detente y explícamelo en vez de cambiarla. Al terminar, corre py -m unittest completo y marca las casillas en tasks.md. No sigas con A.3. Para editar archivos usa tu herramienta de edición, no sed -i, porque cambia los finales de línea CRLF."
+
+**Prompt (resumido):** Implementación del contrato de datos (Fase A) contra las pruebas ya escritas.
+
+**Para qué se usó:** Implementar costo, rango, LlaveUbicacionDTO, obtener_llaves en los clientes, la caché de llaves y la resolución de costos en CriptaMapa. Pasaron las 247 pruebas.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "Corrige solo documentos de specs/001-terreno-cazador/ (spec.md, plan.md, quickstart.md y tasks.md), sin tocar código ni fixtures. El grupo acordó lo siguiente tras revisar el servidor: - cripta-01 ya no existe en el servidor. Hay dos criptas nuevas: cripta-05 "Cripta sellada" (24 salas) y cripta-06 "Cripta de referencia" (300 salas). La versión del catálogo cambió de be68d322d2f5 a 4b9e75a42be5. - cripta-01 se mueve con el catálogo anterior y criptas.json a tests/datos/ como datos de prueba congelados. Las 4 pruebas que usan ClienteOffline("fixtures") (test_guardado_ida, test_guardado_vuelta, test_pergamino, test_servicio_partida) pasan a usar ClienteOffline("tests/datos"), y se actualiza su docstring. - fixtures/ queda igual al servidor actual: cripta-02 a cripta-06 con llaves.json, costo, rango y el catálogo nuevo. - Los tres ejemplos de docs/ejemplos/ ya no se reproducen porque guardan el catálogo anterior. Se reemplazan por ejemplos nuevos que muestren terreno y cazador, en la Fase E. - La cripta de referencia de FR-TER-020 y SC-001 es cripta-06. La carga sintética de 400 salas se mantiene para comparar alternativas, pero la verificación de FR-TER-020 se hace con cripta-06 desde fixtures/. Cambios concretos: 1. spec.md: actualiza el supuesto de la cripta de referencia y agrega una sesión de clarificaciones "Sesión 2026-11-10 (estado del servidor)" con estos hechos. 2. plan.md: actualiza la línea de mediciones de FR-TER-020 y el Límite Conocido 5. 3. quickstart.md: actualiza la medición de FR-TER-020 y el comando de replay de ejemplo. 4. tasks.md: reescribe T016 (el respaldo es el commit e6d52ac y se mueve cripta-01 a tests/datos/ con las 4 pruebas), T017 (regenera cripta-02 a cripta-06 con llaves.json y actualiza docs/FORMATO_OFFLINE.md y la sección de fixtures del README), T039 (mide con cripta-06) y T042 (graba ejemplos nuevos, reemplaza los de docs/ejemplos/ y actualiza la tabla del README). Conserva los ids y el formato de las tareas. No marques casillas. Respeta los finales de línea de cada archivo. No uses sed -i. Al terminar, dime qué cambiaste en cada archivo." Seguimiento, en la misma sesión: "Sí falta una tarea: cargas_bench.py solo tiene cargas sintéticas. Agrega en la Fase D una tarea T036b, antes de T039: modificar cripta/bench/cargas_bench.py para registrar la carga ciclo_referencia, que carga cripta-06 desde fixtures/ con ClienteOffline (sin red ni vista), arma la partida y mide el ciclo de eventos entre dos decisiones del jugador con decenas de cazadores activos. Si cripta-06 no trae suficientes cazadores, la carga activa más instancias de cazador con una semilla fija, y se documenta cuántas. Cita FR-TER-020. Haz que T038 también habilite ciclo_referencia en servicio_bench.py y que T039 use ciclo_referencia. Actualiza la sección de dependencias de tasks.md. Solo tasks.md, no marques casillas, no uses sed -i." (El texto completo está en prompts/p2/08-estado-servidor-001.md.)
+
+**Prompt (resumido):** Ajuste de la spec, el plan, el quickstart y las tareas de 001 a los cambios del servidor (cripta-01 retirada, cripta-05 y cripta-06 nuevas, catálogo nuevo).
+
+**Para qué se usó:** Actualizar T016, T017, T039 y T042, registrar los hechos como sesión de aclaraciones y agregar T036b para medir FR-TER-020 con cripta-06. Se hizo antes del código, en un commit aparte.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T016. Ya moví con git mv fixtures/cripta-01, fixtures/catalogo y fixtures/criptas.json a tests/datos/, así que no muevas ni copies archivos. Falta solo esto: en tests/modelo/test_guardado_ida.py, tests/modelo/test_guardado_vuelta.py, tests/modelo/test_pergamino.py y tests/servicios/test_servicio_partida.py cambia ClienteOffline("fixtures") por ClienteOffline("tests/datos"), y en la primera línea del docstring de esos 4 archivos y de tests/controlador/test_controlador_cripta.py cambia "la cripta real de fixtures/" por "la cripta congelada de tests/datos/". Usa tu herramienta de edición, no sed -i. Corre py -m unittest y marca T016 en tasks.md. No sigas con T017."
+
+**Prompt (resumido):** Paso de las pruebas de la Parte I a los datos congelados de cripta-01.
+
+**Para qué se usó:** Cambiar la ruta de ClienteOffline en cuatro pruebas y los docstrings de siete. Las 247 pruebas siguieron pasando.
+
+### 2026-11-10 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T017, sin ejecutar el script ni usar la red. Cambios: 1. scripts/generar_fixtures.py: en descargar, guardar también GET /criptas/{id}/llaves como <cripta>/llaves.json tal como llega del API, igual que los demás archivos. En verificar, leer también las llaves con ClienteOffline.obtener_llaves y mostrar cuántas leyó. Que el script siga recibiendo una cripta por ejecución. 2. docs/FORMATO_OFFLINE.md: documentar llaves.json, el campo costo de las salidas (opcional) y el campo rango de las fichas de enemigo (opcional), y aclarar que tests/datos/ guarda cripta-01 con el catálogo anterior como datos de prueba congelados que no se regeneran. 3. README.md: actualizar solo la sección de fixtures y la línea del árbol de carpetas para que digan que fixtures/ tiene cripta-02 a cripta-06 del servidor actual y que tests/datos/ tiene cripta-01 congelada. No toques la sección de bitácoras de ejemplo, eso es de T042. Usa tu herramienta de edición, no sed -i, y respeta los finales de línea de cada archivo. No marques T017 todavía, falta correr el script."
+
+**Prompt (resumido):** Descarga de las llaves en el script de fixtures y documentación del formato.
+
+**Para qué se usó:** Agregar llaves.json al script y documentar los campos nuevos. El script se ejecutó a mano para cripta-02 a cripta-06.

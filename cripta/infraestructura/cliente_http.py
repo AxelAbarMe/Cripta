@@ -8,6 +8,7 @@ from cripta.dto.contenido_sala_respuesta_dto import ContenidoSalaRespuestaDTO
 from cripta.dto.cripta_general_dto import CriptaGeneralDTO
 from cripta.dto.cripta_resumen_dto import CriptaResumenDTO
 from cripta.dto.catalogo_dto import CatalogoDTO
+from cripta.dto.llave_ubicacion_dto import LlaveUbicacionDTO
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.version_dto import VersionCatalogoDTO, VersionCriptaDTO
 from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
@@ -175,3 +176,9 @@ class ClienteHttp:
         operacion = "versión de catálogo"
         datos = self._get("/catalogo/version", operacion)
         return self._convertir(operacion, VersionCatalogoDTO.desde_json, datos)
+
+    def obtener_llaves(self, id_cripta: str) -> tuple[LlaveUbicacionDTO, ...]:
+        # GET /criptas/{id}/llaves: dónde se consigue cada llave (en una sala o al derrotar a un enemigo)
+        operacion = f"llaves de {id_cripta}"
+        datos = self._get(f"/criptas/{id_cripta}/llaves", operacion)
+        return self._convertir(operacion, lambda d: tuple(LlaveUbicacionDTO.desde_json(l) for l in d["llaves"]), datos)

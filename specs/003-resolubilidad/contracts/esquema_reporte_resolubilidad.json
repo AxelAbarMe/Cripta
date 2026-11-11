@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EsquemaReporteResolubilidad",
+  "description": "Esquema formal para la estructura de datos del resultado del diagnóstico de resolubilidad de una cripta",
+  "type": "object",
+  "required": [
+    "id_cripta",
+    "version_cripta",
+    "es_resoluble",
+    "llaves_obtenidas",
+    "llaves_no_obtenibles",
+    "frontera_bloqueada",
+    "ubicaciones_llaves",
+    "ciclos_dependencia"
+  ],
+  "properties": {
+    "id_cripta": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version_cripta": {
+      "type": "string",
+      "minLength": 1
+    },
+    "es_resoluble": {
+      "type": "boolean"
+    },
+    "motivo_no_resoluble": {
+      "type": ["string", "null"]
+    },
+    "llaves_obtenidas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "llaves_no_obtenibles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "frontera_bloqueada": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sala_origen", "direccion", "sala_destino"],
+        "properties": {
+          "sala_origen": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "direccion": {
+            "type": "string",
+            "enum": ["N", "S", "E", "O"]
+          },
+          "llave": {
+            "type": ["string", "null"]
+          },
+          "sala_destino": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "ubicaciones_llaves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id_llave", "estado"],
+        "properties": {
+          "id_llave": {
+            "type": "string"
+          },
+          "sala": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "enemigo": {
+            "type": ["string", "null"]
+          },
+          "estado": {
+            "type": "string",
+            "enum": ["obtenible", "no_obtenible", "sin_ubicacion"]
+          }
+        }
+      }
+    },
+    "ciclos_dependencia": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["llaves", "descripcion"],
+        "properties": {
+          "llaves": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2
+          },
+          "descripcion": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

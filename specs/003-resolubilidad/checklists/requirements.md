@@ -31,5 +31,6 @@
 
 ## Notas
 
-- Todos los criterios de calidad de requisitos han sido revisados y satisfechos favorablemente.
+- Lista generada por el agente y revisada a mano tras la fase de aclaraciones (2026-11-11). No sustituye a la revisión por pares ni a `/speckit-analyze`.
+- Puntos a vigilar en el plan: FR-RES-018 y la mención a caché persistente describen comportamiento observable, y el plan no debe convertirlos en reglas de juego nuevas.
 - La especificación se encuentra lista para la fase de planificación (`/speckit-plan`).

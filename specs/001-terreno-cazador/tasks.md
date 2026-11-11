@@ -62,8 +62,8 @@
 
 ### A.3 — Fixtures y documentación de ejemplos
 
-- [ ] T016 [US4] Respaldar los fixtures actuales de `fixtures/` antes de regenerarlos y revisar qué registros de `docs/ejemplos/` dejarían de ser reproducibles con `--replay` si cambia la versión de la cripta (FR-TER-019; Límite Conocido 5 del plan)
-- [ ] T017 [US4] Modificar `scripts/generar_fixtures.py` (Modificado): regenerar fixtures con `costo` en salidas, `rango` en fichas de catálogo y `llaves.json` consultando `/llaves`; verificar que los fixtures generados pasan las pruebas de los DTOs (FR-TER-001, FR-TER-008, FR-TER-018)
+- [ ] T016 [US4] Respaldar y reubicar los datos anteriores al servidor actual (FR-TER-019; Límite Conocido 5 del plan): el respaldo de los fixtures actuales es el commit e6d52ac. Mover `fixtures/cripta-01/`, el catálogo anterior (`fixtures/catalogo/`) y `fixtures/criptas.json` a `tests/datos/` como datos de prueba congelados, y cambiar `ClienteOffline("fixtures")` por `ClienteOffline("tests/datos")` en `tests/modelo/test_guardado_ida.py`, `tests/modelo/test_guardado_vuelta.py`, `tests/modelo/test_pergamino.py` y `tests/servicios/test_servicio_partida.py`, actualizando el docstring de cada una. Confirmar que esas pruebas siguen en `OK`
+- [ ] T017 [US4] Modificar `scripts/generar_fixtures.py` (Modificado): regenerar `fixtures/` para que quede igual al servidor actual (cripta-02 a cripta-06, con `costo` en salidas, `rango` en fichas de catálogo, `llaves.json` consultando `/llaves` y el catálogo 4b9e75a42be5); verificar que los fixtures generados pasan las pruebas de los DTOs; actualizar `docs/FORMATO_OFFLINE.md` y la sección de fixtures del `README.md` (criptas incluidas y ubicación de los datos congelados en `tests/datos/`) (FR-TER-001, FR-TER-008, FR-TER-018)
 
 **Punto de corte del primer Pull Request de código**: Fase A completada y verificada → abrir PR a `main`.
 
@@ -167,7 +167,7 @@
 > [!NOTE]
 > Depende de que las Fases B y C estén completas.
 
-**Objetivo**: Implementar las cargas sintéticas `ruta_cazador` e `invalidacion` con sus alternativas descartadas, medir las cargas de regresión `ciclo`, `agenda` e `historial` y documentar los resultados tal como salgan.
+**Objetivo**: Implementar las cargas sintéticas `ruta_cazador` e `invalidacion` con sus alternativas descartadas, la carga `ciclo_referencia` sobre cripta-06, medir las cargas de regresión `ciclo`, `agenda` e `historial` y documentar los resultados tal como salgan.
 
 ### D.1 — Cargas nuevas
 
@@ -175,17 +175,22 @@
 
   Comando exacto: `py -m cripta --bench --solo ruta_cazador`
 
+- [ ] T036b [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ciclo_referencia`, que carga cripta-06 desde `fixtures/` con `ClienteOffline` (sin red ni vista), arma la partida y mide el ciclo de eventos completo entre dos decisiones del jugador con decenas de cazadores activos persiguiendo al mismo objetivo; si cripta-06 no trae suficientes cazadores, la carga activa más instancias de cazador con una semilla fija (`random.Random(42)`) y reporta cuántas agregó; ninguna cifra de cripta-06 se escribe en el código, todo sale de los fixtures (FR-TER-020)
+
+  Comando exacto: `py -m cripta --bench --solo ciclo_referencia`
+
 - [ ] T037 [US2] [US3] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `invalidacion` con 20 cazadores durante 100 ticks en dos escenarios, puertas estables y 5 puertas con cierre automático cada 15 ticks; implementar también la alternativa descartada (recalcular siempre en cada turno de cazador) (FR-TER-020)
 
   Comando exacto: `py -m cripta --bench --solo invalidacion`
 
-- [ ] T038 [US2] Modificar `cripta/servicios/servicio_bench.py` (Modificado): habilitar las cargas `ruta_cazador` e `invalidacion` y reportar las métricas del plan (tiempo por ciclo, número de búsquedas, razón individual/compartido) (FR-TER-020)
+- [ ] T038 [US2] Modificar `cripta/servicios/servicio_bench.py` (Modificado): habilitar las cargas `ruta_cazador`, `invalidacion` y `ciclo_referencia` y reportar las métricas del plan (tiempo por ciclo, número de búsquedas, razón individual/compartido) (FR-TER-020)
 
 ### D.2 — Cargas de regresión de la Parte I
 
-- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con el resultado de `ruta_cazador` para `H=30` (mientras no se publique la cripta de referencia de P2 §6.1; cuando exista, repetir con ella), comparándolo con el límite de 20 ms, y anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
+- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con la carga `ciclo_referencia` (cripta-06, 300 salas, desde `fixtures/`, con decenas de cazadores activos), comparándola con el límite de 20 ms. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar alternativas. Anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
 
   ```powershell
+  py -m cripta --bench --solo ciclo_referencia
   py -m cripta --bench --solo ciclo
   py -m cripta --bench --solo agenda
   py -m cripta --bench --solo historial
@@ -214,13 +219,13 @@
   ```
   Resultado esperado: sin importaciones prohibidas; cada `sorted(` o `.sort(` se revisa a mano y solo se permite fuera de los ordenamientos evaluados. Los usos de `dict` y `set` como índice o caché se revisan a mano en el Pull Request, porque la búsqueda de texto no distingue los usos permitidos.
 
-- [ ] T042 Reproducir la partida de ejemplo con `--replay` (Principio VIII):
+- [ ] T042 Grabar ejemplos nuevos que muestren terreno con costo y cazadores (con los fixtures regenerados en T017), reemplazar los tres de `docs/ejemplos/` (que guardan el catálogo anterior y ya no se reproducen), actualizar la tabla de bitácoras de ejemplo del `README.md` y reproducir cada uno con `--replay` (Principio VIII):
 
-  Comando exacto: `py -m cripta --offline --replay docs/ejemplos/partida_cripta-02.log`
+  Comando exacto: `py -m cripta --offline --replay docs/ejemplos/partida_cripta-06.log`
 
-  Resultado esperado: código de salida `0`, usando los fixtures originales respaldados en T016 si se regeneraron en T017.
+  Resultado esperado: código de salida `0` para cada ejemplo nuevo, sin ejemplos con el catálogo be68d322d2f5.
 
-- [ ] T043 Ampliar `DECISIONES.md` (raíz) con la sección de la capacidad 001: problema, alternativas y razón de descarte, decisión, complejidad, resultados de `--bench` de T036, T037 y T039 con el comando exacto, límites conocidos y enlaces a `spec.md` y `plan.md` (Principio VI)
+- [ ] T043 Ampliar `DECISIONES.md` (raíz) con la sección de la capacidad 001: problema, alternativas y razón de descarte, decisión, complejidad, resultados de `--bench` de T036, T036b, T037 y T039 con el comando exacto, límites conocidos y enlaces a `spec.md` y `plan.md` (Principio VI)
 - [ ] T044 Registrar en `PROMPTS_LLM.md` las invocaciones de la implementación (por ejemplo `/speckit-implement`), con fecha, herramienta, prompt textual y para qué se usó (Flujo de Trabajo de la Constitución)
 
 ---
@@ -253,7 +258,7 @@ Fase A ──► Fase B ──► Fase C ──► Fase D ──► Fase E
 - Fase A: T001 → T001b → T002–T006 y T006b (pruebas en paralelo) → T007, T008, T009, T014, T015 y T021b (en paralelo) → T010 → T011 y T012 → T013 → T016 → T017
 - Fase B: T018 → T019, T019b, T020 (pruebas) → T021 → T022 → T023 → T024 → T025 → T025b
 - Fase C: T026, T026b, T027, T028, T028b y T035 (pruebas en paralelo) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
-- Fase D: T036 → T037 (mismo archivo) → T038 → T039
+- Fase D: T036 → T036b → T037 (mismo archivo) → T038 → T039
 - Fase E: T040–T041 (en paralelo) → T042 → T043 → T044
 
 ### Oportunidades de paralelización

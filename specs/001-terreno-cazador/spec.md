@@ -45,6 +45,13 @@ Prefijo de requisitos: FR-TER-NNN. No menciones estructuras de datos, clases ni 
 - Q: ¿La regla de que los turnos de enemigos no escriben en partida.log impide que otras capacidades agreguen registros? (FR-TER-021) → A: No. Solo prohíbe líneas por turnos de enemigos. Esta capacidad no agrega tipos de línea, y otras pueden agregar los suyos, como el comentario de «ir a» de P2 §3.4.
 - Q: ¿Qué ocurre si el costo de una conexión se declara en un solo lado, o si los dos lados declaran costos distintos? (FR-TER-002) → A: Si se declara en un solo lado, rige para ambos sentidos. Si los dos lados declaran costos distintos, el dato es inválido y se rechaza con un mensaje que identifica las salas de la conexión.
 
+### Sesión 2026-11-10 (estado del servidor)
+
+- Q: ¿Qué criptas y qué versión de catálogo publica ahora el servidor? → A: cripta-01 ya no existe en el servidor. Hay dos criptas nuevas: cripta-05 «Cripta sellada» (24 salas) y cripta-06 «Cripta de referencia» (300 salas). La versión del catálogo cambió de be68d322d2f5 a 4b9e75a42be5. Los datos de cripta-02 a cripta-06 con llaves, costo y rango reflejan el servidor actual.
+- Q: ¿Qué pasa con cripta-01 y el catálogo anterior? → A: Se conservan como datos de prueba congelados, separados de los datos que reflejan el servidor, para que las pruebas que dependen de ellos sigan siendo reproducibles.
+- Q: ¿Siguen siendo reproducibles las partidas de ejemplo existentes? → A: No. Guardan el catálogo anterior y el reproductor las rechaza por versión distinta. Se reemplazan por ejemplos nuevos que muestran terreno con costo y cazadores, grabados en la fase de cierre.
+- Q: ¿Cuál es la cripta de referencia de FR-TER-020 y SC-001? → A: cripta-06. La carga sintética de 400 salas se mantiene solo para comparar alternativas de diseño, y la verificación de FR-TER-020 se hace con cripta-06.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Movimiento y costos variables del terreno para actores (Prioridad: P1)
@@ -185,5 +192,5 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - Los costos de salida suministrados por el servicio son números enteros mayores o iguales a 1. El costo de una conexión puede venir declarado en uno solo de sus dos lados; en ese caso rige para ambos sentidos. Si ningún lado lo declara o es nulo, asume el valor por defecto de 100.
 - El cazador se activa como cualquier enemigo (P1 §2.4): sus instancias permanecen dormidas hasta que el jugador entra a su sala, y solo un cazador activo decide y persigue.
 - La consulta de ubicación de llaves consume exactamente una solicitud del presupuesto de solicitudes de la cripta y su resultado permanece vigente mientras no se altere la versión de la cripta.
-- La «cripta de referencia» de FR-TER-020 y SC-001 es la que publique el profesor para medir el rendimiento (P2 §6.1). Mientras no esté publicada, FR-TER-020 se verifica con una cripta sintética determinista por semilla, y la medición se repite con la cripta de referencia cuando exista.
+- La «cripta de referencia» de FR-TER-020 y SC-001 es cripta-06 «Cripta de referencia» (300 salas), publicada por el servidor (P2 §6.1). FR-TER-020 se verifica con ella. La carga sintética determinista por semilla de 400 salas se conserva solo para comparar alternativas de diseño.
 - Los actores conservan sus atributos de combate, fórmulas de daño y reglas de turno de la primera parte; la incorporación de salidas con costo variable modifica exclusivamente la duración y el costo del desplazamiento entre salas.

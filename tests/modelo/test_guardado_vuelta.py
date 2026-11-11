@@ -1,4 +1,4 @@
-"""Pruebas de desde_estado_guardado (J9, etapa 2: de EstadoPartida a la partida viva), con la cripta real de fixtures/.
+"""Pruebas de desde_estado_guardado (J9, etapa 2: de EstadoPartida a la partida viva), con la cripta congelada de tests/datos/.
 
 Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.modelo.test_guardado_vuelta -v
 """
@@ -25,7 +25,7 @@ PERGAMINO = N(id="itm_pergamino", clase="pergamino_retroceso", nombre="Pergamino
 
 def armar_mundo():
     """Objetos nuevos y vacíos de partida: es lo que tendría quien carga un guardado en otra ejecución."""
-    cliente = ClienteOffline("fixtures")
+    cliente = ClienteOffline("tests/datos")
     general = cliente.obtener_general("cripta-01")
     mapa, catalogo = CriptaMapa(), ServicioCatalogo(cliente)
     precarga = ServicioPrecarga(cliente, "cripta-01", mapa, servicio_catalogo=catalogo, asincrono=False)

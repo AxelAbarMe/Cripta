@@ -1,4 +1,4 @@
-"""Pruebas de ServicioReplay (--replay, §4.11) con la cripta real de fixtures/.
+"""Pruebas de ServicioReplay (--replay, §4.11) con la cripta congelada de tests/datos/.
 
 Se ejecuta desde la raíz del proyecto con:
     python -m unittest tests.servicios.test_servicio_replay -v

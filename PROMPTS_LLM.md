@@ -576,7 +576,7 @@ Al terminar, muestra un resumen breve de los archivos creados.
 
 **Para qué se usó:** Generar plan.md y sus artefactos asociados para la capacidad de resolubilidad, a revisar antes de pasar a las tareas.
 
-### 2026-11-11 — Antigravity CLI 1.5.4 (Gemini 3.8 Flash)
+### 2026-11-11 — Antigravity CLI 1.5.4 (Claude Sonnet 4.6 Thinking)
 **Prompt:**
 ```text
 /speckit-tasks

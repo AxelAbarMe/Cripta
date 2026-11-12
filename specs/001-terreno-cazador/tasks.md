@@ -80,14 +80,14 @@
 
 ### B.0 — Infraestructura de pruebas de la Fase B
 
-- [ ] T018 [US1] Crear `tests/aceptacion/__init__.py` (Nuevo) para habilitar el descubrimiento `unittest` en la carpeta `tests/aceptacion/` (FR-TER-004, FR-TER-005)
+- [X] T018 [US1] Crear `tests/aceptacion/__init__.py` (Nuevo) para habilitar el descubrimiento `unittest` en la carpeta `tests/aceptacion/` (FR-TER-004, FR-TER-005)
 
 ### B.1 — Pruebas de terreno (escribir antes que el código)
 
 > [!NOTE]
 > Las pruebas siguientes se escriben primero y se confirma que fallan antes de modificar el motor.
 
-- [ ] T019 [US1] Crear `tests/aceptacion/test_terreno_costos.py` (Nuevo) con los escenarios de aceptación de US1 y los casos del Apéndice B correspondientes a terreno:
+- [X] T019 [US1] Crear `tests/aceptacion/test_terreno_costos.py` (Nuevo) con los escenarios de aceptación de US1 y los casos del Apéndice B correspondientes a terreno:
   - US1-1: actor de velocidad 100, salida de costo 250 → intervalo 250 en ida y vuelta (FR-TER-001, FR-TER-002, FR-TER-003)
   - US1-2: actor de velocidad 100, salida sin costo → intervalo 100 (FR-TER-001)
   - US1-3 / Apéndice B caso 6: actor de velocidad 200, salida de costo 1 → intervalo `>= 1` (FR-TER-004)
@@ -95,8 +95,8 @@
   - US1-5: esperar y atacar conservan costo 100 sin importar las salidas adyacentes (FR-TER-006)
   - US1-6: errante y rastreador usan el costo de la salida que cruzan (FR-TER-007)
   - Simetría: el costo de una salida es igual en ambos sentidos; si ningún lado declara costo, la conexión vale 100; si el costo se declara en un solo lado de la conexión (por ejemplo 250 de un lado y nada del otro), rige para ambos sentidos; si los dos lados declaran costos distintos, construir el mapa lanza `CriptaDatosInvalidosError` con las salas de la conexión en el mensaje (FR-TER-002; Límite Conocido 4 del plan)
-- [ ] T019b [US1] Ampliar `tests/controlador/test_controlador_errores.py` (Modificado) con la prueba de FR-TER-023: ante un desplazamiento rechazado (puerta cerrada o dirección sin salida), (a) se emite un mensaje descriptivo de rechazo observable, (b) el reloj virtual no avanza, (c) no cambian el estado del juego ni el historial de retroceso y (d) no se escribe ninguna línea en `partida.log`; la prueba cita FR-TER-023 (FR-TER-023)
-- [ ] T020 [P] [US1] Crear `tests/modelo/test_reloj.py` (Nuevo): prueba que `calcular_intervalo` con costo 1 y velocidad alta produce `>= 1`; prueba que `calcular_tiempo_reprogramado` escala el tiempo restante (se reutiliza la función existente de `cripta/modelo/reloj.py`, P1 §2.3, sin fórmula nueva); prueba el desempate por menor número de secuencia para dos eventos en el mismo instante en `RelojEventos` (FR-TER-004, FR-TER-005, FR-TER-022)
+- [X] T019b [US1] Ampliar `tests/controlador/test_controlador_errores.py` (Modificado) con la prueba de FR-TER-023: ante un desplazamiento rechazado (puerta cerrada o dirección sin salida), (a) se emite un mensaje descriptivo de rechazo observable, (b) el reloj virtual no avanza, (c) no cambian el estado del juego ni el historial de retroceso y (d) no se escribe ninguna línea en `partida.log`; la prueba cita FR-TER-023 (FR-TER-023)
+- [X] T020 [P] [US1] Crear `tests/modelo/test_reloj.py` (Nuevo): prueba que `calcular_intervalo` con costo 1 y velocidad alta produce `>= 1`; prueba que `calcular_tiempo_reprogramado` escala el tiempo restante (se reutiliza la función existente de `cripta/modelo/reloj.py`, P1 §2.3, sin fórmula nueva); prueba el desempate por menor número de secuencia para dos eventos en el mismo instante en `RelojEventos` (FR-TER-004, FR-TER-005, FR-TER-022)
 
 ### B.2 — Implementación de terreno
 

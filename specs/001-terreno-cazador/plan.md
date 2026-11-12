@@ -44,7 +44,7 @@ Todas las afirmaciones de rendimiento de este plan son hipótesis a confirmar co
 - Los turnos de los enemigos (cazadores incluidos) no escriben en `partida.log`; esta capacidad no agrega tipos de línea (FR-TER-021).
 - Compatibilidad retroactiva: las 222 pruebas de la Parte I deben seguir terminando en `OK`.
 
-**Escala/Alcance**: Laberintos de hasta 1 000 salas, con decenas de cazadores activos simultáneos y rangos de 1 a 1 000 unidades de costo (valores de diseño para las cargas sintéticas, no datos de una cripta concreta).
+**Escala/Alcance**: Laberintos de hasta 1 000 salas, con decenas de cazadores activos simultáneos y rangos de cazador de hasta 2 400 unidades de costo (valores reales del servidor: 600 y 2 400).
 
 ---
 
@@ -305,13 +305,14 @@ tests/
 
 ### 1. Carga `ruta_cazador` (Cálculo Compartido vs Alternativa Descartada Individual)
 - **Comando**: `py -m cripta --bench --solo ruta_cazador`
-- **Configuración Sintética**: Cripta sintética generada de forma determinista con semilla fija (`SEMILLA_BENCH = 42`), 400 salas, salidas con costos pseudoaleatorios entre 10 y 250 (valores de diseño de la carga, no datos de una cripta publicada).
+- **Configuración Sintética**: Cripta sintética generada de forma determinista con semilla fija (`SEMILLA_BENCH = 42`), 400 salas, salidas con costos pseudoaleatorios entre 20 y 490 (el intervalo de los costos de salida del servidor, sin copiar datos de una cripta publicada).
 - **Escenarios Evaluados**:
   - $H = 1, 10, 30$ cazadores activos simultáneos.
-  - Rangos de persecución: pequeño ($R = 100$) vs amplio ($R = 500$).
-  - Un caso de rangos heterogéneos: un cazador de rango amplio y varios de rango pequeño.
+  - Rangos de persecución: $R = 600$ (sabueso óseo) y $R = 2400$ (espectro acechador), valores reales del servidor.
+  - Un caso de rangos heterogéneos con la proporción de cripta-06 (25 cazadores de rango 600 y 11 de rango 2400), escalada a $H$ y con al menos un cazador de cada rango.
 - **Métricas a Reportar**:
   - Tiempo por ciclo con **cálculo compartido** (decisión elegida). «Ciclo» es un ciclo completo de `Partida` entre dos decisiones del jugador (agenda, turnos de enemigos, búsqueda e invalidación), sin red ni vista, que es lo que exige FR-TER-020; el tiempo de la búsqueda sola se reporta aparte.
+  - Tiempo dedicado a consultar costos de salida (`costo_de_conexion`) durante el ciclo, reportado aparte (Límite Conocido 6).
   - Tiempo por ciclo con **cálculo individual desde cada cazador** (alternativa descartada).
   - Razón $\text{Tiempo}_{\text{individual}} / \text{Tiempo}_{\text{compartido}}$.
 - **Criterio de Aceptación**: Hipótesis: con 30 cazadores el cálculo compartido mantiene el ciclo por debajo de 20 ms, y el individual crece con $H$. Se reportan los resultados tal como salgan. Si la hipótesis no se cumple, se documenta como límite conocido y se revisa la decisión.
@@ -350,6 +351,8 @@ tests/
    - El diseño usa que $\text{dist}(u, S_J) = \text{dist}(S_J, u)$ porque FR-TER-002 establece costos simétricos. `CriptaMapa` la garantiza resolviendo el costo desde ambos lados de la conexión y rechazando como dato inválido dos costos distintos. Con los fixtures regenerados se comprueba en qué lado declara el servicio el costo.
 5. **Regeneración de Fixtures y Reproducción de Registros Existentes**:
    - `scripts/generar_fixtures.py` descarga datos del servicio y sobrescribe `fixtures/`. El servidor ya cambió: cripta-01 no existe, hay cripta-05 y cripta-06, y el catálogo pasó de be68d322d2f5 a 4b9e75a42be5. Por eso los tres registros de `docs/ejemplos/` (que guardan el catálogo anterior) ya no se reproducen con `--replay` y se reemplazan en la Fase E por ejemplos nuevos de terreno y cazador. El respaldo de los fixtures anteriores es el commit e6d52ac. cripta-01, el catálogo anterior y `criptas.json` se mueven a `tests/datos/` como datos de prueba congelados, y las 4 pruebas que los usan leen de allí.
+6. **Costo de la Consulta `costo_de_conexion` en la Búsqueda**:
+   - La búsqueda consulta el costo de cada arista con `CriptaMapa.costo_de_conexion`, que cuesta $O(\log n)$ por consulta. Se mantiene así y se mide: la carga `ruta_cazador` reporta aparte el tiempo dedicado a esas consultas. La alternativa es precalcular los costos en una tabla plana al construir el mapa, con $O(1)$ por consulta. Queda como alternativa a evaluar si la medición muestra que la consulta pesa, y se documenta en `DECISIONES.md` (T043).
 
 ---
 

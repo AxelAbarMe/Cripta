@@ -199,7 +199,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
    - `desde_json`: si `comportamiento == "cazador"` y `"rango"` es un entero positivo $\ge 1$, se conserva. Si el rango es nulo, falta, no es entero o es menor que 1, no se lanza excepción: `rango` queda en `None` y el cazador se trata de forma pasiva (ataca si comparte sala con el jugador y si no espera con costo 100; nunca persigue), con un aviso a la bitácora de mensajes al activarse (FR-TER-008).
 3. **`LlaveUbicacionDTO` (`cripta/dto/llave_ubicacion_dto.py` — Nuevo)**:
    - Nuevo DTO inmutable `(id: str, sala: int, enemigo: str | None = None)`.
-   - Si `enemigo` es nulo o ausente, la llave está en el suelo de la sala. Si está presente, la porta el enemigo indicado.
+   - Si `enemigo` es nulo o ausente, la llave está en el suelo de la sala. Si está presente, la porta el enemigo indicado. Si es una cadena vacía, el dato es inválido y `desde_json` lanza `ValueError` con el dato afectado, igual que con un `id` vacío (FR-TER-018).
 4. **Puertos y Adaptadores (`cripta/infraestructura/`)**:
    - `ClienteCripta` (`puertos.py`): añadir `obtener_llaves(id_cripta: str) -> tuple[LlaveUbicacionDTO, ...]`.
    - `ClienteHttp`: llamada HTTP con cabecera `X-Cripta-Client-Id`, deducción de presupuesto y gestión de HTTP 429.

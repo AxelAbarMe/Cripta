@@ -33,6 +33,7 @@ Este documento define formalmente los contratos externos e internos para la Part
     ```
   - `404 Not Found`: Si la cripta no existe.
   - `429 Too Many Requests`: `{"error": "...", "reintentar_en": n}`. Debe esperarse y reintentarse respetando presupuesto.
+- **Regla de `enemigo`**: nulo o ausente significa llave en el suelo de la sala. Un identificador no vacío significa que la porta ese enemigo. Una cadena vacía (`""`) es un dato inválido y `LlaveUbicacionDTO.desde_json` lanza `ValueError` con el dato afectado, igual que con un `id` vacío. El cliente lo convierte como siempre (FR-TER-018).
 - **Esquema formal**: Definido en [contrato_servicio_llaves.json](contrato_servicio_llaves.json).
 
 ---
@@ -120,10 +121,12 @@ class LlaveUbicacionDTO:
             raise ValueError(f"ubicación de llave sin 'id' o 'sala': {datos}")
         if not str(datos["id"]) or not isinstance(datos["sala"], int) or datos["sala"] < 1:
             raise ValueError(f"ubicación de llave con 'id' vacío o 'sala' menor que 1: {datos}")
+        if datos.get("enemigo") == "":
+            raise ValueError(f"ubicación de llave con 'enemigo' vacío: {datos}")
         return cls(
             id=str(datos["id"]),
             sala=datos["sala"],
-            enemigo=str(datos["enemigo"]) if datos.get("enemigo") else None
+            enemigo=str(datos["enemigo"]) if datos.get("enemigo") is not None else None
         )
 ```
 

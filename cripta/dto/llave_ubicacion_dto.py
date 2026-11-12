@@ -17,4 +17,7 @@ class LlaveUbicacionDTO:
         sala = datos["sala"]
         if isinstance(sala, bool) or not isinstance(sala, int) or sala < 1:
             raise ValueError(f"llave «{datos['id']}» con «sala» inválida ({sala!r}): debe ser un entero >= 1")
-        return LlaveUbicacionDTO(id=datos["id"], sala=sala, enemigo=datos.get("enemigo"))
+        enemigo = datos.get("enemigo")
+        if enemigo == "":
+            raise ValueError(f"llave «{datos['id']}» con «enemigo» vacío: debe ser nulo, ausente o un id")
+        return LlaveUbicacionDTO(id=datos["id"], sala=sala, enemigo=enemigo)

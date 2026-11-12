@@ -32,6 +32,16 @@ class TestLlaveUbicacionDto(unittest.TestCase):
             LlaveUbicacionDTO.desde_json({"id": "k", "sala": 0})
         self.assertIn("sala", str(ctx.exception))
 
+    def test_enemigo_vacio_lanza_value_error_con_el_dato(self):  # FR-TER-018
+        with self.assertRaises(ValueError) as ctx:
+            LlaveUbicacionDTO.desde_json({"id": "k", "sala": 4, "enemigo": ""})
+        self.assertIn("enemigo", str(ctx.exception))
+
+    def test_solo_enemigo_nulo_o_ausente_es_llave_en_el_suelo(self):  # FR-TER-018
+        self.assertIsNone(LlaveUbicacionDTO.desde_json({"id": "k", "sala": 4, "enemigo": None}).enemigo)
+        self.assertIsNone(LlaveUbicacionDTO.desde_json({"id": "k", "sala": 4}).enemigo)
+        self.assertEqual(LlaveUbicacionDTO.desde_json({"id": "k", "sala": 4, "enemigo": "e-1"}).enemigo, "e-1")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -285,8 +285,8 @@ class Partida:
                 return
             costo = COSTO_ATACAR
         elif tipo == "mover":
+            costo = self._mapa.costo_de_conexion(enemigo.sala_actual, direccion)
             self._mover_enemigo(enemigo, direccion)
-            costo = COSTO_MOVER
         else:
             costo = COSTO_ESPERAR
         self._programar_turno_enemigo(enemigo, costo)
@@ -373,6 +373,7 @@ class Partida:
             return self._rechazar(f"No hay salida hacia el {direccion}.")
         if not self._mapa.puerta_transitable(sala.id, direccion):
             return self._rechazar("La puerta está cerrada.")
+        costo_salida = self._mapa.costo_de_conexion(sala.id, direccion)
         # El contenido de la sala destino debe estar en memoria antes de confirmar el movimiento (§2.5).
         # Si todavía no llegó, esta llamada espera: la espera real no mueve el reloj virtual.
         with self._historial.sin_registrar():   # cargar contenido es infraestructura, no estado del juego
@@ -390,7 +391,7 @@ class Partida:
         if (self._jugador.esta_vivo() and destino.id == self._datos.sala_salida and self._puerta_exige_llave_de_salida(sala.id, direccion)):
             self._desenlace = VICTORIA
             self._decir("¡Has llegado a la salida! Ganas la partida.")
-        self._terminar_accion_jugador(accion.costo_base)
+        self._terminar_accion_jugador(costo_salida)
         return self._aceptar()
 
     def _puerta_exige_llave_de_salida(self, origen_id: int, direccion: str) -> bool:

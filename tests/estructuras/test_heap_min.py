@@ -76,5 +76,35 @@ class TestHeapMinimo(unittest.TestCase):
         self.assertEqual(obtenidos, sorted(pares))
 
 
+class TestHeapMinimoEstado(unittest.TestCase):
+    def test_esta_vacio_es_verdadero_en_un_monticulo_nuevo(self):  # FR-TER-010
+        self.assertTrue(HeapMinimo().esta_vacio())
+
+    def test_esta_vacio_es_falso_tras_insertar_y_verdadero_al_extraer_todo(self):  # FR-TER-010
+        heap = HeapMinimo()
+        heap.insertar(4)
+        self.assertFalse(heap.esta_vacio())
+        heap.eliminar_minimo()
+        self.assertTrue(heap.esta_vacio())
+
+    def test_len_de_un_monticulo_nuevo_es_cero(self):  # FR-TER-010
+        self.assertEqual(len(HeapMinimo()), 0)
+
+    def test_len_sigue_las_inserciones_y_las_extracciones(self):  # FR-TER-010
+        heap = HeapMinimo()
+        for cantidad, valor in enumerate((5, 3, 8, 3), start=1):
+            heap.insertar(valor)
+            self.assertEqual(len(heap), cantidad)
+        for restantes in (3, 2, 1, 0):
+            heap.eliminar_minimo()
+            self.assertEqual(len(heap), restantes)
+
+    def test_extraer_de_un_monticulo_vacio_no_cambia_el_tamano(self):  # FR-TER-010
+        heap = HeapMinimo()
+        heap.eliminar_minimo()
+        self.assertEqual(len(heap), 0)
+        self.assertTrue(heap.esta_vacio())
+
+
 if __name__ == "__main__":
     unittest.main()

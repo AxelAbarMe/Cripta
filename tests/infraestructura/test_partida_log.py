@@ -8,9 +8,13 @@ import unittest
 from pathlib import Path
 
 from cripta.excepciones import CriptaBitacoraError
+from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
 from cripta.infraestructura.partida_log import (
     EscritorBitacoraPartida, LectorBitacoraPartida, diferencias_de_version,
 )
+from cripta.modelo.accion import Accion as A
+from cripta.servicios.servicio_partida import ServicioPartida
+from tests.cliente_falso import ClienteFalso
 
 ENCABEZADO = {"id_cripta": "cripta-01", "version_cripta": "fd58f7743b9e",
               "version_catalogo": "be68d322d2f5", "semilla": 42}
@@ -92,6 +96,52 @@ class TestDiferenciasDeVersion(unittest.TestCase):
     def test_cada_version_distinta_se_reporta(self):
         self.assertEqual(len(diferencias_de_version(ENCABEZADO, "otra", "be68d322d2f5")), 1)
         self.assertEqual(len(diferencias_de_version(ENCABEZADO, "otra", "otra")), 2)
+
+
+def _ficha(identificador, comportamiento, rango=None):
+    ficha = {"id": identificador, "clase": "enemigo", "nombre": identificador, "vida_max": 1000, "ataque": 10,
+             "defensa": 0, "velocidad": 100, "comportamiento": comportamiento}
+    if rango is not None:
+        ficha["rango"] = rango
+    return ficha
+
+
+def _servicio_sintetico():
+    """Cripta de tres salas en fila con un cazador, un errante y un rastreador en la sala inicial."""
+    salidas = {1: {"E": {"sala": 2, "costo": 100}}, 2: {"O": {"sala": 1}, "E": {"sala": 3, "costo": 100}},
+               3: {"O": {"sala": 2}}}
+    salas = [{"id": i, "nombre": f"Sala {i}", "salidas": s} for i, s in salidas.items()]
+    contenido = [{"sala": i, "enemigos": [], "objetos": [], "trampas": []} for i in salidas]
+    contenido[0]["enemigos"] = [{"instancia": "e-1", "tipo": "ent_cazador"},
+                                {"instancia": "e-2", "tipo": "ent_errante"},
+                                {"instancia": "e-3", "tipo": "ent_rastreador"}]
+    fichas = [_ficha("ent_cazador", "cazador", 600), _ficha("ent_errante", "errante"),
+              _ficha("ent_rastreador", "rastreador")]
+    general = {"id": "c1", "version": "v1", "salas_total": 3, "paginas": 1, "salas_por_pagina": 50,
+               "sala_inicial": 1, "sala_salida": 3, "llave_salida": "itm_llave", "presupuesto_solicitudes": 9,
+               "inventario_max": 10, "jugador": {"vida_max": 100000, "ataque": 6, "defensa": 2, "velocidad": 100}}
+    cliente = ClienteFalso(fichas, contenido, [{"pagina": 1, "total_paginas": 1, "salas": salas}], general)
+    return ServicioPartida(cliente, ContadorSolicitudes(), asincrono=False)
+
+
+class TestEnemigosNoEscribenEnLaBitacora(unittest.TestCase):
+    def test_turnos_de_cazador_errante_y_rastreador_no_generan_lineas(self):  # FR-TER-021
+        carpeta = tempfile.TemporaryDirectory()
+        self.addCleanup(carpeta.cleanup)
+        ruta = str(Path(carpeta.name) / "partida.log")
+        servicio = _servicio_sintetico()
+        self.addCleanup(servicio.cerrar)
+        servicio.iniciar_nueva("c1", 42, ruta)
+        # Esperar y atacar con los tres en la sala, luego alejarse y volver a esperar para que se muevan y esperen
+        acciones = [A("esperar"), A("esperar"), A("mover", "E"), A("mover", "E"), A("esperar"), A("esperar"),
+                    A("esperar"), A("mover", "O"), A("esperar")]
+        for accion in acciones:
+            self.assertTrue(servicio.ejecutar(accion).aceptada)
+        self.assertGreater(len([m for m in servicio.partida.mensajes() if "te ataca" in m]), 0)
+        lineas = Path(ruta).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lineas), 1 + len(acciones))   # el encabezado y una línea por acción del jugador
+        _, registradas = LectorBitacoraPartida(ruta).leer()
+        self.assertEqual(list(registradas), [a.a_dict() for a in acciones])
 
 
 if __name__ == "__main__":

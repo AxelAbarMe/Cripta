@@ -422,7 +422,7 @@ def bench_ciclo_eventos(escala: float = 1.0):
         azar = random.Random(SEMILLA_BENCH)
         jugador = Jugador(type("J", (), {"vida_max": 10**9, "ataque": 6, "defensa": 2, "velocidad": 100})(), 1, 10)
         ficha = type("F", (), {"id": "ent_rata", "nombre": "Rata", "vida_max": 10**9, "ataque": 5, "defensa": 1,
-                               "velocidad": 150, "comportamiento": "rastreador", "suelta": ()})()
+                               "velocidad": 150, "comportamiento": "rastreador", "suelta": (), "rango": None})()
         reloj = RelojEventos()
         enemigos = [Enemigo(f"e-{i}", ficha, 1) for i in range(actores)]
 

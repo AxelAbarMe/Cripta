@@ -21,6 +21,7 @@ from cripta.infraestructura.estado_guardado import (
 )
 from cripta.modelo import combate
 from cripta.modelo.bitacora_mensajes import BitacoraMensajes
+from cripta.modelo.buscador_rutas import BuscadorRutas
 from cripta.modelo.comportamiento_enemigo import decidir_accion_enemigo
 
 from cripta.modelo.efectos import (
@@ -69,6 +70,7 @@ class Partida:
         self._reloj = RelojEventos()
         self._jugador = Jugador(datos_generales.jugador, datos_generales.sala_inicial, datos_generales.inventario_max)
         self._bitacora = BitacoraMensajes()
+        self._buscador = BuscadorRutas()         # tabla de rutas compartida por todos los cazadores
         self._historial = HistorialRetroceso()
         self._conectar_retroceso()
         self._desenlace = EN_CURSO
@@ -170,6 +172,7 @@ class Partida:
             self._bitacora.agregar(mensaje)
         self._siguiente_instancia = siguiente_instancia_tras(self._jugador.inventario)
         self._turno_listo = True                    # solo se guarda cuando al jugador le toca decidir
+        self._buscador.invalidar()
         self._mensajes_nuevos = []
         self._iniciada = True
 
@@ -260,6 +263,10 @@ class Partida:
         for enemigo in sala.activar_enemigos_dormidos():
             self._con_retroceso(enemigo)
             enemigo.activar()
+            if enemigo.comportamiento == "cazador":
+                self._buscador.invalidar()
+                if enemigo.rango is None:
+                    self._decir(f"{enemigo.etiqueta()} ({enemigo.tipo_catalogo}) es un cazador sin rango válido y no persigue al jugador.")
             self._programar_turno_enemigo(enemigo, COSTO_MOVER)
 
     def _programar_turno_enemigo(self, enemigo, costo: int) -> None:
@@ -273,9 +280,10 @@ class Partida:
     def _turno_enemigo(self, enemigo) -> None:
         if not enemigo.esta_vivo() or self._desenlace != EN_CURSO:
             return
-        tipo, direccion = decidir_accion_enemigo(
-            enemigo, self._jugador.sala_actual, self._mapa, self._azar, self._reloj.tiempo_actual
+        decision = decidir_accion_enemigo(
+            enemigo, self._jugador.sala_actual, self._mapa, self._azar, self._reloj.tiempo_actual, self._buscador
         )
+        tipo, direccion = decision[0], decision[1]
         if tipo == "atacar":
             daño = combate.atacar(enemigo, self._jugador, self._azar)
             self._decir(f"{enemigo.etiqueta()} te ataca y te hace {daño} de daño.")
@@ -285,7 +293,7 @@ class Partida:
                 return
             costo = COSTO_ATACAR
         elif tipo == "mover":
-            costo = self._mapa.costo_de_conexion(enemigo.sala_actual, direccion)
+            costo = decision[2] if len(decision) == 3 else self._mapa.costo_de_conexion(enemigo.sala_actual, direccion)
             self._mover_enemigo(enemigo, direccion)
         else:
             costo = COSTO_ESPERAR
@@ -353,6 +361,7 @@ class Partida:
         if not self._historial.hay_intervalo_para_deshacer():
             return self._rechazar("No hay ninguna acción que deshacer.")
         self._historial.deshacer_ultimo_intervalo()
+        self._buscador.invalidar()
         with self._historial.sin_registrar():
             inventario.quitar_primero_de_clase("pergamino_retroceso")
         self._decir("Usas un pergamino de retroceso: el tiempo vuelve atrás.")
@@ -382,6 +391,7 @@ class Partida:
         tiempo = self._reloj.tiempo_actual
         sala.marcar_visita(tiempo)
         self._jugador.sala_actual = destino.id
+        self._buscador.invalidar()
         destino.marcar_visita(tiempo)   # el rastro de la sala destino es el instante en que se entra
         self._decir(f"Entras a {destino.esqueleto.nombre}.")
         self._activar_enemigos_de(destino)
@@ -432,6 +442,7 @@ class Partida:
             return self._rechazar("No tienes la llave de esta puerta.")
         sala.marcar_visita(self._reloj.tiempo_actual)
         self._mapa.abrir_puerta(sala.id, direccion)
+        self._buscador.invalidar()
         self._decir(f"Abres la puerta hacia el {direccion}.")
         if cierre is not None:
             EfectoCierrePuerta(
@@ -443,6 +454,7 @@ class Partida:
 
     def _avisar_cierre_de_puerta(self) -> None:
         # El efecto cierra los dos lados; quien ya cruzó se queda donde está (solo se impide volver a atravesar)
+        self._buscador.invalidar()
         self._decir("Una puerta se cierra sola.")
 
 

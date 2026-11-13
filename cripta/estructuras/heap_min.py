@@ -16,6 +16,14 @@ class HeapMinimo:
             self._hundir(0)
         return minimo
 
+    def esta_vacio(self) -> bool:
+        # Verdadero si el montículo no tiene elementos
+        return len(self.heap) == 0
+
+    def __len__(self) -> int:
+        # Cantidad de elementos almacenados
+        return len(self.heap)
+
     def _flotar(self, indice):
         while indice > 0:
             padre = (indice - 1) // 2

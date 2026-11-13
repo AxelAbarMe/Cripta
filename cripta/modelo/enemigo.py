@@ -21,6 +21,7 @@ class Enemigo(Actor):
         self.tipo_catalogo = ficha.id
         self.comportamiento = ficha.comportamiento
         self.suelta = ficha.suelta
+        self.rango = ficha.rango  # None si la ficha no lo define o no es válido
         self.activo = False  # se activa solo cuando el jugador entra a su sala
 
         if vida_inicial is not None:

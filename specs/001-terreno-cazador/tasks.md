@@ -154,8 +154,8 @@
 
 ### C.2 — Estructuras auxiliares
 
-- [ ] T029 [P] [US2] Modificar `cripta/estructuras/heap_min.py` (Modificado): añadir `esta_vacio(self) -> bool` y `__len__(self) -> int` sobre la estructura interna existente, sin `heapq` ni otras bibliotecas prohibidas; hoy `HeapMinimo` solo tiene `insertar` y `eliminar_minimo` (FR-TER-010)
-- [ ] T030 [P] [US2] Modificar `cripta/modelo/enemigo.py` (Modificado): exponer la propiedad `rango` tomada de la ficha del catálogo, para uso de la decisión del cazador (FR-TER-008, FR-TER-012)
+- [X] T029 [P] [US2] Modificar `cripta/estructuras/heap_min.py` (Modificado): añadir `esta_vacio(self) -> bool` y `__len__(self) -> int` sobre la estructura interna existente, sin `heapq` ni otras bibliotecas prohibidas; hoy `HeapMinimo` solo tiene `insertar` y `eliminar_minimo` (FR-TER-010)
+- [X] T030 [P] [US2] Modificar `cripta/modelo/enemigo.py` (Modificado): exponer la propiedad `rango` tomada de la ficha del catálogo, para uso de la decisión del cazador (FR-TER-008, FR-TER-012)
 
 ### C.3 — BuscadorRutas
 

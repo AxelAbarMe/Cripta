@@ -159,7 +159,7 @@
 
 ### C.3 — BuscadorRutas
 
-- [ ] T031 [US2] Crear `cripta/modelo/buscador_rutas.py` (Nuevo): clase `BuscadorRutas` con `_distancias: list[int | None]`, `_cerrados: list[bool]`, `_sala_objetivo`, `_rango_max_calculado` y `_valido`; implementar `invalidar()`, `calcular_o_reutilizar(mapa, sala_jugador_id, rango_max)` con búsqueda de costo mínimo desde la sala del jugador usando `HeapMinimo` y tabla plana indexada por `sala_id` (sin `heapq`, `bisect`, `collections`, `dict` ni `set`), con poda al extraer un nodo de distancia `> rango_max`, solo por salidas abiertas en ese instante; implementar `distancia(sala_id)` y `decidir_paso(cazador, sala_jugador_id, mapa)`, que devuelve acción, dirección y costo de la salida, con desempate por `min(v.id)` (FR-TER-010, FR-TER-011, FR-TER-012, FR-TER-013, FR-TER-014, FR-TER-015)
+- [X] T031 [US2] Crear `cripta/modelo/buscador_rutas.py` (Nuevo): clase `BuscadorRutas` con `_distancias: list[int | None]`, `_cerrados: list[bool]`, `_sala_objetivo`, `_rango_max_calculado` y `_valido`; implementar `invalidar()`, `calcular_o_reutilizar(mapa, sala_jugador_id, rango_max)` con búsqueda de costo mínimo desde la sala del jugador usando `HeapMinimo` y tabla plana indexada por `sala_id` (sin `heapq`, `bisect`, `collections`, `dict` ni `set`), con poda al extraer un nodo de distancia `> rango_max`, solo por salidas abiertas en ese instante; implementar `distancia(sala_id)` y `decidir_paso(cazador, sala_jugador_id, mapa)`, que devuelve acción, dirección y costo de la salida, con desempate por `min(v.id)` (FR-TER-010, FR-TER-011, FR-TER-012, FR-TER-013, FR-TER-014, FR-TER-015)
 
 ### C.4 — Comportamiento del cazador en el motor
 

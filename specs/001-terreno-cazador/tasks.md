@@ -184,7 +184,7 @@
 
   Comando exacto: `py -m cripta --bench --solo ruta_cazador`
 
-- [X] T036b [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ciclo_referencia`, que carga cripta-06 desde `fixtures/` con `ClienteOffline` (sin red ni vista), arma la partida y mide el ciclo de eventos completo entre dos decisiones del jugador con decenas de cazadores activos persiguiendo al mismo objetivo; si cripta-06 no trae suficientes cazadores, la carga activa más instancias de cazador con una semilla fija (`random.Random(42)`) y reporta cuántas agregó; ninguna cifra de cripta-06 se escribe en el código, todo sale de los fixtures (FR-TER-020)
+- [X] T036b [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ciclo_referencia`, que carga cripta-06 desde `fixtures/` con `ClienteOffline` (sin red ni vista), arma la partida y mide el ciclo de eventos completo entre dos decisiones del jugador con decenas de cazadores activos (P2 §6.1). La carga despierta a todos los cazadores reales de cripta-06 con la activación del juego, sin agregar copias, y reporta los cazadores activos y el promedio en persecución por ciclo. Ninguna cifra de cripta-06 se escribe en el código, todo sale de los fixtures (FR-TER-020)
 
   Comando exacto: `py -m cripta --bench --solo ciclo_referencia`
 
@@ -196,7 +196,7 @@
 
 ### D.2 — Cargas de regresión de la Parte I
 
-- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con la carga `ciclo_referencia` (cripta-06, 300 salas, desde `fixtures/`, con decenas de cazadores activos), comparándola con el límite de 20 ms. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar alternativas. Anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
+- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con la carga `ciclo_referencia` (cripta-06, 300 salas, desde `fixtures/`, con decenas de cazadores activos), comparándola con el límite de 20 ms, y reportar de `ciclo_referencia` los cazadores activos y el promedio en persecución por ciclo. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar el cálculo compartido contra el individual (P2 §5.1). Anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
 
   ```powershell
   py -m cripta --bench --solo ciclo_referencia

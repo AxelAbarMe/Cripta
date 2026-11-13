@@ -36,7 +36,7 @@ Todas las afirmaciones de rendimiento de este plan son hipótesis a confirmar co
 **Tipo de Proyecto**: Juego de mazmorra por turnos y simulador de eventos discretos en arquitectura MVC estricta con CLI y modo `--offline` desacoplado.
 
 **Objetivos de Rendimiento**:
-- Ciclo de eventos completo entre dos decisiones del jugador $< 20\text{ ms}$ en la cripta de referencia, aun con decenas de cazadores activos en persecución simultánea (FR-TER-020).
+- Ciclo de eventos completo entre dos decisiones del jugador $< 20\text{ ms}$ en la cripta de referencia, con decenas de cazadores activos (FR-TER-020, P2 §6.1). El caso de decenas de cazadores que persiguen a la vez al mismo jugador (P2 §5.1) se mide aparte con `ruta_cazador`.
 - Tiempo de decisión por cazador en modo compartido: $O(1)$ tras la búsqueda inicial (hipótesis a confirmar con `--bench` de sobrecosto marginal).
 
 **Restricciones**:
@@ -307,7 +307,7 @@ tests/
 - **Comando**: `py -m cripta --bench --solo ruta_cazador`
 - **Configuración Sintética**: Cripta sintética generada de forma determinista con semilla fija (`SEMILLA_BENCH = 42`), 400 salas, salidas con costos pseudoaleatorios entre 20 y 490 (el intervalo de los costos de salida del servidor, sin copiar datos de una cripta publicada).
 - **Escenarios Evaluados**:
-  - $H = 1, 10, 30$ cazadores activos simultáneos.
+  - $H = 1, 10, 30$ cazadores que persiguen a la vez al mismo jugador (P2 §5.1).
   - Rangos de persecución: $R = 600$ (sabueso óseo) y $R = 2400$ (espectro acechador), valores reales del servidor.
   - Un caso de rangos heterogéneos con la proporción de cripta-06 (25 cazadores de rango 600 y 11 de rango 2400), escalada a $H$ y con al menos un cazador de cada rango.
 - **Métricas a Reportar**:
@@ -315,6 +315,7 @@ tests/
   - Tiempo dedicado a consultar costos de salida (`costo_de_conexion`) durante el ciclo, reportado aparte (Límite Conocido 6).
   - Tiempo por ciclo con **cálculo individual desde cada cazador** (alternativa descartada).
   - Razón $\text{Tiempo}_{\text{individual}} / \text{Tiempo}_{\text{compartido}}$.
+- **Alcance**: `ruta_cazador` compara el cálculo compartido contra el individual con `H=30` en persecución simultánea (P2 §5.1) y no verifica el límite de §6.1, que verifica `ciclo_referencia`.
 - **Criterio de Aceptación**: Hipótesis: con 30 cazadores el cálculo compartido mantiene el ciclo por debajo de 20 ms, y el individual crece con $H$. Se reportan los resultados tal como salgan. Si la hipótesis no se cumple, se documenta como límite conocido y se revisa la decisión.
 
 ---
@@ -333,7 +334,7 @@ tests/
 
 ### 3. Mediciones de Regresión de la Parte I
 - **Comandos**:
-  - `py -m cripta --bench --solo ciclo` (regresión de la Parte I, sin cazadores: verificar que sigue por debajo de $20\text{ ms}$ con los costos variables). FR-TER-020 se verifica con cripta-06 (300 salas, P2 §6.1) cargada desde `fixtures/`, con decenas de cazadores activos. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar alternativas.
+  - `py -m cripta --bench --solo ciclo` (regresión de la Parte I, sin cazadores: verificar que sigue por debajo de $20\text{ ms}$ con los costos variables). FR-TER-020 se verifica con `py -m cripta --bench --solo ciclo_referencia`: cripta-06 (300 salas, P2 §6.1) cargada desde `fixtures/`, con decenas de cazadores activos. Reporta los cazadores activos y el promedio en persecución por ciclo (en cripta-06 como máximo 8 tienen al jugador en rango a la vez). La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar el cálculo compartido contra el individual (P2 §5.1).
   - `py -m cripta --bench --solo agenda` (verificar el rendimiento de `HeapMinimo` con intervalos variables y reprogramaciones frecuentes).
   - `py -m cripta --bench --solo historial` (verificar el costo de registrar y revertir acciones cuando hay muchos cazadores moviéndose).
 
@@ -392,7 +393,7 @@ tests/
 | **FR-TER-017** (lectura del cazador y su rango en el catálogo) | `cripta/dto/enemigo_dto.py`, `cripta/infraestructura/serializacion.py` | `tests.dto.test_enemigo_dto` |
 | **FR-TER-018** (consulta `/llaves`, presupuesto y portador) | `cripta/infraestructura/cliente_http.py` | `tests.infraestructura.test_cliente_offline_llaves` |
 | **FR-TER-019** (invalidación formal por versión de cripta) | `cripta/infraestructura/cache.py` | `tests.infraestructura.test_cache_llaves` |
-| **FR-TER-020** (ciclo de eventos $< 20\text{ ms}$ con cazadores) | `cripta/modelo/buscador_rutas.py` | `--bench --solo ruta_cazador ciclo` / Escenario Quickstart 5 |
+| **FR-TER-020** (ciclo de eventos $< 20\text{ ms}$ con decenas de cazadores activos) | `cripta/modelo/buscador_rutas.py` | `--bench --solo ciclo_referencia` (§6.1) y `ruta_cazador` (§5.1) / Escenario Quickstart 5 |
 | **FR-TER-021** (los turnos de enemigos no escriben en `partida.log`) | `cripta/infraestructura/partida_log.py` | `tests.infraestructura.test_partida_log` |
 | **FR-TER-022** (desempate de agenda por menor secuencia) | `cripta/modelo/reloj.py` (`RelojEventos`) | `tests.modelo.test_reloj` (Nuevo) |
 | **FR-TER-023** (desplazamientos rechazados sin tiempo ni log) | `cripta/modelo/partida.py` (`_despachar`) | `tests.controlador.test_controlador_errores` |

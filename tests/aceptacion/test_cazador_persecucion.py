@@ -2,12 +2,20 @@
 Usa criptas sintéticas en memoria (sin datos de ninguna cripta real). Se ejecuta con:
     py -m unittest tests.aceptacion.test_cazador_persecucion -v
 """
+import tempfile
 import unittest
+from pathlib import Path
 
+from cripta.constantes import direccion_opuesta
+from cripta.infraestructura.cliente_general import ClienteGeneral
+from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
 from cripta.modelo.accion import Accion as A
 from cripta.modelo.efectos import EfectoCierrePuerta
+from cripta.servicios.servicio_partida import ServicioPartida
+from tests.cliente_falso import ClienteFalso
 from tests.modelo.test_cazador_decisiones import (
-    RANGO_ESPECTRO, RANGO_SABUESO, armar_partida, avanzar_hasta, cazador_de, grafo, recorrer,
+    RANGO_ESPECTRO, RANGO_SABUESO, id_ficha, ficha_cazador, armar_partida, avanzar_hasta, cazador_de, grafo,
+    recorrer,
 )
 
 
@@ -152,6 +160,120 @@ class TestActivacionYMuerte(unittest.TestCase):
         avanzar_hasta(partida, 300)
         self.assertEqual(indices_de_ataque(partida, "e-1"), [])
         self.assertEqual(cazador.tiempo_siguiente, 100)
+
+
+LLAVE = "itm_llave_atajo"
+PERGAMINO = "itm_pergamino"
+FICHA_LLAVE = {"id": LLAVE, "clase": "llave", "nombre": "Llave del atajo", "peso": 1, "valor": 1, "abre": 1}
+FICHA_PERGAMINO = {"id": PERGAMINO, "clase": "pergamino_retroceso", "nombre": "Pergamino", "peso": 1, "valor": 1}
+
+
+def cerrar_con_llave(salidas, origen, direccion, llave):
+    """Marca la salida y su lado opuesto como cerrados con esa llave."""
+    destino = salidas[origen][direccion]["sala"]
+    for sala, salida in ((origen, direccion), (destino, direccion_opuesta(direccion))):
+        salidas[sala][salida].update({"cerrada": True, "llave": llave})
+    return salidas
+
+
+def armar_servicio(salidas, cazadores, objetos=None, fichas_extra=()):
+    """ServicioPartida sobre una cripta sintética. `objetos` es {sala: [ids de ficha]}. La sala 1 es la inicial."""
+    objetos = objetos or {}
+    salas = [{"id": i, "nombre": f"Sala {i}", "salidas": s} for i, s in salidas.items()]
+    contenido = [{"sala": i, "enemigos": [], "objetos": list(objetos.get(i, [])), "trampas": []} for i in salidas]
+    fichas = list(fichas_extra)
+    for sala, instancia, rango in cazadores:
+        for entrada in contenido:
+            if entrada["sala"] == sala:
+                entrada["enemigos"].append({"instancia": instancia, "tipo": id_ficha(rango)})
+        if id_ficha(rango) not in [f["id"] for f in fichas]:
+            fichas.append(ficha_cazador(rango, 100))
+    general = {"id": "c1", "version": "v1", "salas_total": len(salas), "paginas": 1, "salas_por_pagina": 50,
+               "sala_inicial": 1, "sala_salida": max(salidas), "llave_salida": "itm_llave", "presupuesto_solicitudes": 9,
+               "inventario_max": 10, "jugador": {"vida_max": 100000, "ataque": 6, "defensa": 2, "velocidad": 1000}}
+    cliente = ClienteFalso(fichas, contenido, [{"pagina": 1, "total_paginas": 1, "salas": salas}], general)
+    servicio = ServicioPartida(ClienteGeneral(cliente), ContadorSolicitudes(), asincrono=False)
+    servicio.iniciar_nueva("c1", 3)
+    return servicio
+
+
+def mapa_de(servicio):
+    return servicio.partida._mapa
+
+
+def sala_del_jugador(servicio):
+    return servicio.partida._jugador.sala_actual
+
+
+# Desde la 1 hay dos caminos a la 4 (por la 3 cuesta 200) y uno a la 2 (cuesta 100). Para el jugador en la 2
+# el mejor paso del cazador es el este, y para el jugador en la 4 es el norte.
+DOS_CAMINOS = [(1, "E", 2, 100), (1, "N", 3, 100), (3, "E", 4, 100), (2, "S", 4, 500)]
+
+
+class TestInvalidacionDeLaTablaDelCazador(unittest.TestCase):
+    def test_abrir_una_puerta_con_llave_que_acorta_la_ruta_cambia_la_decision(self):  # FR-TER-015
+        # Cerrada la puerta 1-2 el rodeo cuesta 1000 y supera el rango 600 asi que el cazador espera en t=100
+        conexiones = [(1, "E", 2, 100), (1, "N", 5, 300), (5, "E", 6, 400), (6, "S", 2, 300)]
+        salidas = cerrar_con_llave(grafo(conexiones), 1, "E", LLAVE)
+        servicio = armar_servicio(salidas, [(1, "e-1", RANGO_SABUESO)], {5: [LLAVE]}, [FICHA_LLAVE])
+        partida, mapa = servicio.partida, mapa_de(servicio)
+        for accion in (A("mover", "N"), A("recoger", LLAVE), A("mover", "E"), A("mover", "S")):
+            self.assertTrue(servicio.ejecutar(accion).aceptada)
+        avanzar_hasta(partida, 100)
+        cazador = cazador_de(mapa, "e-1")
+        self.assertEqual((cazador.sala_actual, cazador.tiempo_siguiente), (1, 200))   # esperó con la tabla del rodeo
+        self.assertTrue(servicio.ejecutar(A("abrir", direccion_opuesta("E"))).aceptada)
+        avanzar_hasta(partida, 200)
+        self.assertEqual((cazador.sala_actual, cazador.tiempo_siguiente), (2, 300))   # ahora la ruta cuesta 100
+
+    def test_usar_el_pergamino_y_volver_a_una_sala_anterior_cambia_la_decision(self):  # FR-TER-015
+        servicio = armar_servicio(grafo(DOS_CAMINOS), [(1, "e-1", RANGO_SABUESO)], {1: [PERGAMINO]}, [FICHA_PERGAMINO])
+        partida, mapa = servicio.partida, mapa_de(servicio)
+        self.assertTrue(servicio.ejecutar(A("recoger", PERGAMINO)).aceptada)
+        recorrer(partida, ["E"])
+        avanzar_hasta(partida, 90)
+        recorrer(partida, ["S"])          # el jugador pasa a la 4 y el turno de t=100 se decide con ella como destino
+        cazador = cazador_de(mapa, "e-1")
+        self.assertEqual(cazador.sala_actual, 3)
+        self.assertTrue(servicio.ejecutar(A("pergamino")).aceptada)
+        self.assertEqual((sala_del_jugador(servicio), cazador.sala_actual), (2, 1))
+        avanzar_hasta(partida, 100)
+        self.assertEqual((cazador.sala_actual, cazador.tiempo_siguiente), (2, 200))   # decide para la sala 2 y no la 4
+
+    def test_activar_un_cazador_de_rango_mayor_no_deja_una_tabla_corta_para_el_nuevo(self):  # FR-TER-015
+        # Salas 1 (sabueso) -400- 2 -10- 3 (espectro dormido) y 2 -990- 5. El jugador termina en la 5 a distancia 1000
+        # del espectro, que solo la alcanza con su rango 2400. Con velocidad 1000 cada acción del jugador dura un décimo de su costo
+        conexiones = [(1, "E", 2, 400), (2, "E", 3, 10), (2, "N", 5, 990)]
+        servicio = armar_servicio(grafo(conexiones), [(1, "e-1", RANGO_SABUESO), (3, "e-2", RANGO_ESPECTRO)])
+        partida, mapa = servicio.partida, mapa_de(servicio)
+        recorrer(partida, ["E"])            # t=0 el jugador pasa a la 2 y su siguiente turno es t=40
+        avanzar_hasta(partida, 100)         # t=100 el sabueso (distancia 400) pasa a la 2 y su siguiente turno es t=500
+        sabueso = cazador_de(mapa, "e-1")
+        self.assertEqual((sabueso.sala_actual, sabueso.tiempo_siguiente), (2, 500))
+        recorrer(partida, ["E"])            # t=100 entra a la 3 y despierta al espectro con primer turno t=200
+        espectro = cazador_de(mapa, "e-2")
+        self.assertTrue(espectro.activo)
+        self.assertEqual(espectro.tiempo_siguiente, 200)
+        recorrer(partida, ["O", "N"])       # t=101 vuelve a la 2 y t=102 llega a la 5 con su siguiente turno en t=201
+        avanzar_hasta(partida, 200)         # t=200 el espectro (distancia 10 + 990) da su primer paso por la salida de 10
+        self.assertEqual(indices_de_ataque(partida, "e-2"), [])
+        self.assertEqual((espectro.sala_actual, espectro.tiempo_siguiente), (2, 200 + 10))
+
+    def test_cargar_una_partida_guardada_decide_como_desde_cero(self):  # FR-TER-015
+        servicio = armar_servicio(grafo(DOS_CAMINOS), [(1, "e-1", RANGO_SABUESO)])
+        with tempfile.TemporaryDirectory() as carpeta:
+            ruta = Path(carpeta) / "partida.sav"
+            recorrer(servicio.partida, ["E"])
+            servicio.guardar(ruta)        # jugador en la 2 y el turno del cazador en t=100 sin ejecutarse
+            avanzar_hasta(servicio.partida, 90)
+            recorrer(servicio.partida, ["S"])
+            self.assertEqual(cazador_de(mapa_de(servicio), "e-1").sala_actual, 3)    # decidió para la sala 4
+            servicio.cargar(ruta)
+        partida, mapa = servicio.partida, mapa_de(servicio)
+        self.assertEqual(sala_del_jugador(servicio), 2)
+        avanzar_hasta(partida, 100)
+        cazador = cazador_de(mapa, "e-1")
+        self.assertEqual((cazador.sala_actual, cazador.tiempo_siguiente), (2, 200))
 
 
 if __name__ == "__main__":

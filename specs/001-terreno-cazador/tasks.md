@@ -142,7 +142,7 @@
   - Cazador que muere con su próximo turno programado: ese turno no produce ninguna acción (FR-TER-015)
   - Cazador en la misma sala que el jugador aunque la distancia por el mapa supere su rango: ataca (FR-TER-009)
 
-- [ ] T028c [US3] Ampliar `tests/aceptacion/test_cazador_persecucion.py` (Modificado) con escenarios que comprueban, a través de `Partida`, que la tabla del cazador se invalida en cada evento de T033 que hoy no tiene prueba propia:
+- [X] T028c [US3] Ampliar `tests/aceptacion/test_cazador_persecucion.py` (Modificado) con escenarios que comprueban, a través de `Partida`, que la tabla del cazador se invalida en cada evento de T033 que hoy no tiene prueba propia:
   - El jugador abre una puerta con llave que acorta la ruta (FR-TER-015)
   - El jugador usa el pergamino de retroceso y vuelve a una sala anterior (FR-TER-015)
   - Se activa un cazador con un rango mayor que el calculado (FR-TER-015)

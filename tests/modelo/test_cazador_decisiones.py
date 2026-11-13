@@ -36,12 +36,12 @@ def construir_mapa(conexiones):
     return mapa
 
 
-def _id_ficha(rango):
+def id_ficha(rango):
     return "ent_cz_sin_rango" if rango is None else f"ent_cz_{rango}"
 
 
-def _ficha_cazador(rango, velocidad):
-    ficha = {"id": _id_ficha(rango), "clase": "enemigo", "nombre": "Cazador", "vida_max": 1000, "ataque": 10,
+def ficha_cazador(rango, velocidad):
+    ficha = {"id": id_ficha(rango), "clase": "enemigo", "nombre": "Cazador", "vida_max": 1000, "ataque": 10,
              "defensa": 0, "velocidad": velocidad, "comportamiento": "cazador"}
     if rango is not None:
         ficha["rango"] = rango
@@ -57,9 +57,9 @@ def armar_partida(salidas, cazadores, velocidad_jugador=1000, velocidad_cazador=
     for sala, instancia, rango in cazadores:
         for entrada in contenido:
             if entrada["sala"] == sala:
-                entrada["enemigos"].append({"instancia": instancia, "tipo": _id_ficha(rango)})
-        if _id_ficha(rango) not in [f["id"] for f in fichas]:
-            fichas.append(_ficha_cazador(rango, velocidad_cazador))
+                entrada["enemigos"].append({"instancia": instancia, "tipo": id_ficha(rango)})
+        if id_ficha(rango) not in [f["id"] for f in fichas]:
+            fichas.append(ficha_cazador(rango, velocidad_cazador))
     general = {"id": "c1", "version": "v1", "salas_total": len(salas), "paginas": 1, "salas_por_pagina": 50,
                "sala_inicial": 1, "sala_salida": max(salidas), "llave_salida": "itm_llave",
                "presupuesto_solicitudes": 9, "inventario_max": 10,
@@ -176,11 +176,11 @@ class TestCazadorSinRango(unittest.TestCase):
 
     def test_al_activarse_agrega_a_la_bitacora_un_aviso_con_el_id_de_la_ficha(self):  # FR-TER-008
         partida, _ = armar_partida(self.PASILLO, [(1, "e-1", None)])
-        self.assertTrue(any(_id_ficha(None) in m for m in partida.mensajes()))
+        self.assertTrue(any(id_ficha(None) in m for m in partida.mensajes()))
 
     def test_un_cazador_con_rango_valido_no_agrega_ese_aviso(self):  # FR-TER-008
         partida, _ = armar_partida(self.PASILLO, [(1, "e-1", RANGO_SABUESO)])
-        self.assertFalse(any(_id_ficha(RANGO_SABUESO) in m for m in partida.mensajes()))
+        self.assertFalse(any(id_ficha(RANGO_SABUESO) in m for m in partida.mensajes()))
 
 
 if __name__ == "__main__":

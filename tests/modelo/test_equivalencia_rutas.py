@@ -8,7 +8,7 @@ import unittest
 from types import SimpleNamespace as N
 
 from cripta.modelo.buscador_rutas import BuscadorRutas
-from tests.modelo.test_cazador_decisiones import RANGO_ESPECTRO, RANGO_SABUESO, construir_mapa
+from tests.cripta_cazadores import RANGO_ESPECTRO, RANGO_SABUESO, construir_mapa
 
 LADO = 6
 PASOS = 250

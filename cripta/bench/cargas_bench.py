@@ -13,7 +13,6 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from cripta.constantes import COSTO_MOVER
 from cripta.dto.entidad_dto import entidad_desde_json
 from cripta.estructuras.lista_doble_enlazada import ListaDobleEnlazada
 from cripta.estructuras.ordenamiento_selector import elegir_algoritmo, ordenar_auto
@@ -48,6 +47,7 @@ class Resultado:
     segundos: float
     operaciones: int
     nota: str = ""
+    es_razon: bool = False
 
     @property
     def micros_por_operacion(self) -> float:
@@ -583,12 +583,10 @@ CAZADORES_INVALIDACION = 20
 TICKS_INVALIDACION = 100
 PASOS_ALEJAMIENTO = 8
 VELOCIDAD_CAZADOR_INVALIDACION = 25
-PASOS_DISPERSION_EXTRAS = 4
 PUERTAS_INESTABLES = 5
 PERIODO_CIERRE_TICKS = 15
 TICK_REAPERTURA = 7
 CRIPTA_REFERENCIA = "cripta-06"
-CAZADORES_REFERENCIA_MINIMOS = 30
 PASOS_CALENTAMIENTO_REFERENCIA = 150
 LIMITE_CICLO_MS = 20.0
 DIRECTORIO_FIXTURES_BENCH = Path(__file__).resolve().parents[2] / "fixtures"
@@ -660,7 +658,7 @@ def _rangos_mixtos(cantidad: int):
 def _armar_partida_terreno(salidas, rangos, buscador, velocidad_cazador: int = 100):
     """Partida sobre la cripta sintética con todos los cazadores en la sala 1 y el buscador indicado."""
     # Import local: tests/ no es parte del paquete cripta
-    from tests.modelo.test_cazador_decisiones import armar_partida
+    from tests.cripta_cazadores import armar_partida
     cazadores = [(1, f"cz-{i:03d}", rango) for i, rango in enumerate(rangos)]
     partida, mapa = armar_partida(salidas, cazadores, velocidad_jugador=100, velocidad_cazador=velocidad_cazador,
                                   semilla=SEMILLA_CARGAS_TERRENO)
@@ -731,7 +729,7 @@ def _ms(segundos: float) -> str:
 def bench_ruta_cazador(escala: float = 1.0, corridas: int = 2):
     """Cálculo compartido (elegida) contra cálculo individual por cazador (descartada) en una cripta sintética."""
     # Import local: tests/ no es parte del paquete cripta
-    from tests.modelo.test_cazador_decisiones import grafo
+    from tests.cripta_cazadores import grafo
     salidas = grafo(_conexiones_cripta_terreno())
     ciclos = max(20, int(60 * escala))
     resultados = []
@@ -751,7 +749,8 @@ def bench_ruta_cazador(escala: float = 1.0, corridas: int = 2):
                 f"mediana de {len(t_comp)} ciclos, peor {_ms(max(t_comp))} ms"))
             resultados.append(Resultado(
                 "ruta_cazador", f"{caso}: compartido, búsqueda sola", bus_comp.busquedas.segundos, ciclos,
-                f"{bus_comp.busquedas.llamadas} búsquedas para {bus_comp.decisiones} decisiones, por ciclo"))
+                f"{bus_comp.busquedas.llamadas} búsquedas para {bus_comp.decisiones} decisiones, "
+                f"total de la corrida de {ciclos} ciclos, no por ciclo"))
             resultados.append(Resultado(
                 "ruta_cazador", f"{caso}: compartido, consultas de costo_de_conexion", cons_comp.segundos, ciclos,
                 f"{cons_comp.llamadas} consultas ({cons_comp.segundos / max(1, cons_comp.llamadas) * 1e6:.2f} µs cada una), "
@@ -761,14 +760,15 @@ def bench_ruta_cazador(escala: float = 1.0, corridas: int = 2):
                 f"mediana de {len(t_ind)} ciclos, peor {_ms(max(t_ind))} ms"))
             resultados.append(Resultado(
                 "ruta_cazador", f"{caso}: individual, búsqueda sola", bus_ind.busquedas.segundos, ciclos,
-                f"{bus_ind.busquedas.llamadas} búsquedas para {bus_ind.decisiones} decisiones, por ciclo"))
+                f"{bus_ind.busquedas.llamadas} búsquedas para {bus_ind.decisiones} decisiones, "
+                f"total de la corrida de {ciclos} ciclos, no por ciclo"))
             resultados.append(Resultado(
                 "ruta_cazador", f"{caso}: individual, consultas de costo_de_conexion", cons_ind.segundos, ciclos,
                 f"{cons_ind.llamadas} consultas ({cons_ind.segundos / max(1, cons_ind.llamadas) * 1e6:.2f} µs cada una)"))
             resultados.append(Resultado(
                 "ruta_cazador", f"{caso}: razón individual/compartido", 0.0, 1,
                 f"razón de tiempo {med_ind / med_comp:.2f} y de búsquedas "
-                f"{bus_ind.busquedas.llamadas / max(1, bus_comp.busquedas.llamadas):.2f}"))
+                f"{bus_ind.busquedas.llamadas / max(1, bus_comp.busquedas.llamadas):.2f}", es_razon=True))
     return resultados
 
 
@@ -813,7 +813,7 @@ def _correr_invalidacion(salidas, fabrica_buscador, inestable: bool):
 def bench_invalidacion(escala: float = 1.0):
     """Invalidación selectiva (elegida) contra recalcular en cada turno de cazador (descartada)."""
     # Import local: tests/ no es parte del paquete cripta
-    from tests.modelo.test_cazador_decisiones import grafo
+    from tests.cripta_cazadores import grafo
     salidas = grafo(_conexiones_cripta_terreno())
     resultados = []
     for etiqueta, inestable in (("puertas estables", False),
@@ -823,32 +823,19 @@ def bench_invalidacion(escala: float = 1.0):
         caso = f"{CAZADORES_INVALIDACION} cazadores, {TICKS_INVALIDACION} ticks, {etiqueta}"
         resultados.append(Resultado(
             "invalidacion", f"{caso}: invalidación selectiva (elegida)", total_e, TICKS_INVALIDACION,
-            f"{bus_e.busquedas.llamadas} búsquedas para {bus_e.decisiones} decisiones, "
+            f"{bus_e.busquedas.llamadas} búsquedas para {bus_e.decisiones} decisiones "
+            f"(total de los {TICKS_INVALIDACION} ticks, no por ciclo), "
             f"{_ms(bus_e.busquedas.segundos)} ms en búsquedas, {usadas} puertas inestables"))
         resultados.append(Resultado(
             "invalidacion", f"{caso}: recalcular siempre (descartada)", total_d, TICKS_INVALIDACION,
-            f"{bus_d.busquedas.llamadas} búsquedas para {bus_d.decisiones} decisiones, "
+            f"{bus_d.busquedas.llamadas} búsquedas para {bus_d.decisiones} decisiones "
+            f"(total de los {TICKS_INVALIDACION} ticks, no por ciclo), "
             f"{_ms(bus_d.busquedas.segundos)} ms en búsquedas"))
         resultados.append(Resultado(
             "invalidacion", f"{caso}: razón recalcular siempre/selectiva", 0.0, 1,
             f"razón de tiempo {total_d / total_e:.2f} y de búsquedas "
-            f"{bus_d.busquedas.llamadas / max(1, bus_e.busquedas.llamadas):.2f}"))
+            f"{bus_d.busquedas.llamadas / max(1, bus_e.busquedas.llamadas):.2f}", es_razon=True))
     return resultados
-
-
-class _FichaCopiada:
-    """Ficha mínima con los datos de un cazador existente para crear instancias adicionales."""
-
-    def __init__(self, modelo):
-        self.id = modelo.tipo_catalogo
-        self.nombre = modelo.nombre
-        self.vida_max = modelo.vida_max
-        self.ataque = modelo.ataque_base
-        self.defensa = modelo.defensa_base
-        self.velocidad = modelo.velocidad
-        self.comportamiento = modelo.comportamiento
-        self.suelta = modelo.suelta
-        self.rango = modelo.rango
 
 
 def _cazadores_activos(mapa):
@@ -860,46 +847,18 @@ def _cazadores_activos(mapa):
     return activos
 
 
-def _cazadores_conocidos(mapa):
-    """Cazadores activos y dormidos de las salas ya cargadas, que sirven de modelo para copiar."""
-    conocidos = list(_cazadores_activos(mapa))
-    for sala in mapa.todas_las_salas():
-        for enemigo in sala.enemigos_dormidos:
-            if enemigo.comportamiento == "cazador":
-                conocidos.append(enemigo)
-    return conocidos
-
-
-def _sala_cercana(mapa, origen: int, azar) -> int:
-    """Sala alcanzada con una caminata corta al azar desde el origen."""
-    actual = origen
-    for _ in range(PASOS_DISPERSION_EXTRAS):
-        vecinos = mapa.vecinos(actual)
-        actual = vecinos[azar.randrange(len(vecinos))][1]
-    return actual
-
-
-def _agregar_cazadores_hasta(partida, mapa, minimo: int) -> int:
-    """Activa cazadores extra con semilla fija hasta llegar al mínimo y devuelve cuántos agregó."""
-    faltan = minimo - len(_cazadores_activos(mapa))
-    if faltan <= 0:
-        return 0
-    modelos = _cazadores_conocidos(mapa)
-    if not modelos:
-        raise ValueError("La cripta no tiene ningún cazador que copiar")
-    azar = random.Random(SEMILLA_CARGAS_TERRENO)
-    for k in range(faltan):
-        sala = mapa.obtener(_sala_cercana(mapa, partida._jugador.sala_actual, azar))
-        enemigo = partida._con_retroceso(Enemigo(f"cz-extra-{k:03d}", _FichaCopiada(modelos[k % len(modelos)]), sala.id))
-        sala.enemigos_activos.append(enemigo)
-        enemigo.activar()
-        partida._programar_turno_enemigo(enemigo, COSTO_MOVER)
-    partida._buscador.invalidar()
-    return faltan
+def _activar_cazadores_reales(partida, mapa) -> None:
+    """Carga cada sala como lo hace el juego al entrar y activa los cazadores reales que tenga."""
+    for sala_id in [sala.id for sala in mapa.todas_las_salas()]:
+        with partida._historial.sin_registrar():
+            sala = partida._precarga.preparar_sala(sala_id)
+        partida._marcar_preparada(sala.id)
+        if any(e.comportamiento == "cazador" for e in sala.enemigos_dormidos):
+            partida._activar_enemigos_de(sala)
 
 
 def _correr_referencia(ciclos: int, calentamiento: int):
-    """Una corrida sobre la cripta de referencia. Devuelve tiempos, activos, agregados y perseguidores."""
+    """Una corrida sobre la cripta de referencia. Devuelve tiempos, activos y perseguidores por ciclo."""
     servicio = ServicioPartida(ClienteGeneral(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))),
                                ContadorSolicitudes(), asincrono=False)
     servicio.iniciar_nueva(CRIPTA_REFERENCIA, semilla=SEMILLA_BENCH)
@@ -908,35 +867,53 @@ def _correr_referencia(ciclos: int, calentamiento: int):
     partida._jugador.vida_max = partida._jugador.vida = 10 ** 9
     prohibido = servicio.datos_generales.sala_salida
     azar = random.Random(SEMILLA_CARGAS_TERRENO)
+    _activar_cazadores_reales(partida, mapa)
+    activos = len(_cazadores_activos(mapa))
     for _ in range(calentamiento):
         _dar_paso_aleatorio(partida, mapa, azar, prohibido)
-    activos = len(_cazadores_activos(mapa))
-    agregados = _agregar_cazadores_hasta(partida, mapa, CAZADORES_REFERENCIA_MINIMOS)
-    tiempos = _tiempos_de_pasos(partida, mapa, azar, ciclos, prohibido)
-    perseguidores = 0
-    for cazador in _cazadores_activos(mapa):
-        distancia = partida._buscador.distancia(cazador.sala_actual)
-        if cazador.rango is not None and distancia is not None and distancia <= cazador.rango:
-            perseguidores += 1
+    tiempos, perseguidores = [], []
+    for _ in range(ciclos):
+        t0 = time.perf_counter()
+        _dar_paso_aleatorio(partida, mapa, azar, prohibido)
+        tiempos.append(time.perf_counter() - t0)
+        perseguidores.append(_cazadores_en_rango(partida, mapa))   # fuera de la medición del ciclo
     servicio.cerrar()
-    return tiempos, activos, agregados, perseguidores
+    return tiempos, activos, perseguidores
+
+
+def _cazadores_en_rango(partida, mapa) -> int:
+    """Cazadores activos cuya distancia al jugador no supera su rango. Usa un buscador aparte para no alterar la medición."""
+    activos = _cazadores_activos(mapa)
+    rangos = [c.rango for c in activos if c.rango is not None]
+    if not rangos:
+        return 0
+    contador = BuscadorRutas()
+    contador.calcular_o_reutilizar(mapa, partida._jugador.sala_actual, max(rangos))
+    cantidad = 0
+    for cazador in activos:
+        distancia = contador.distancia(cazador.sala_actual)
+        if cazador.rango is not None and distancia is not None and distancia <= cazador.rango:
+            cantidad += 1
+    return cantidad
 
 
 def bench_ciclo_referencia(escala: float = 1.0, corridas: int = 3):
     """Ciclo completo de Partida sobre la cripta de referencia de fixtures con muchos cazadores activos."""
     ciclos = max(20, int(100 * escala))
     calentamiento = max(60, int(PASOS_CALENTAMIENTO_REFERENCIA * escala))
-    peores, medianas = [], []
+    peores, medianas, en_rango = [], [], []
     for _ in range(corridas):
-        tiempos, activos, agregados, perseguidores = _correr_referencia(ciclos, calentamiento)
+        tiempos, activos, perseguidores = _correr_referencia(ciclos, calentamiento)
         peores.append(max(tiempos))
         medianas.append(_mediana(tiempos))
+        en_rango.extend(perseguidores)
     peor = _mediana(peores)
     cumple = "CUMPLE" if peor * 1000 < LIMITE_CICLO_MS else "NO CUMPLE"
     detalle = ", ".join(_ms(p) for p in peores)
     return [Resultado(
-        "ciclo_referencia", f"{CRIPTA_REFERENCIA}, {activos} cazadores activos al medir ({agregados} agregados), "
-                            f"{perseguidores} dentro de su rango al final, {ciclos} ciclos x {corridas} corridas",
+        "ciclo_referencia", f"{CRIPTA_REFERENCIA}, {activos} cazadores activos al medir, "
+                            f"en persecución por ciclo: promedio {sum(en_rango) / len(en_rango):.1f} y máximo {max(en_rango)}, "
+                            f"{ciclos} ciclos x {corridas} corridas",
         peor, 1,
         f"ciclo típico {_ms(_mediana(medianas))} ms, peor caso {_ms(peor)} ms (peor de cada corrida: {detalle} ms) "
         f"-> {cumple} el límite de {LIMITE_CICLO_MS:.0f} ms")]

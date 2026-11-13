@@ -6,7 +6,7 @@ import unittest
 from types import SimpleNamespace as N
 
 from cripta.modelo.buscador_rutas import BuscadorRutas
-from tests.modelo.test_cazador_decisiones import RANGO_ESPECTRO, RANGO_SABUESO, construir_mapa
+from tests.cripta_cazadores import RANGO_ESPECTRO, RANGO_SABUESO, construir_mapa
 
 # Cinco salas con costos distintos. Desde la 1 las distancias son 2:50, 3:120, 4:200 y 5:210 (por la 4, no por la 2)
 CONEXIONES = [(1, "E", 2, 50), (2, "E", 3, 70), (1, "N", 4, 200), (4, "E", 5, 10), (5, "S", 2, 400)]

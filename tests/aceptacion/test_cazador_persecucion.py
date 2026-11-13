@@ -13,7 +13,7 @@ from cripta.modelo.accion import Accion as A
 from cripta.modelo.efectos import EfectoCierrePuerta
 from cripta.servicios.servicio_partida import ServicioPartida
 from tests.cliente_falso import ClienteFalso
-from tests.modelo.test_cazador_decisiones import (
+from tests.cripta_cazadores import (
     RANGO_ESPECTRO, RANGO_SABUESO, id_ficha, ficha_cazador, armar_partida, avanzar_hasta, cazador_de, grafo,
     recorrer,
 )

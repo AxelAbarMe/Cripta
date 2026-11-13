@@ -180,19 +180,19 @@
 
 ### D.1 — Cargas nuevas
 
-- [ ] T036 [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ruta_cazador`, que mide ciclos completos de `Partida` entre dos decisiones del jugador (agenda, turnos de enemigos, búsqueda e invalidación), sin red ni vista, como `bench_partida_real` de la Parte I, y reporta aparte el tiempo de la búsqueda sola y el tiempo dedicado a consultar costos con `costo_de_conexion` (Límite Conocido 6 del plan); usa una cripta sintética determinista de 400 salas (una muestra de la escala de diseño de hasta 1 000 salas) generada con `random.Random(42)`, costos de salida entre 20 y 490, escenarios `H=1, 10, 30` y rangos `R=600` y `R=2400` (valores reales del servidor), más el caso de rangos heterogéneos con la proporción de cripta-06 (25 de rango 600 y 11 de rango 2400, escalada a `H`, Límite Conocido 2 del plan); implementar también la alternativa descartada (cálculo individual desde cada cazador) en la misma carga (FR-TER-020)
+- [X] T036 [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ruta_cazador`, que mide ciclos completos de `Partida` entre dos decisiones del jugador (agenda, turnos de enemigos, búsqueda e invalidación), sin red ni vista, como `bench_partida_real` de la Parte I, y reporta aparte el tiempo de la búsqueda sola y el tiempo dedicado a consultar costos con `costo_de_conexion` (Límite Conocido 6 del plan); usa una cripta sintética determinista de 400 salas (una muestra de la escala de diseño de hasta 1 000 salas) generada con `random.Random(42)`, costos de salida entre 20 y 490, escenarios `H=1, 10, 30` y rangos `R=600` y `R=2400` (valores reales del servidor), más el caso de rangos heterogéneos con la proporción de cripta-06 (25 de rango 600 y 11 de rango 2400, escalada a `H`, Límite Conocido 2 del plan); implementar también la alternativa descartada (cálculo individual desde cada cazador) en la misma carga (FR-TER-020)
 
   Comando exacto: `py -m cripta --bench --solo ruta_cazador`
 
-- [ ] T036b [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ciclo_referencia`, que carga cripta-06 desde `fixtures/` con `ClienteOffline` (sin red ni vista), arma la partida y mide el ciclo de eventos completo entre dos decisiones del jugador con decenas de cazadores activos persiguiendo al mismo objetivo; si cripta-06 no trae suficientes cazadores, la carga activa más instancias de cazador con una semilla fija (`random.Random(42)`) y reporta cuántas agregó; ninguna cifra de cripta-06 se escribe en el código, todo sale de los fixtures (FR-TER-020)
+- [X] T036b [US2] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `ciclo_referencia`, que carga cripta-06 desde `fixtures/` con `ClienteOffline` (sin red ni vista), arma la partida y mide el ciclo de eventos completo entre dos decisiones del jugador con decenas de cazadores activos persiguiendo al mismo objetivo; si cripta-06 no trae suficientes cazadores, la carga activa más instancias de cazador con una semilla fija (`random.Random(42)`) y reporta cuántas agregó; ninguna cifra de cripta-06 se escribe en el código, todo sale de los fixtures (FR-TER-020)
 
   Comando exacto: `py -m cripta --bench --solo ciclo_referencia`
 
-- [ ] T037 [US2] [US3] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `invalidacion` con 20 cazadores durante 100 ticks en dos escenarios, puertas estables y 5 puertas con cierre automático cada 15 ticks; implementar también la alternativa descartada (recalcular siempre en cada turno de cazador) (FR-TER-020)
+- [X] T037 [US2] [US3] Modificar `cripta/bench/cargas_bench.py` (Modificado): registrar la carga `invalidacion` con 20 cazadores durante 100 ticks en dos escenarios, puertas estables y 5 puertas con cierre automático cada 15 ticks; implementar también la alternativa descartada (recalcular siempre en cada turno de cazador) (FR-TER-020)
 
   Comando exacto: `py -m cripta --bench --solo invalidacion`
 
-- [ ] T038 [US2] Modificar `cripta/servicios/servicio_bench.py` (Modificado): habilitar las cargas `ruta_cazador`, `invalidacion` y `ciclo_referencia` y reportar las métricas del plan (tiempo por ciclo, número de búsquedas, razón individual/compartido) (FR-TER-020)
+- [X] T038 [US2] Modificar `cripta/servicios/servicio_bench.py` (Modificado): habilitar las cargas `ruta_cazador`, `invalidacion` y `ciclo_referencia` y reportar las métricas del plan (tiempo por ciclo, número de búsquedas, razón individual/compartido) (FR-TER-020)
 
 ### D.2 — Cargas de regresión de la Parte I
 

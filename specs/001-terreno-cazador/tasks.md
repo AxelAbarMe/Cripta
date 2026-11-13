@@ -142,6 +142,13 @@
   - Cazador que muere con su próximo turno programado: ese turno no produce ninguna acción (FR-TER-015)
   - Cazador en la misma sala que el jugador aunque la distancia por el mapa supere su rango: ataca (FR-TER-009)
 
+- [ ] T028c [US3] Ampliar `tests/aceptacion/test_cazador_persecucion.py` (Modificado) con escenarios que comprueban, a través de `Partida`, que la tabla del cazador se invalida en cada evento de T033 que hoy no tiene prueba propia:
+  - El jugador abre una puerta con llave que acorta la ruta (FR-TER-015)
+  - El jugador usa el pergamino de retroceso y vuelve a una sala anterior (FR-TER-015)
+  - Se activa un cazador con un rango mayor que el calculado (FR-TER-015)
+  - Se carga una partida guardada (FR-TER-015)
+  - En cada caso la decisión del cazador debe ser la misma que calcular desde cero (FR-TER-015)
+
 - [X] T028b [P] [US2] Ampliar `tests/estructuras/test_heap_min.py` (Modificado): prueba que `esta_vacio()` es verdadero en un montículo nuevo y falso tras insertar, y que `__len__` sigue las inserciones y extracciones (FR-TER-010)
 - [X] T035 [P] [US3] Ampliar `tests/infraestructura/test_partida_log.py` (Modificado): tras turnos completos de un cazador, un errante y un rastreador (movimiento, espera y ataque) no se escribe ninguna línea en `partida.log`; `cripta/infraestructura/partida_log.py` no debería requerir cambios (FR-TER-021)
 
@@ -259,7 +266,7 @@ Fase A ──► Fase B ──► Fase C ──► Fase D ──► Fase E
 
 - Fase A: T001 → T001b → T002–T006, T004b y T006b (pruebas en paralelo) → T007, T008, T009, T014, T015 y T021b (en paralelo) → T009b (tras T004b, antes de la Fase C) → T010 → T011 y T012 → T013 → T016 → T017
 - Fase B: T018 → T019, T019b, T020 (pruebas) → T021 → T022 → T023 → T024 → T025 → T025b
-- Fase C: T026, T026b, T027, T028, T028b y T035 (pruebas en paralelo) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
+- Fase C: T026, T026b, T027, T028, T028b y T035 (pruebas en paralelo) → T028c (tras T028, mismo archivo, antes de C.4) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
 - Fase D: T036 → T036b → T037 (mismo archivo) → T038 → T039
 - Fase E: T040–T041 (en paralelo) → T042 → T043 → T044
 

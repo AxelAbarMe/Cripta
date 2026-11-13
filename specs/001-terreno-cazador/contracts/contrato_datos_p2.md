@@ -149,6 +149,11 @@ class BuscadorRutas:
         ...
 
     def decidir_paso(self, cazador: Enemigo, sala_jugador_id: int, mapa: CriptaMapa) -> tuple[str, str | None, int]:
-        """Devuelve (accion, direccion, costo) con accion 'mover' o 'esperar'. El ataque se decide antes, en _decidir_cazador."""
+        """Devuelve (accion, direccion, costo) con accion 'mover' o 'esperar'. El ataque se decide antes, en _decidir_cazador.
+
+        Llama internamente a calcular_o_reutilizar(mapa, sala_jugador_id, cazador.rango), así que quien la invoca
+        no necesita calcular antes. La tabla se reutiliza si sigue válida y el rango del cazador no supera
+        el rango con que se calculó.
+        """
         ...
 ```

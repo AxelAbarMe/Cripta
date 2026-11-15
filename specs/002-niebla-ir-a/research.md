@@ -18,10 +18,10 @@
 
 ### Ruta del jugador
 
-- **Decisión**: Dijkstra con `HeapMinimo` propio; evaluar reutilizar el núcleo previsto por la 001 con proveedor de adyacencias conocidas. No compartir el estado/caché del cazador. Recalcular antes de cada paso.
+- **Decisión**: búsqueda de costo mínimo propia del jugador en `cripta/modelo/ruta_conocida.py`, con `HeapMinimo` propio, calculada desde el destino sobre el subgrafo conocido y recalculada antes de cada paso. No se comparte el estado ni la caché del cazador.
 - **Razón**: costos ponderados, subgrafo parcial, puertas recordadas abiertas y conocimiento que puede cambiar entre pasos.
-- **Alternativas**: duplicar Dijkstra, descartado provisionalmente por duplicación y riesgo de discrepancia; selección lineal manual, alternativa experimental obligatoria con costo O(V²+E).
-- **Condición**: conservar reutilización solo si la interfaz de 001 admite vecinos inyectados y la medición confirma <5 ms. La ruta de cazador se cita únicamente como prevista en `specs/001-terreno-cazador/plan.md`; no existe como código en esta rama.
+- **Alternativas**: reutilizar `BuscadorRutas` previsto por la 001, descartada porque calcula sobre el mapa real, poda por rango de cazadores, guarda una caché pensada para sus eventos y no recibe destino; selección lineal manual, alternativa experimental obligatoria con costo O(V²+E).
+- **Dependencia**: `HeapMinimo.esta_vacio` y `__len__` los añade la 001. La búsqueda del cazador se cita únicamente como prevista en `specs/001-terreno-cazador/plan.md`; no existe como código en esta rama.
 
 ### Orquestación y bitácora
 
@@ -36,6 +36,7 @@
 - **Razón**: FR-NIE-006 y SC-NIE-005 requieren guardar/cargar e historia.
 - **Alternativa**: inferir al cargar solo desde la posición actual, descartada porque pierde visitas anteriores y últimas observaciones.
 - **Alcance**: 004 define formato binario, versión y compatibilidad; este diseño no los fija.
+- **Dependencia abierta**: la capacidad 004 aún no tiene especificación. La verificación de guardar y cargar queda bloqueada hasta que el grupo decida quién añade el campo del conocimiento a la codificación binaria.
 
 ## Contexto verificado
 
@@ -47,7 +48,7 @@
 ## Hipótesis por comprobar
 
 1. Las listas directas por id usan memoria aceptable para el mayor id de la referencia.
-2. El núcleo Dijkstra compartido tiene costo comparable a una copia especializada y ambos quedan bajo 5 ms.
+2. La búsqueda propia con `HeapMinimo` queda bajo 5 ms con el mapa conocido completo de la cripta de referencia.
 3. La selección lineal puede ganar en mapas pequeños por su menor constante, aunque empeora cuadráticamente.
 4. Las inversas por celda mantienen buen desempeño cuando la antorcha revela varias vecinas.
 

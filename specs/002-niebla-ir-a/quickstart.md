@@ -13,7 +13,7 @@ Escenarios previstos para implementar con `unittest`; esta guía no ejecuta prue
 1. Iniciar y consultar mapa: inicial explorada, destinos avistados y otras desconocidas; la consulta no consume tiempo ni se registra.
 2. Observar puertas al entrar. Cambiar una puerta fuera de sus extremos conserva la observación anterior. Activar cierre automático mientras el jugador está en la sala vecina actualiza la memoria; recalcular antes del movimiento siguiente.
 3. Encender antorcha sin moverse no revela vecinas. Entrar con antorcha revela vecinas y la puerta de conexión sin preparar ni activar contenido. Apagarla conserva conocimiento.
-4. Revertir con pergamino una entrada con antorcha: revertir el paso y las celdas cambiadas; terminar el bucle sin continuarlo.
+4. Revertir con pergamino una entrada con antorcha: se revierten el paso y las celdas cambiadas. Ejecutar un viaje paso a paso, intercalar un pergamino y comprobar que revierte un solo paso y que el viaje no continúa.
 5. «Ir a» entre varias rutas: verificar costo mínimo, puertas recordadas abiertas, desempate por menor id, recálculo por paso, acciones normales y detenciones en el orden especificado.
 6. Destino no explorado/inexistente, sala actual y falta de ruta inicial: cero pasos, tiempo, comentario/log o cambio del retroceso; mostrar el motivo.
 7. Revisar `partida.log`: comentario una vez justo antes del primer movimiento, movimientos individuales y ningún turno enemigo; replay omite comentario y reproduce acciones.

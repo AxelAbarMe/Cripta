@@ -6,7 +6,7 @@
 
 La capacidad mantiene una representación propia del conocimiento del jugador, revela solo las salas alcanzadas por entradas ordinarias o por la antorcha, conserva una observación por puerta y calcula «ir a» sobre el subgrafo conocido. El plan usa listas indexadas por identificador entero y las estructuras manuales existentes. Cada actualización del conocimiento registra una operación inversa en el historial de la Parte I. Cada movimiento del viaje sigue pasando por la acción ordinaria del modelo y el servicio, para que reloj, eventos, retroceso y bitácora mantengan su semántica.
 
-La búsqueda usará el núcleo Dijkstra previsto por la 001 si su interfaz admite una fuente de adyacencias limitada al conocimiento; la carga comparativa documentada en este plan medirá ese uso frente a una búsqueda manual independiente. La alternativa de selección lineal de la siguiente sala también se implementará en la carga y se medirá. Los resultados son hipótesis hasta ejecutar `--bench`.
+La búsqueda de «ir a» es una búsqueda de costo mínimo propia del jugador, separada de la del cazador prevista por la 001; solo comparte `HeapMinimo`. La alternativa de selección lineal del siguiente nodo también se implementa en la carga de medición. Los resultados son hipótesis hasta ejecutar `--bench`.
 
 ## Contexto técnico
 
@@ -23,7 +23,7 @@ La búsqueda usará el núcleo Dijkstra previsto por la 001 si su interfaz admit
 
 | Puerta | Resultado | Evidencia de diseño |
 |---|---|---|
-| Estructuras manuales y consultas sin tablas hash | Cumple | Tablas contiguas por id; Dijkstra usa `HeapMinimo` propio si la medición confirma reutilización; sin bibliotecas prohibidas. |
+| Estructuras manuales y consultas sin tablas hash | Cumple | Tablas contiguas por id; Dijkstra usa `HeapMinimo` propio; sin bibliotecas prohibidas. |
 | Determinismo | Cumple | Orden de vecinos N/S/E/O al revelar; desempate explícito por id; carga sintética con `random.Random(semilla)` local. |
 | MVC y modos sin vista | Cumple | El modelo calcula y devuelve resultados; el controlador coordina la orden; la vista presenta mapa y motivos. `--replay`/`--bench` no crean vista. |
 | Estado reversible sin instantáneas por acción | Cumple | Registrar inversas puntuales por celda cambiada en `HistorialRetroceso`. |
@@ -55,19 +55,23 @@ Para cada escritura que cambie una celda se conserva el valor anterior y se regi
 
 **Estado nuevo que se guarda.** El estado de partida debe contener, por sala, el nivel de conocimiento y las cuatro últimas observaciones de puerta. Se serializa como datos planos, no como closures. La antorcha/efecto activo y su duración solo se incluyen si ya forman parte del estado general de efectos; esta capacidad no redefine ese estado. Capacidad 004 decide campos físicos, versión y formato binario; no se especifica aquí el formato. La restauración reconstruye `ConocimientoJugador` antes de permitir consultas o acciones.
 
+**Dependencia abierta.** La capacidad 004 aún no tiene especificación. La verificación de guardar y cargar (SC-NIE-005) queda bloqueada hasta que el grupo decida quién añade el campo del conocimiento a la codificación binaria y con qué versión. Las tareas de guardado se marcan como bloqueadas por esa decisión.
+
 ### Búsqueda y viaje «ir a»
 
 **Operaciones y frecuencia esperada.** Una ruta se calcula antes del primer movimiento y se recalcula antes de cada paso (§3.4 y FR-NIE-012); las observaciones durante el paso pueden invalidarla. El tamaño es el subgrafo de salas exploradas y puertas recordadas abiertas.
 
-**Alternativas.** (1) Reutilizar el algoritmo Dijkstra que la 001 prevé en `specs/001-terreno-cazador/plan.md`, inyectándole vecinos permitidos por `ConocimientoJugador`: evita duplicar el núcleo de ruta y comparte desempate. La 001 lo plantea para cazadores, pero aún no existe como código en esta rama. (2) Implementar un Dijkstra separado para el jugador: adapta claramente la vista parcial, pero duplica relajación, reconstrucción y desempate y abre riesgo de divergencia. (3) Dijkstra con selección lineal manual del mínimo en vez de `HeapMinimo`: conserva corrección, pero cuesta O(V²+E) frente a O((V+E) log V); se implementará como alternativa experimental obligatoria de `--bench`, no como decisión de producción.
+**Alternativas.** (1) Reutilizar la búsqueda del cazador prevista por la 001 (`specs/001-terreno-cazador/plan.md`, `BuscadorRutas`): descartada porque calcula sobre el mapa real (vecinos y puertas transitables reales) y no sobre el conocimiento del jugador; poda por el rango de los cazadores; guarda una tabla con invalidación pensada para eventos de cazadores y no recibe destino. Adaptarla obligaría a modificar un archivo de otra capacidad que aún no está en `main`. (2) Búsqueda de costo mínimo propia con `HeapMinimo`: calcula sobre el subgrafo conocido, con O((V+E) log V). (3) La misma búsqueda con selección lineal manual del mínimo: O(V²+E); se implementa solo como alternativa de `--bench`.
 
-**Decisión provisional sometida a medición.** Compartir el núcleo Dijkstra previsto por la 001, no el estado ni la caché del cazador. La entrada recibe origen/destino y consulta adyacencias del subgrafo conocido en cada llamada; solo salas exploradas y puertas observadas abiertas son transitables. Se recalcula desde cero antes de cada paso, sin reutilizar la caché inversa o invalidación selectiva prevista para cazadores. Entre rutas de costo mínimo se selecciona como primer paso la vecina de menor id. La comparación medirá el núcleo común con adaptador de conocimiento frente a la implementación separada y la variante lineal. Si la interfaz real de 001 no admite adyacencias inyectadas o la medición común supera el límite, el diseño se separa antes de implementar, actualizando primero este plan.
+**Decisión.** Opción 2, en `cripta/modelo/ruta_conocida.py` (Nuevo). Calcula las distancias desde el destino sobre salas exploradas y puertas recordadas abiertas, en una lista indexada por id. El primer paso es la vecina del origen que minimiza el costo de la salida más la distancia, con desempate por menor id. Se recalcula desde cero antes de cada paso. Respecto de la 001, solo reutiliza `HeapMinimo`, que necesita `esta_vacio` y `__len__`; esos métodos los añade la 001 (tarea T029 de su plan) y esta capacidad no los vuelve a definir.
 
 **Complejidad esperada.** Búsqueda con heap binario propio: O((V+E) log V), memoria O(V+E) para distancias, predecesores y heap; cálculo repetido antes de cada paso. Selección lineal: O(V²+E), memoria O(V+E). No son cifras medidas.
 
-**Bucle y MVC.** El bucle de la orden reside en `ControladorCripta`, que ya despacha órdenes interactivas. Antes de cada movimiento pide al modelo el siguiente paso/ruta, ejecuta `Accion("mover", direccion)` mediante `ServicioPartida.ejecutar` y evalúa el resultado completo antes de continuar. El modelo no recibe objetos de vista ni formatea mensajes. El controlador entrega el mapa conocido a la vista y le presenta el motivo final de detención. Las acciones siguen siendo normales, de modo que eventos y pergamino actúan entre pasos. Usar pergamino es una nueva orden y revierte el último paso; el bucle termina sin reanudar el viaje.
+**Bucle y MVC.** El bucle de la orden reside en `ControladorCripta`, que ya despacha órdenes interactivas. Antes de cada movimiento pide al modelo el siguiente paso/ruta, ejecuta `Accion("mover", direccion)` mediante `ServicioPartida.ejecutar` y evalúa el resultado completo antes de continuar. El modelo no recibe objetos de vista ni formatea mensajes. El controlador entrega el mapa conocido a la vista y le presenta el motivo final de detención. Las acciones siguen siendo normales, de modo que eventos y pergamino actúan entre pasos. El viaje activo vive en el controlador y avanza un paso por iteración. Cualquier acción distinta de un paso del propio viaje que se ejecute entre dos pasos, por ejemplo un pergamino, cancela el viaje, que solo continúa con una nueva orden. La prueba de B-NIE-006 ejecuta el viaje paso a paso desde el servicio, intercala el pergamino y comprueba que se revirtió un solo paso y que no hubo pasos posteriores.
 
-**Bitácora.** Cuando se confirma que hay una ruta con al menos un paso, el servicio escribe un único comentario de viaje inmediatamente antes de ejecutar el primer movimiento. Si no existe ruta al inicio, el destino es inválido o es la sala actual, no escribe. Cada paso posterior se registra como acción ordinaria individual por `ServicioPartida`. Se amplían lector/replay para reconocer y omitir el comentario de depuración sin tratarlo como acción. Los turnos de enemigos continúan sin registro, según la regla de la 001 prevista en `specs/001-terreno-cazador/plan.md`; no se cita como código existente.
+**Bitácora.** Cuando se confirma que hay una ruta con al menos un paso, el servicio escribe un único comentario de viaje inmediatamente antes de ejecutar el primer movimiento. Si no existe ruta al inicio, el destino es inválido o es la sala actual, no escribe. Cada paso posterior se registra como acción ordinaria individual por `ServicioPartida`. Se amplían lector/replay para reconocer y omitir el comentario de depuración sin tratarlo como acción. Los turnos de enemigos continúan sin registro, según la regla de la 001 prevista en `specs/001-terreno-cazador/plan.md`; no se cita como código existente. 
+
+**Formato del comentario.** Cada línea posterior al encabezado es hoy una acción en forma de diccionario. El comentario se escribe como una línea que empieza con `#` seguida de la orden y su destino. `PartidaLog` gana un método para registrarlo y el lector descarta esas líneas, de modo que el replay solo ve acciones. Alternativa descartada: un objeto con clave `comentario`, porque obliga a todo consumidor de acciones a filtrarlo y mezcla metadatos con acciones. Límite conocido: una bitácora con comentarios no la lee el lector de la Parte I; las de la Parte I siguen leyéndose. Una prueba debe verificar que el replay conserva los números de línea físicos en sus mensajes de problema.
 
 ### Mediciones `--bench`
 
@@ -79,8 +83,8 @@ py -m cripta --bench --solo niebla_rutas --escala 1
 
 La carga mide sin red ni vista:
 
-1. **Referencia**: mapa conocido completo de `cripta-06` en `fixtures/cripta-06/`, orígenes/destinos válidos y costo de cada cálculo del primer paso. Informa número de salas/salidas leído del fixture, mediana y máximo, y cumplimiento de 5 ms. El reloj de pared se usa solo para medir, no afecta estado del juego.
-2. **Alternativas de ruta**: Dijkstra de núcleo compartido vs. Dijkstra separado y selección lineal, sobre idéntico grafo y consultas, con semilla fija `20260928` y `random.Random(semilla)` propio. Comprueba que las tres opciones producen primer paso correcto. La selección lineal se implementa en el harness de bench y se reporta aunque resulte más rápida en esta escala.
+1. **Referencia**: mapa conocido completo de la cripta de referencia, elegida como la de mayor total de salas del listado de fixtures sin fijar su id en el código, orígenes/destinos válidos y costo de cada cálculo del primer paso. Informa número de salas/salidas leído del fixture, mediana y máximo, y cumplimiento de 5 ms. El reloj de pared se usa solo para medir, no afecta estado del juego.
+2. **Alternativas de ruta**: búsqueda con `HeapMinimo` (elegida) frente a selección lineal manual (descartada), sobre el mismo grafo y las mismas consultas, con semilla fija y `random.Random(semilla)` propio. Comprueba que ambas dan el mismo primer paso. La selección lineal se reporta aunque resulte más rápida en esta escala.
 3. **Revelación**: varios R de salas nuevas sobre mapas de tamaños distintos, midiendo solo actualización; compara la ruta incremental con una pasada ingenua por todo el mapa, solo en el harness.
 4. **Reversión**: registra y revierte cambios de antorcha y compara tiempo/número de inversas con copia completa del conocimiento como alternativa de medición, nunca de implementación.
 
@@ -90,7 +94,8 @@ La carga comprobará existencia, integridad y versión del fixture antes de medi
 
 - El índice directo ocupa memoria hasta el mayor id, no solo hasta el número de salas, si los identificadores son dispersos.
 - Dijkstra se recalcula en cada paso por requisito; un viaje largo repite búsquedas.
-- Compartir el núcleo genérico depende de la implementación final de 001; la decisión requiere medición y revisión de este plan si no encaja.
+- La relajación de aristas se duplica respecto de la búsqueda del cazador; se acepta por las diferencias de interfaz descritas en la decisión.
+- Esta capacidad y la 001 modifican `partida.py`, `efectos.py`, `cargas_bench.py`, `servicio_bench.py`, `heap_min.py` y `tests/infraestructura/test_partida_log.py`. La 001 debe fusionarse primero y esta rama traer `main` con merge antes de implementar.
 - El umbral de 5 ms depende del equipo y del mapa real de referencia; cada informe debe indicar entorno.
 - Campos de guardado y reconstrucción histórica se coordinan con 004; este plan no controla formato, checkpoints ni migración.
 
@@ -125,10 +130,12 @@ Las etiquetas describen esta rama, no el estado futuro. Las rutas **Nuevo** son 
 | `cripta/infraestructura/partida_log.py` | Modificado | Comentario compatible con lectura/replay. |
 | `cripta/servicios/servicio_replay.py` | Modificado | Omitir comentario de depuración y reproducir acciones. |
 | `cripta/infraestructura/estado_guardado.py` | Modificado, coordinar 004 | Campo lógico para conocimiento; no define codificación binaria. |
-| `cripta/infraestructura/guardado_binario.py` | Sin cambios en este plan | Formato/versionado corresponde a 004. |
+| `cripta/infraestructura/guardado_binario.py` | Modificado, bloqueado por decisión de la 004 | Guardar el conocimiento exige cambiar la codificación; formato y versión corresponden a la 004. |
 | `cripta/bench/cargas_bench.py` | Modificado | Cargas de ruta, revelación y reversión con alternativas. |
 | `cripta/servicios/servicio_bench.py` | Modificado | Registrar `niebla_rutas`; seguir sin vista. |
-| `cripta/modelo/buscador_rutas.py` | Previsto por 001; integración a medir | No está en esta rama. Reutilizar el núcleo solo si existe y admite proveedor de adyacencias; no asumir disponibilidad actual. |
+| `cripta/modelo/buscador_rutas.py` | Sin cambios (previsto por la 001) | No está en esta rama. No se reutiliza ni se modifica; ver la decisión de búsqueda. |
+| `cripta/modelo/ruta_conocida.py` | Nuevo | Búsqueda de costo mínimo sobre el subgrafo conocido, con `HeapMinimo`, y primer paso con desempate por menor id. |
+| `cripta/estructuras/heap_min.py` | Modificado por la 001 | La 001 añade `esta_vacio` y `__len__`; esta capacidad solo lo usa. |
 | `tests/modelo/test_conocimiento_jugador.py` | Nuevo | Estados, puertas, antorcha, cierres y reversión con FR citados. |
 | `tests/modelo/test_ir_a.py` | Nuevo | Ruta mínima, desempate, recálculo, detenciones y acciones normales. |
 | `tests/controlador/test_controlador_cripta.py` | Modificado | Órdenes, motivos y no continuación tras pergamino. |

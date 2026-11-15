@@ -21,7 +21,7 @@ Este contrato describe límites entre capas, no añade reglas de juego.
 
 ## Servicio y bitácora
 
-- Escribe un comentario único inmediatamente antes del primer movimiento que sí se ejecutará.
+- Escribe un comentario único, como línea que empieza con `#`, inmediatamente antes del primer movimiento que sí se ejecutará.
 - Registra cada movimiento mediante el mecanismo ordinario.
 - Sin paso no hay comentario ni registro.
 - El lector/replay reconoce el comentario como metadato, no acción; reproduce movimientos y acciones.

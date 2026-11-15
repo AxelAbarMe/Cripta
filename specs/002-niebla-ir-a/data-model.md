@@ -19,7 +19,7 @@ Los datos viven en listas contiguas indexadas por id entero. No se usa tabla has
 - Apagar antorcha: no elimina conocimiento.
 - Encender antorcha sin entrar: no cambia vecinas.
 - Observar una puerta: su memoria pasa a abierta o cerrada según el estado real observado.
-- Cambio real sin jugador en un extremo: no cambia memoria.
+- Cambio real con el jugador en uno de los dos extremos (incluido un cierre automático): su memoria se actualiza de inmediato.
 - Pergamino: restaura en orden inverso las celdas cambiadas en la acción que deshace.
 
 ## Viaje

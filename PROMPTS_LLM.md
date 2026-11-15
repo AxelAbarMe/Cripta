@@ -655,3 +655,23 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 
 **Para qué se usó:** Ajustar la lista de tareas al plan, a la especificación y al estado real del repositorio antes de /speckit-analyze.
 
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/002-niebla-ir-a/tasks.md: coloca la proyección de resultado_partida.py antes del bucle del controlador; agrega la tarea de código de vista_base.py, las pruebas de revelación y reversión del benchmark y el comando de consulta del mapa en el controlador; explicita el punto de corte del Pull Request; reubica T015 y T023 bajo su objetivo; quita las marcas [P] que comparten archivo; fusiona las pruebas duplicadas; corrige T021 a Modificado; deja la medición sin escribir archivos y la sección de DECISIONES.md solo en la tarea final; divide la prueba del ciclo de viaje y ordena el formato."
+
+**Prompt (resumido):** Se pidió una segunda corrección de tasks.md de la capacidad 002: orden de pruebas y código, tarea faltante de vista_base.py, pruebas del benchmark, comando de mapa, punto de corte del Pull Request y formato.
+
+**Para qué se usó:** Dejar tasks.md consistente con el plan y con la regla de pruebas antes del código antes de /speckit-analyze.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/002-niebla-ir-a/tasks.md: renumera las tareas de forma consecutiva, corrige qué prueba del harness es Nueva y cuál Modificada en tests/servicios/test_servicio_bench.py y agrega las líneas en blanco entre encabezados y objetivos."
+
+**Prompt (resumido):** Se pidió una tercera corrección mecánica de tasks.md de la capacidad 002: numeración, estado de una ruta de pruebas y formato.
+
+**Para qué se usó:** Dejar tasks.md consecutivo y consistente con el estado real del repositorio antes de /speckit-analyze.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "/speckit-analyze Sigue las instrucciones de prompts/p2/06-analyze-002.md. Analiza la consistencia entre spec.md, plan.md, research.md, data-model.md, quickstart.md, contracts/, tasks.md y la constitución, en solo lectura: cobertura de FR-NIE-001 a 024, de los escenarios, de los seis casos del Apéndice B y de SC-NIE-001 a 005; estructuras prohibidas; afirmaciones de rendimiento; rutas Nuevo y Modificado; orden de pruebas y código; etiquetas de dependencia con 001 y 004; contradicciones entre plan, quickstart, contrato y modelo de datos. Clasifica los hallazgos por gravedad con archivo y línea."
+
+**Prompt (resumido):** Análisis de solo lectura de la consistencia de la capacidad de niebla de guerra e «ir a» entre especificación, plan, tareas y constitución.
+
+**Para qué se usó:** completar con los hallazgos y lo que se corrigió.

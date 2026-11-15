@@ -463,7 +463,7 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 
 **Para qué se usó:** Agregar llaves.json al script y documentar los campos nuevos. El script se ejecutó a mano para cripta-02 a cripta-06.
 
-### 2026-11-14 — Codex CLI 0.167.2 (modelo: completar con /status)
+### 2026-11-14 — Codex CLI 0.167.2 (GPT-6-Luna)
 **Prompt:**
 ```text
 $speckit-specify
@@ -495,3 +495,35 @@ Prefijo de requisitos: FR-NIE-NNN. spec.md dice qué y por qué: sin estructuras
 **Prompt (resumido):** Se pidió generar la especificación de la capacidad de niebla de guerra e «ir a»: tres estados de sala (explorada, avistada, desconocida), memoria de puertas, efecto de la antorcha, conocimiento como estado del juego (se guarda, se revierte con el pergamino y entra en la línea de tiempo), comando para ver el mapa conocido, viaje automático con sus condiciones de parada y registro en partida.log, y los seis escenarios del Apéndice B como escenarios de aceptación, con prefijo FR-NIE-NNN y sin estructuras, clases ni módulos.
 
 **Para qué se usó:** Generar spec.md y sus artefactos asociados de la capacidad 002 en la rama 002-niebla-ir-a, para revisarlos contra el enunciado antes de ejecutar clarify.
+
+
+### 2026-11-14 — Claude (Sonnet 5.5, claude.ai)
+**Prompt:**
+```text
+Revisa la especificación generada con spec-kit para la capacidad 002 (niebla de guerra e «ir a») y su lista de calidad (se adjuntaron spec.md y checklists/requirements.md). Contrástalas con el enunciado de la Parte II (§3.3, §3.4, §5.3, §6.1 y Apéndice B) y con la constitución, indica si necesitan cambios antes de ejecutar clarify y redacta el prompt de clarify.
+```
+
+**Prompt (resumido):** Se pidió revisar la especificación de niebla de guerra e «ir a» contra el enunciado y la constitución, decidir si requería correcciones antes de la aclaración y preparar el prompt de clarify.
+
+**Para qué se usó:** Comprobar que la especificación cubriera los seis casos del Apéndice B sin reglas inventadas. Se concluyó que no requiere correcciones y se identificaron seis ambigüedades para resolver en clarify.
+
+### 2026-11-14 — Codex CLI 0.169.0 (GPT-6-Luna)
+**Prompt:**
+```text
+$speckit-clarify
+(pegar aquí el texto completo del prompt anterior)
+```
+
+**Prompt (resumido):** Se pidió resolver, con un máximo de cinco preguntas de una en una y cada una con recomendación, las ambigüedades de la especificación de niebla de guerra e «ir a»: puertas de salas exploradas solo con antorcha, motivos de detención simultáneos, órdenes degeneradas, registro y consumo de tiempo del mapa y de la orden, y comportamiento de la antorcha y del pergamino.
+
+**Para qué se usó:** Dejar la especificación sin ambigüedades en las reglas observables antes de pasar al plan.### 2026-11-14 — Codex CLI (versión y modelo: completar con /status)
+**Prompt:**
+```text
+$speckit-clarify
+(pegar aquí el texto completo del prompt anterior)
+```
+
+**Prompt (resumido):** Se pidió resolver, con un máximo de cinco preguntas de una en una y cada una con recomendación, las ambigüedades de la especificación de niebla de guerra e «ir a»: puertas de salas exploradas solo con antorcha, motivos de detención simultáneos, órdenes degeneradas, registro y consumo de tiempo del mapa y de la orden, y comportamiento de la antorcha y del pergamino.
+
+**Para qué se usó:** Dejar la especificación sin ambigüedades en las reglas observables antes de pasar al plan.
+

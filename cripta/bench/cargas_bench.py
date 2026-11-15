@@ -6,6 +6,7 @@ cripta real: todo son datos generados aquí (o en tests/cripta_artificial.py) co
 `escala` multiplica los tamaños de las cargas (1.0 = rápido; 5.0 = mediciones más finas).
 """
 import copy
+import gc
 import os
 import random
 import tempfile
@@ -699,6 +700,7 @@ def _dar_paso_aleatorio(partida, mapa, azar, prohibido: int) -> None:
 def _tiempos_de_pasos(partida, mapa, azar, ciclos: int, prohibido: int):
     """Tiempo de cada ciclo completo entre dos decisiones del jugador."""
     tiempos = []
+    gc.collect()   # cada escenario no paga la basura acumulada por los anteriores
     for _ in range(ciclos):
         t0 = time.perf_counter()
         _dar_paso_aleatorio(partida, mapa, azar, prohibido)
@@ -794,6 +796,7 @@ def _correr_invalidacion(salidas, fabrica_buscador, inestable: bool):
     partida._buscador.decisiones = 0
     puertas = _puertas_a_dos_pasos(partida, mapa) if inestable else []
     cerradas = False
+    gc.collect()   # cada escenario no paga la basura acumulada por los anteriores
     t0 = time.perf_counter()
     for tick in range(1, TICKS_INVALIDACION + 1):
         if puertas and tick % PERIODO_CIERRE_TICKS == 0:
@@ -872,6 +875,7 @@ def _correr_referencia(ciclos: int, calentamiento: int):
     for _ in range(calentamiento):
         _dar_paso_aleatorio(partida, mapa, azar, prohibido)
     tiempos, perseguidores = [], []
+    gc.collect()   # cada escenario no paga la basura acumulada por los anteriores
     for _ in range(ciclos):
         t0 = time.perf_counter()
         _dar_paso_aleatorio(partida, mapa, azar, prohibido)

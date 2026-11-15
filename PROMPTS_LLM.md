@@ -675,3 +675,17 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 **Prompt (resumido):** Análisis de solo lectura de la consistencia de la capacidad de niebla de guerra e «ir a» entre especificación, plan, tareas y constitución.
 
 **Para qué se usó:** completar con los hallazgos y lo que se corrigió.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-analyze Sigue las instrucciones de prompts/p2/06-analyze-002.md. Solo lectura: no modifiques ningún archivo. Responde en español, con una tabla de hallazgos por gravedad con archivo y línea, y una lista de requisitos y escenarios sin cobertura."
+
+**Prompt (resumido):** Análisis de solo lectura de la consistencia de la capacidad de niebla de guerra e «ir a» entre especificación, plan, tareas y constitución.
+
+**Para qué se usó:** Detectó que SC-NIE-001, SC-NIE-003 y SC-NIE-005 no estaban citados por tareas de prueba, el nombre ambiguo de la prueba de equivalencia y la falta de salvedad de estimaciones en el plan. Su hallazgo sobre una prueba automatizada del umbral de 5 ms no se adoptó, porque el rendimiento se respalda con --bench.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo plan.md y tasks.md de la capacidad 002: agrega tests/vista/test_vista_consola.py y tests/servicios/test_servicio_bench.py a la tabla de impacto, el árbol y la trazabilidad del plan; marca las complejidades y el objetivo de 5 ms como estimaciones; redacta la cancelación del viaje como cancelación por pergamino; en las tareas, cita SC-NIE-001, 002, 003 y 005 en las pruebas, aclara que T034 valida FR-NIE-018 con --bench y renombra la prueba de equivalencia."
+
+**Prompt (resumido):** Se pidió corregir los hallazgos de /speckit-analyze y dos incoherencias detectadas en la revisión: archivos de pruebas ausentes del plan y una regla de cancelación que la especificación no fija.
+
+**Para qué se usó:** Alinear plan.md y tasks.md con la especificación antes del Pull Request de documentación.

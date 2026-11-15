@@ -15,7 +15,7 @@ La búsqueda de «ir a» es una búsqueda de costo mínimo propia del jugador, s
 - **Almacenamiento**: estado del modelo proyectado a `EstadoPartida`; la capacidad 004 define y es dueña del formato binario.
 - **Pruebas**: `unittest` bajo `tests/`, con la estructura de paquetes existente.
 - **Plataforma**: CLI existente, modalidad interactiva, `--replay` y `--bench` sin instanciar la vista.
-- **Rendimiento**: consulta de sala y puerta O(1); revelación O(R) para R salas reveladas en la actualización; cálculo de un primer paso con Dijkstra O((V+E) log V) y objetivo inferior a 5 ms con el mapa completo de referencia.
+- **Rendimiento**: consulta de sala y puerta O(1), revelación O(R) para R salas reveladas en la actualización y cálculo de un primer paso con Dijkstra O((V+E) log V) son complejidades estimadas. El objetivo de menos de 5 ms con el mapa completo de referencia también es una estimación hasta medir con `py -m cripta --bench --solo niebla_rutas --escala 1`.
 - **Restricciones**: nada de `dict`/`set` como índice, caché o tabla de búsqueda; nada de `heapq`, `bisect`, `collections`, `networkx` o `sort`/`sorted` donde rigen las prohibiciones. No copiar el estado completo por acción. El modelo no conoce red, disco ni vista. Ningún dato de cripta concreta se fija en el código.
 - **Alcance**: estados de conocimiento, evolución y reversión, consulta del mapa, viaje y registro. No define el formato binario ni reglas adicionales a [spec.md](spec.md).
 
@@ -67,7 +67,7 @@ Para cada escritura que cambie una celda se conserva el valor anterior y se regi
 
 **Complejidad esperada.** Búsqueda con heap binario propio: O((V+E) log V), memoria O(V+E) para distancias, predecesores y heap; cálculo repetido antes de cada paso. Selección lineal: O(V²+E), memoria O(V+E). No son cifras medidas.
 
-**Bucle y MVC.** El bucle de la orden reside en `ControladorCripta`, que ya despacha órdenes interactivas. Antes de cada movimiento pide al modelo el siguiente paso/ruta, ejecuta `Accion("mover", direccion)` mediante `ServicioPartida.ejecutar` y evalúa el resultado completo antes de continuar. El modelo no recibe objetos de vista ni formatea mensajes. El controlador entrega el mapa conocido a la vista y le presenta el motivo final de detención. Las acciones siguen siendo normales, de modo que eventos y pergamino actúan entre pasos. El viaje activo vive en el controlador y avanza un paso por iteración. Cualquier acción distinta de un paso del propio viaje que se ejecute entre dos pasos, por ejemplo un pergamino, cancela el viaje, que solo continúa con una nueva orden. La prueba de B-NIE-006 ejecuta el viaje paso a paso desde el servicio, intercala el pergamino y comprueba que se revirtió un solo paso y que no hubo pasos posteriores.
+**Bucle y MVC.** El bucle de la orden reside en `ControladorCripta`, que ya despacha órdenes interactivas. Antes de cada movimiento pide al modelo el siguiente paso/ruta, ejecuta `Accion("mover", direccion)` mediante `ServicioPartida.ejecutar` y evalúa el resultado completo antes de continuar. El bucle solo ejecuta los pasos de la propia orden y no despacha otras acciones entre ellos. El modelo no recibe objetos de vista ni formatea mensajes. El controlador entrega el mapa conocido a la vista y le presenta el motivo final de detención. Las acciones siguen siendo normales, de modo que eventos y pergamino actúan durante cada paso. Si se usa un pergamino, el viaje se cancela conforme a FR-NIE-017 y solo continúa con una nueva orden. La prueba de B-NIE-006 ejecuta el viaje paso a paso desde el servicio, intercala el pergamino y comprueba que se revirtió un solo paso y que no hubo pasos posteriores. El controlador avanza un paso por iteración, de modo que el servicio puede recibir un pergamino entre dos pasos.
 
 **Bitácora.** Cuando se confirma que hay una ruta con al menos un paso, el servicio escribe un único comentario de viaje inmediatamente antes de ejecutar el primer movimiento. Si no existe ruta al inicio, el destino es inválido o es la sala actual, no escribe. Cada paso posterior se registra como acción ordinaria individual por `ServicioPartida`. Se amplían lector/replay para reconocer y omitir el comentario de depuración sin tratarlo como acción. Los turnos de enemigos continúan sin registro, según la regla de la 001 prevista en `specs/001-terreno-cazador/plan.md`; no se cita como código existente. 
 
@@ -141,6 +141,8 @@ Las etiquetas describen esta rama, no el estado futuro. Las rutas **Nuevo** son 
 | `tests/controlador/test_controlador_cripta.py` | Modificado | Órdenes, motivos y no continuación tras pergamino. |
 | `tests/infraestructura/test_partida_log.py` | Modificado | Comentario único, movimientos individuales y ausencia de turnos enemigos. |
 | `tests/servicios/test_servicio_partida_guardado.py` | Modificado | Conservación de conocimiento, coordinada con 004. |
+| `tests/vista/test_vista_consola.py` | Modificado | Presentación del mapa conocido y motivos de detención. |
+| `tests/servicios/test_servicio_bench.py` | Nuevo | Equivalencia de resultados entre algoritmos y alternativas de revelación/reversión. |
 | `tests/aceptacion/__init__.py` | Nuevo si falta | Paquete requerido para discover unittest. |
 | `tests/aceptacion/test_niebla_ir_a.py` | Nuevo | Casos del Apéndice B y SC con FR citados. |
 
@@ -152,35 +154,35 @@ Las rutas de pruebas de la tabla son propuestas futuras. Cada prueba citará los
 
 | Requisito/caso | Componente | Medición o prueba prevista |
 |---|---|---|
-| FR-NIE-001 | `ConocimientoJugador`, `Partida` | Inicio explorado y estados válidos. |
+| FR-NIE-001 | `ConocimientoJugador`, `Partida` | Inicio explorado y estados válidos; `tests/modelo/test_conocimiento_jugador.py` (Nuevo). |
 | FR-NIE-002 | Conocimiento y esqueleto/costo | Entrada revela nombre, salidas, costo y puertas. |
-| FR-NIE-003 | Revelación de adyacencias | Avistada y desconocidas correctas; SC-NIE-001. |
+| FR-NIE-003 | Revelación de adyacencias | Avistada y desconocidas correctas; SC-NIE-001; `tests/modelo/test_conocimiento_jugador.py` (Nuevo). |
 | FR-NIE-004 | Estado por puerta | Última observación sobrevive a cambio real; consulta O(1). |
-| FR-NIE-005 | Entrada con antorcha | B-NIE-004; vecinas sin contenido ni activación. |
+| FR-NIE-005 | Entrada con antorcha | B-NIE-004; vecinas sin contenido ni activación; `tests/aceptacion/test_niebla_ir_a.py` (Nuevo). |
 | FR-NIE-006 | Estado de partida/restauración/inversas | Guardado, carga, pergamino e historia con 004; SC-NIE-005. |
-| FR-NIE-007 | Controlador/vista | Consulta sin tiempo/log/retroceso y sin filtración; SC-NIE-001. |
+| FR-NIE-007 | Controlador/vista | Consulta sin tiempo/log/retroceso y sin filtración; SC-NIE-001; `tests/controlador/test_controlador_cripta.py` (Modificado), `tests/vista/test_vista_consola.py` (Modificado). |
 | FR-NIE-008 | Proyección y proveedor de ruta | Solo conocimiento consultado; SC-NIE-001/002. |
 | FR-NIE-009 | Validación del destino | No explorado/no existe, cero efectos; B-NIE-001; SC-NIE-002. |
 | FR-NIE-010 | Dijkstra conocido | Costo, puerta no observada y empate por id; SC-NIE-002; bench. |
 | FR-NIE-011 | Bucle y acción normal | Tiempo/eventos entre pasos; SC-NIE-003. |
 | FR-NIE-012 | Recálculo previo | Ruta cambia tras observar puerta; SC-NIE-002/003. |
-| FR-NIE-013 | Resultado del viaje | Motivos, prioridad y fin; B-NIE-003; SC-NIE-003. |
+| FR-NIE-013 | Resultado del viaje | Motivos, prioridad y fin; B-NIE-003; SC-NIE-003; `tests/controlador/test_controlador_cripta.py` (Modificado), `tests/vista/test_vista_consola.py` (Modificado). |
 | FR-NIE-014 | Proveedor de vecinos | No abre puerta aunque posea llave; SC-NIE-002. |
 | FR-NIE-015 | Observación y cierre | B-NIE-002; actualización vecina y parada sin tiempo extra. |
 | FR-NIE-016 | Servicio/`partida.log` | Comentario antes del primer paso, una vez; acciones separadas. |
 | FR-NIE-017 | Pergamino y fin del bucle | B-NIE-006; revierte último paso y no reanuda. |
-| FR-NIE-018 | `niebla_rutas` | Comando de bench en mapa completo; <5 ms por cálculo. |
+| FR-NIE-018 | `niebla_rutas` | Comando de bench en mapa completo; <5 ms por cálculo; corrección de alternativas en `tests/servicios/test_servicio_bench.py` (Nuevo). |
 | FR-NIE-019 | Origen igual a destino | Cero tiempo, log, paso e historial; SC-NIE-002/003. |
 | FR-NIE-020 | Parada tras entrada | Permite primer paso y para al entrar con enemigos vivos. |
 | FR-NIE-021 | Búsqueda inicial | Sin ruta, sin paso/tiempo/log/historial; SC-NIE-002/003. |
 | FR-NIE-022 | Estado antorcha/conocimiento | Apagar conserva salas/puertas; SC-NIE-001/005. |
 | FR-NIE-023 | Activación de antorcha | Encender en sitio no revela hasta entrada; SC-NIE-001. |
 | FR-NIE-024 | Inversas de revelación | B-NIE-005; celdas regresan al estado anterior; SC-NIE-005. |
-| SC-NIE-001 | Modelo y vista | Casos de estados y ocultamiento, FR-001–008/022/023. |
-| SC-NIE-002 | Ruta y validación | FR-009/010/012/014/019/021 y `niebla_rutas`. |
-| SC-NIE-003 | Bucle/resultado/servicio | FR-011/013/015/016/017/020 y aceptación integrada. |
-| SC-NIE-004 | Búsqueda | Bench exacto, fixture completo y límite <5 ms. |
-| SC-NIE-005 | Persistencia/inversas/historia | Integración 004; guardar/cargar/pergamino/historia. |
+| SC-NIE-001 | Modelo y vista | Casos de estados y ocultamiento, FR-001–008/022/023; `tests/modelo/test_conocimiento_jugador.py` (Nuevo), `tests/vista/test_vista_consola.py` (Modificado), `tests/aceptacion/test_niebla_ir_a.py` (Nuevo). |
+| SC-NIE-002 | Ruta y validación | FR-009/010/012/014/019/021 y `niebla_rutas`; `tests/modelo/test_ir_a.py` (Nuevo), `tests/servicios/test_servicio_bench.py` (Nuevo). |
+| SC-NIE-003 | Bucle/resultado/servicio | FR-011/013/015/016/017/020 y aceptación integrada; `tests/controlador/test_controlador_cripta.py` (Modificado), `tests/vista/test_vista_consola.py` (Modificado), `tests/aceptacion/test_niebla_ir_a.py` (Nuevo). |
+| SC-NIE-004 | Búsqueda | Bench exacto, fixture completo y límite <5 ms; corrección de alternativas en `tests/servicios/test_servicio_bench.py` (Nuevo). |
+| SC-NIE-005 | Persistencia/inversas/historia | Integración 004; guardar/cargar/pergamino/historia; `tests/servicios/test_servicio_partida_guardado.py` (Modificado), `tests/aceptacion/test_niebla_ir_a.py` (Nuevo). |
 | B-NIE-001: destino no explorado | Controlador/modelo | Cero tiempo y sin registro (FR-NIE-009). |
 | B-NIE-002: puerta recordada abierta pero cerrada real | Evento/conocimiento/viaje | Observación desde vecina, recálculo y parada (FR-NIE-015). |
 | B-NIE-003: entrada con enemigos dormidos | Bucle/activación | Activación normal y detención tras paso (FR-NIE-013). |
@@ -191,6 +193,27 @@ Las rutas de pruebas de la tabla son propuestas futuras. Cada prueba citará los
 ## Estructura elegida
 
 Se mantiene el proyecto único: reglas en `cripta/modelo/`, orquestación en `cripta/controlador/` y `cripta/servicios/`, presentación en `cripta/vista/`, adaptadores en `cripta/infraestructura/`, cargas en `cripta/bench/` y pruebas paralelas en `tests/`. No se crea una capa de interfaz nueva ni se modifica estructura fuera de esta capacidad.
+
+Árbol de las pruebas afectadas:
+
+```text
+tests/
+├── controlador/
+│   └── test_controlador_cripta.py (Modificado)
+├── infraestructura/
+│   └── test_partida_log.py (Modificado)
+├── modelo/
+│   ├── test_conocimiento_jugador.py (Nuevo)
+│   └── test_ir_a.py (Nuevo)
+├── servicios/
+│   ├── test_servicio_bench.py (Nuevo)
+│   └── test_servicio_partida_guardado.py (Modificado)
+├── vista/
+│   └── test_vista_consola.py (Modificado)
+└── aceptacion/
+    ├── __init__.py (Nuevo si falta)
+    └── test_niebla_ir_a.py (Nuevo)
+```
 
 ## Revisión de constitución posterior al diseño
 

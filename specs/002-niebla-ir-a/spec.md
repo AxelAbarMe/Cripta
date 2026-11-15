@@ -86,8 +86,8 @@ Como jugador, quiero ordenar «ir a» una sala explorada y que el personaje avan
 - Un viaje puede perder su ruta conocida cuando se actualiza la observación de una puerta; esa detención no añade un paso ni tiempo.
 - La parada por enemigos dormidos ocurre después de que se active su comportamiento normal de entrada a sala.
 - Si coinciden motivos de detención en un paso, se comunican todos en el orden fijo: llegada al destino, enemigos vivos en la sala, daño recibido. Si el daño mata al jugador, se aplican las reglas de fin de partida de la Parte I y no se informa un viaje.
-- Una orden «ir a» cuyo destino sea la sala actual informa que el jugador ya está allí y no produce efecto, consume tiempo, ejecuta pasos ni se registra en `partida.log`.
-- Consultar el mapa conocido no consume tiempo, se registra ni altera el historial de retroceso. Una orden «ir a» rechazada o sin ruta desde el inicio tampoco consume tiempo, se registra ni altera ese historial.
+- Una orden «ir a» cuyo destino sea la sala actual informa que el jugador ya está allí, y no produce efecto, no consume tiempo, no ejecuta pasos y no se registra en `partida.log`.
+- Consultar el mapa conocido no consume tiempo, no se registra y no altera el historial de retroceso. Una orden «ir a» rechazada o sin ruta desde el inicio tampoco consume tiempo, ni se registra, ni altera ese historial.
 - El comentario de «ir a» se registra una sola vez, justo antes del primer movimiento de un viaje con pasos, y permanece aunque el viaje se detenga posteriormente.
 - Iniciar «ir a» en una sala con enemigos vivos no detiene el viaje: la condición de detención por enemigos se evalúa al entrar a una sala.
 - Apagar la antorcha no elimina las salas ni las observaciones ya conocidas. Encenderla dentro de una sala no explora vecinas hasta una entrada posterior con la antorcha encendida.
@@ -106,7 +106,7 @@ Como jugador, quiero ordenar «ir a» una sala explorada y que el personaje avan
 - **FR-NIE-006**: El conocimiento del jugador forma parte del estado de la partida, se conserva al guardar y cargar, se revierte con el pergamino y se incluye en los estados consultables de la línea de tiempo.
 - **FR-NIE-007**: La interfaz debe ofrecer un comando para consultar el mapa conocido, mostrando las salas exploradas, sus salidas y las salas avistadas, sin revelar información que no forme parte del conocimiento del jugador. La consulta no consume tiempo, no se registra ni altera el historial de retroceso.
 - **FR-NIE-008**: La vista y el comando «ir a» deben derivar toda información del mapa exclusivamente del conocimiento del jugador.
-- **FR-NIE-009**: El comando «ir a <sala>» debe aceptar como destino únicamente una sala explorada. Una orden cuyo destino no esté explorado o no exista se rechaza sin movimiento, consumo de tiempo, registro en `partida.log` ni cambio del historial de retroceso.
+- **FR-NIE-009**: El comando «ir a <sala>» debe aceptar como destino únicamente una sala explorada. Una orden cuyo destino no esté explorado o no exista se rechaza sin movimiento, consumo de tiempo, registro en `partida.log` ni cambio del historial de retroceso, e informa al jugador el motivo del rechazo.
 - **FR-NIE-010**: «Ir a» debe calcular la ruta usando solo salas exploradas y salidas cuyas puertas el mapa conocido recuerde abiertas, minimizando la suma de costos. Una puerta no observada no se considera abierta ni puede cruzarse. En caso de empate, el primer paso debe dirigirse a la vecina con menor identificador.
 - **FR-NIE-011**: Cada paso de «ir a» debe ser una acción completa ordinaria del jugador: consume tiempo según Parte II §3.1 y permite que los eventos ocurran normalmente entre pasos.
 - **FR-NIE-012**: La ruta de «ir a» debe recalcularse antes de cada paso según el conocimiento vigente del jugador.
@@ -118,7 +118,7 @@ Como jugador, quiero ordenar «ir a» una sala explorada y que el personaje avan
 - **FR-NIE-018**: Con el mapa conocido completo de la cripta de referencia, el cálculo de un paso de «ir a» debe tardar menos de 5 ms en las condiciones de medición del enunciado.
 - **FR-NIE-019**: Si el destino de «ir a» es la sala actual del jugador, el sistema debe informar que el jugador ya está allí, sin producir efecto, consumir tiempo, ejecutar pasos, registrar la orden en `partida.log` ni alterar el historial de retroceso.
 - **FR-NIE-020**: Si «ir a» se inicia en una sala con enemigos vivos, el viaje debe poder ejecutar su primer paso con normalidad. La detención por enemigos se evalúa al entrar a una sala, y el viaje se detiene por las reglas habituales.
-- **FR-NIE-021**: Si «ir a» no tiene ruta conocida desde el inicio, la orden debe terminar sin pasos, consumo de tiempo, registro en `partida.log` ni alteración del historial de retroceso.
+- **FR-NIE-021**: Si «ir a» no tiene ruta conocida desde el inicio, la orden debe terminar sin pasos, consumo de tiempo, registro en `partida.log` ni alteración del historial de retroceso, e informar al jugador que no hay ruta conocida.
 - **FR-NIE-022**: Apagar la antorcha no debe eliminar las salas ni observaciones ya conocidas por su efecto.
 - **FR-NIE-023**: Encender la antorcha mientras el jugador permanece en una sala no debe explorar sus vecinas en ese momento; esa exploración ocurre al entrar a una sala mientras la antorcha está encendida.
 - **FR-NIE-024**: Al revertir con pergamino una entrada que produjo exploraciones u observaciones por antorcha, el conocimiento de esas salas y puertas debe volver al estado previo a la entrada.
@@ -146,3 +146,10 @@ Como jugador, quiero ordenar «ir a» una sala explorada y que el personaje avan
 - Se adopta como decisión del grupo que la observación de las puertas de la sala ocurre cuando el jugador está en cualquiera de las dos salas que conectan, incluyendo al entrar o permanecer en ellas. El enunciado define cuándo se observa, pero no detalla el instante exacto de actualización.
 - El costo de salida usado por la vista y por el viaje corresponde al costo del terreno definido en Parte II §3.1.
 - Los eventos y activaciones que suceden al entrar a una sala conservan las reglas de Parte I; esta funcionalidad añade la parada del viaje cuando hay enemigos, sin redefinir el combate ni las trampas.
+- Decisiones del grupo tomadas en la aclaración, pendientes de confirmar con el profesor porque el enunciado no las fija expresamente:
+  - Una puerta no observada no se considera abierta y «ir a» no puede cruzarla.
+  - Si coinciden varios motivos de detención se comunican todos, en el orden fijo: llegada al destino, enemigos vivos en la sala, daño recibido. Solo cuentan los enemigos vivos y el daño se evalúa al terminar el paso y sus eventos.
+  - «Ir a» hacia la sala actual no tiene efecto, y iniciar un viaje en una sala con enemigos vivos está permitido.
+  - Consultar el mapa conocido y las órdenes «ir a» rechazadas o sin pasos no consumen tiempo, no se registran y no alteran el historial de retroceso. El comentario de una orden con pasos se escribe una sola vez, antes del primer movimiento.
+  - Apagar la antorcha conserva lo explorado, y encenderla dentro de una sala no explora vecinas hasta una entrada posterior.
+- El formato de guardado y la línea de tiempo pertenecen a la capacidad 004. Esta especificación solo exige que el conocimiento del jugador forme parte de ese estado.

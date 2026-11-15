@@ -520,7 +520,19 @@ $speckit-clarify
 **Prompt:**
 ```text
 $speckit-clarify
-(pegar aquí el texto completo del prompt anterior)
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Contexto: ya estoy en la rama 002-niebla-ir-a. No crees ni cambies de rama y no hagas commit ni push. Redacta todo en español. Solo modifica specs/002-niebla-ir-a/spec.md. No modifiques checklists/requirements.md y no ejecutes plan. Puedes LEER (sin modificar) docs/enunciados/Parte2.md (§3.3, §3.4, §5.3, §6.1 y Apéndice B), .specify/memory/constitution.md y specs/001-terreno-cazador/spec.md (solo FR-TER-021 y FR-TER-023, por coherencia con el registro de partida.log). Si la respuesta a una duda ya está en el enunciado, no la preguntes: cítala y aplícala. No inventes reglas: lo que no esté en el enunciado queda como decisión del grupo, escrita en Supuestos.
+
+PASO 1. No hay correcciones directas a spec.md.
+
+PASO 2. Formula como máximo estas 5 preguntas, de una en una, cada una con tu recomendación, y actualiza spec.md con cada respuesta en la sección "Aclaraciones", subsección "Sesión 2026-11-14", con el formato "- P: ... → R: ...". Propaga cada respuesta a los requisitos, escenarios y casos límite afectados. Conserva los identificadores existentes; los requisitos y criterios nuevos van al final de su lista con la numeración siguiente, sin renumerar. No nombres estructuras, clases ni módulos.
+a) Salas exploradas solo por la antorcha: se revelan nombre y salidas, pero las puertas que no conectan con la sala donde entró el jugador nunca se han observado. ¿Qué recuerda el mapa de esas puertas y puede «ir a» cruzarlas? (FR-NIE-005, FR-NIE-010)
+b) Motivos de detención: si coinciden varios en un mismo paso (por ejemplo, llegar al destino con enemigos o recibir daño al entrar), ¿se informa uno con orden de prioridad o todos? ¿Un enemigo muerto cuenta como enemigo en la sala? ¿Cuándo se evalúa el daño? El escenario 6 de la historia 3 dice "cuando termina de resolverse ese paso y sus eventos", pero el enunciado solo dice "recibe daño".
+c) Órdenes degeneradas: destino igual a la sala actual, destino que no existe en la cripta y viaje que se inicia estando ya en una sala con enemigos. ¿Se rechazan o se ejecutan, y consumen tiempo?
+d) Tiempo y registro: ¿el comando de ver el mapa conocido consume tiempo, se registra en partida.log o altera el historial de retroceso? Una orden «ir a» rechazada o que no llega a dar ningún paso, ¿deja su comentario en partida.log? Debe ser coherente con la regla de la 001 de que las acciones rechazadas no se registran.
+e) Antorcha: si el jugador la enciende estando ya dentro de una sala, ¿explora las vecinas en ese momento o solo en la siguiente entrada? Si se apaga, ¿lo ya explorado se conserva? Al revertir con pergamino una entrada con antorcha, ¿se revierten también las observaciones de puertas hechas en esa entrada?
+
+Al terminar, muestra un resumen breve de lo cambiado.
 ```
 
 **Prompt (resumido):** Se pidió resolver, con un máximo de cinco preguntas de una en una y cada una con recomendación, las ambigüedades de la especificación de niebla de guerra e «ir a»: puertas de salas exploradas solo con antorcha, motivos de detención simultáneos, órdenes degeneradas, registro y consumo de tiempo del mapa y de la orden, y comportamiento de la antorcha y del pergamino.
@@ -616,4 +628,30 @@ Marca [P] solo las tareas que tocan archivos distintos y no dependen entre sí. 
 **Prompt (resumido):** Se pidió generar la lista de tareas de la capacidad de niebla de guerra e «ir a», con pruebas antes que el código, cada tarea ligada a sus requisitos, las dependencias externas de las capacidades 001 y 004 marcadas, y el punto de corte del Pull Request.
 
 **Para qué se usó:** Generar tasks.md para revisarlo antes de ejecutar analyze.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6-Luna)
+**Prompt:** Corrige solo specs/002-niebla-ir-a/tasks.md. No toques ningún otro archivo, no crees ni cambies de rama y no hagas commit ni push. Respeta los finales de línea del archivo y no uses sed -i. Conserva el formato de las tareas; renumera solo lo necesario y actualiza las dependencias y la sección "Cobertura independiente". Comprueba con Test-Path (solo lectura) cada ruta que cites.
+
+1. T028: la ruta es DECISIONES.md en la raíz (Modificado), no docs/DECISIONES.md. Agrega la sección de esta capacidad.
+2. Agrega tareas de prueba (antes del código) y de código para:
+   a. cripta/modelo/efectos.py (Modificado): avisar al conocimiento los cierres automáticos observables desde una sala vecina (FR-NIE-004, FR-NIE-015; B-NIE-002).
+   b. cripta/modelo/resultado_partida.py (Modificado): proyección inmutable del mapa y resultado y motivos del viaje (FR-NIE-007, FR-NIE-008, FR-NIE-013).
+   c. cripta/vista/vista_base.py (Modificado): contrato de presentación del mapa conocido y de la detención, antes de T020.
+   d. cripta/infraestructura/estado_guardado.py (Modificado, coordinar con 004) para el campo lógico del conocimiento y cripta/modelo/persistencia_modelo.py (Modificado) para proyectarlo y restaurarlo, sin codificación binaria. Corrige T008: EstadoPartida está en estado_guardado.py.
+3. Pon T011 antes de T008 y valida T008 con tests.servicios.test_servicio_partida_guardado.
+4. Pon T016 antes de T015.
+5. Valida T022 con tests.servicios.test_servicio_bench; el comando de --bench queda en T023. Divide T022 en tres tareas: selección lineal, revelación y reversión, cada una con su criterio de hecho.
+6. T024: quita tasks.md como ruta de evidencia; no modifica archivos y sus resultados se llevan a la sección de DECISIONES.md.
+7. En T002, T003, T004 y T006 la ruta tests/modelo/test_conocimiento_jugador.py pasa a "Modificado"; solo T001 es "Nuevo".
+8. Divide T010: B-NIE-004 y B-NIE-005 quedan en la Fase B; B-NIE-001, B-NIE-002, B-NIE-003 y B-NIE-006 pasan a la Fase C, antes del bucle del controlador. tests/aceptacion/test_niebla_ir_a.py es Nuevo en la primera y Modificado en la segunda.
+9. T001 cita también los escenarios 1.3 y 1.4. T014 agrega el caso en que el daño mata al jugador (FR-NIE-013: se aplican las reglas de fin de partida y no se informa viaje) y las aserciones de cero tiempo, sin línea en partida.log y sin cambio en el historial para destino no explorado, destino igual a la sala actual y falta de ruta inicial (escenarios 3.1, 3.12, 3.14; FR-NIE-009, 019, 021). T019 agrega o remite a una prueba de que consultar el mapa no consume tiempo ni se registra (FR-NIE-007).
+10. Agrega la etiqueta "Depende de 001" (costo de salida en el movimiento de partida.py) a T014 y T015.
+11. Corrige la nota de paralelismo para que coincida con las tareas marcadas [P].
+12. T026: agrega un comando de solo lectura que verifique que cripta/modelo no importa red, archivos ni vista, y otro que verifique que servicio_replay.py y servicio_bench.py no instancian la vista. Aclara que la búsqueda de set/dict puede traer falsos positivos en comentarios y que se revisan a mano.
+13. En los criterios de T005 y T013 agrega que los errores de programación heredan de IndexError o ValueError.
+Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
+
+**Prompt (resumido):** Se pidió corregir tasks.md de la capacidad 002: rutas, archivos del plan sin tarea, orden de pruebas y código, tareas demasiado grandes y cobertura de escenarios.
+
+**Para qué se usó:** Ajustar la lista de tareas al plan, a la especificación y al estado real del repositorio antes de /speckit-analyze.
 

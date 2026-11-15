@@ -196,7 +196,11 @@
 
 ### D.2 — Cargas de regresión de la Parte I
 
-- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con la carga `ciclo_referencia` (cripta-06, 300 salas, desde `fixtures/`, con decenas de cazadores activos), comparándola con el límite de 20 ms, y reportar de `ciclo_referencia` los cazadores activos y el promedio en persecución por ciclo. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar el cálculo compartido contra el individual (P2 §5.1). Anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
+- [ ] T039b [US2] Revisión de P2 §5.6 (plan.md, Revisión de Decisiones, punto 3). Primero crear la prueba en `tests/modelo/` (Nuevo) que, después de `Partida.ejecutar_accion`, comprueba que `gc.get_freeze_count()` es mayor que 0 y que llama a `gc.unfreeze()` al final de la prueba aunque falle. Luego modificar `cripta/modelo/partida.py` (Modificado) para que `ejecutar_accion` llame a `gc.freeze()` al terminar (FR-TER-020)
+
+- [ ] T039c [US2] Crear la prueba en `tests/bench/` (Nuevo, con `__init__.py`) que ejecuta cada carga registrada en `CARGAS` a una escala mínima y comprueba que devuelve resultados sin lanzar excepciones (Principio VIII, FR-TER-020). Motivo: un cambio de la Fase C rompió la carga `ciclo` sin que ninguna prueba lo detectara
+
+- [ ] T039 Ejecutar las mediciones de regresión de la Parte I (sin cazadores) y verificar FR-TER-020 con la carga `ciclo_referencia` (cripta-06, 300 salas, desde `fixtures/`, con decenas de cazadores activos), comparándola con el límite de 20 ms, y reportar de `ciclo_referencia` los cazadores activos y el promedio en persecución por ciclo. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar el cálculo compartido contra el individual (P2 §5.1). Las mediciones definitivas se toman después de T039b y se conservan también las de antes de esa revisión para el antes y el después de T043. Anotar los resultados tal como salgan, sin afirmar cifras no medidas (FR-TER-020):
 
   ```powershell
   py -m cripta --bench --solo ciclo_referencia
@@ -206,7 +210,7 @@
   ```
   Si algún límite se supera, documentarlo como límite conocido, revisar la decisión e informar al responsable de la capacidad 004 sobre el resultado de `historial`.
 
-**Punto de verificación Fase D**: Las cargas nuevas y de regresión terminan sin errores y los resultados quedan anotados para T043.
+**Punto de verificación Fase D**: Las cargas nuevas y de regresión terminan sin errores, T039b y T039c pasan y los resultados (antes y después de la revisión de `gc.freeze()`) quedan anotados para T043.
 
 ---
 
@@ -234,7 +238,7 @@
 
   Resultado esperado: código de salida `0` para cada ejemplo nuevo, sin ejemplos con el catálogo be68d322d2f5.
 
-- [ ] T043 Ampliar `DECISIONES.md` (raíz) con la sección de la capacidad 001: problema, alternativas y razón de descarte, decisión, complejidad, resultados de `--bench` de T036, T036b, T037 y T039 con el comando exacto, el tiempo de consulta de costos medido en T036 y, si pesa, la alternativa de precalcular los costos en una tabla plana al construir el mapa (O(1) por consulta, frente a O(log n) de la consulta actual), límites conocidos y enlaces a `spec.md` y `plan.md` (Principio VI)
+- [ ] T043 Ampliar `DECISIONES.md` (raíz) con la sección de la capacidad 001: problema, alternativas y razón de descarte, decisión, complejidad, resultados de `--bench` de T036, T036b, T037 y T039 con el comando exacto, el antes y el después de la revisión de `gc.freeze()` de T039b (P2 §5.6, con el límite conocido de la basura cíclica entre objetos congelados), el tiempo de consulta de costos medido en T036 y, si pesa, la alternativa de precalcular los costos en una tabla plana al construir el mapa (O(1) por consulta, frente a O(log n) de la consulta actual), límites conocidos y enlaces a `spec.md` y `plan.md` (Principio VI)
 - [ ] T044 Registrar en `PROMPTS_LLM.md` las invocaciones de la implementación (por ejemplo `/speckit-implement`), con fecha, herramienta, prompt textual y para qué se usó (Flujo de Trabajo de la Constitución)
 
 ---
@@ -267,7 +271,7 @@ Fase A ──► Fase B ──► Fase C ──► Fase D ──► Fase E
 - Fase A: T001 → T001b → T002–T006, T004b y T006b (pruebas en paralelo) → T007, T008, T009, T014, T015 y T021b (en paralelo) → T009b (tras T004b, antes de la Fase C) → T010 → T011 y T012 → T013 → T016 → T017
 - Fase B: T018 → T019, T019b, T020 (pruebas) → T021 → T022 → T023 → T024 → T025 → T025b
 - Fase C: T026, T026b, T027, T028, T028b y T035 (pruebas en paralelo) → T028c (tras T028, mismo archivo, antes de C.4) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
-- Fase D: T036 → T036b → T037 (mismo archivo) → T038 → T039
+- Fase D: T036 → T036b → T037 (mismo archivo) → T038 → T039b y T039c (en paralelo, no comparten archivo) → T039
 - Fase E: T040–T041 (en paralelo) → T042 → T043 → T044
 
 ### Oportunidades de paralelización

@@ -367,6 +367,12 @@ tests/
    - *Decisión Parte I*: Registro de operaciones inversas para los últimos 5 intervalos, sin copias completas del estado.
    - *Impacto Parte II*: Con muchos cazadores moviéndose entre dos acciones del jugador, un solo intervalo podría acumular muchas operaciones inversas.
    - *Riesgo a medir*: Se medirá con `--bench --solo historial` el costo de registrar y revertir con muchos cazadores. El resultado se informa al responsable de la capacidad 004 (línea de tiempo), que es quien decide si este mecanismo es adecuado para su carga. Este plan no extrae conclusiones sobre esa capacidad.
+3. **Carga partida de la Parte I (P2 §5.6) y el recolector de memoria de Python**:
+   - *Problema*: El peor caso de la carga partida de la Parte I supera 20 ms con 400 salas (29.5, 43.8 y 48.2 ms en Windows con Python 3.14). La Parte I lo documentó con la causa sin aislar.
+   - *Evidencia*: La causa son las pausas del recolector de memoria. Con el recolector apagado el peor caso baja a unos 15 ms y la mediana no cambia. En una partida de 400 salas con 1287 acciones, una limpieza completa encuentra 0 objetos de basura cíclica y la memoria es igual con o sin limpiezas (8.5 MB), así que las pausas recorren objetos vivos, sobre todo el historial de retroceso, sin recuperar nada. Con `gc.freeze()` al terminar cada acción del jugador el peor caso queda en 11.1, 15.7 y 17.4 ms en Windows con Python 3.14 (en Linux con Python 3.10 baja de 55-66 ms a 14-15.6 ms), con la mediana igual y un costo de unos 0.01 ms por llamada.
+   - *Alternativas descartadas*: (a) apagar el recolector, porque deja de recoger basura cíclica nueva. (b) limpiar con `gc.collect()` en el tiempo ocioso tras cada acción, porque cada limpieza cuesta 35 a 72 ms con 400 salas. (c) subir el umbral de la generación 2, porque el recolector de Python 3.14 trabaja distinto y la solución no es portable.
+   - *Decisión*: Llamar a `gc.freeze()` al final de `Partida.ejecutar_accion` en `cripta/modelo/partida.py`. Ese punto cubre el juego, `--replay` y `--bench`, porque las cargas del cazador llaman a `Partida` directamente sin pasar por `ServicioPartida`. Las tareas son T039b (prueba y cambio) y T039c (prueba de humo de las cargas). Las mediciones definitivas de T039 se toman después de T039b y T043 documenta el antes y el después.
+   - *Riesgo*: La basura cíclica entre objetos congelados no se recoge. Se midió 0 objetos en la partida de 400 salas y se documenta como límite conocido en `DECISIONES.md` (T043).
 
 ---
 

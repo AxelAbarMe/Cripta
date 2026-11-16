@@ -4,6 +4,7 @@ No conoce HTTP, archivos ni la vista: recibe sus dependencias ya construidas.
 El jugador y los enemigos son eventos del mismo reloj virtual; el orden sale solo de
 (tiempo, secuencia). Toda la aleatoriedad sale de una única random.Random(semilla).
 """
+import gc
 import random
 from contextlib import nullcontext
 
@@ -315,6 +316,11 @@ class Partida:
 
     # ------------------------------------------------------------- acciones
     def ejecutar_accion(self, accion) -> ResultadoAccion:
+        resultado = self._ejecutar_accion(accion)
+        gc.freeze()   # congela los objetos vivos para que el recolector no vuelva a recorrerlos (P2 §5.6)
+        return resultado
+
+    def _ejecutar_accion(self, accion) -> ResultadoAccion:
         self._mensajes_nuevos = []
         if not self._iniciada:
             raise RuntimeError("Hay que llamar a iniciar() antes de ejecutar acciones.")

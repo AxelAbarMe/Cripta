@@ -196,7 +196,7 @@
 
 ### D.2 — Cargas de regresión de la Parte I
 
-- [ ] T039b [US2] Revisión de P2 §5.6 (plan.md, Revisión de Decisiones, punto 3). Primero crear la prueba en `tests/modelo/` (Nuevo) que, después de `Partida.ejecutar_accion`, comprueba que `gc.get_freeze_count()` es mayor que 0 y que llama a `gc.unfreeze()` al final de la prueba aunque falle. Luego modificar `cripta/modelo/partida.py` (Modificado) para que `ejecutar_accion` llame a `gc.freeze()` al terminar (FR-TER-020)
+- [X] T039b [US2] Revisión de P2 §5.6 (plan.md, Revisión de Decisiones, punto 3). Primero crear la prueba en `tests/modelo/` (Nuevo) que, después de `Partida.ejecutar_accion`, comprueba que `gc.get_freeze_count()` es mayor que 0 y que llama a `gc.unfreeze()` al final de la prueba aunque falle. Luego modificar `cripta/modelo/partida.py` (Modificado) para que `ejecutar_accion` llame a `gc.freeze()` al terminar (FR-TER-020)
 
 - [ ] T039c [US2] Crear la prueba en `tests/bench/` (Nuevo, con `__init__.py`) que ejecuta cada carga registrada en `CARGAS` a una escala mínima y comprueba que devuelve resultados sin lanzar excepciones (Principio VIII, FR-TER-020). Motivo: un cambio de la Fase C rompió la carga `ciclo` sin que ninguna prueba lo detectara
 

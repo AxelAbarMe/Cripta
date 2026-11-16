@@ -103,11 +103,14 @@ cripta/
 │   ├── cripta_mapa.py           # Modificado: costo de cada conexión resuelto desde ambos lados
 │   ├── efectos.py               # Modificado: EfectoCierrePuerta invalida BuscadorRutas (T033); se verifica EfectoCambioVelocidad (T022)
 │   ├── enemigo.py               # Modificado: expone propiedad rango de la ficha
-│   └── partida.py               # Modificado: costos variables en movimiento, invalidación, agenda
+│   ├── partida.py               # Modificado: costos variables en movimiento, invalidación, agenda, costo y marca de cazador al armar la vista
+│   └── resultado_partida.py     # Modificado: SalidaVista con el costo resuelto y EnemigoVista con indicador de cazador
 ├── estructuras/
 │   └── heap_min.py              # Modificado: agrega métodos esta_vacio() y __len__()
 ├── servicios/
 │   └── servicio_bench.py        # Modificado: habilita las cargas ruta_cazador e invalidacion (T038)
+├── vista/
+│   └── vista_consola.py         # Modificado: muestra el costo junto a cada salida y una marca para los cazadores (FR-TER-024)
 └── bench/
     └── cargas_bench.py          # Modificado: añade cargas ruta_cazador e invalidacion
 
@@ -132,7 +135,10 @@ tests/
 │   ├── test_buscador_rutas.py   # Nuevo: Pruebas unitarias de Dijkstra, poda por rango y desempate
 │   ├── test_equivalencia_rutas.py # Nuevo: Decisión con reutilización igual a la de calcular desde cero (FR-TER-015)
 │   ├── test_cripta_mapa_costos.py # Nuevo: Costo de la conexión resuelto desde ambos lados (FR-TER-001 y 002, T006b)
-│   └── test_cazador_decisiones.py # Nuevo: Pruebas de decisiones del cazador (ataque, espera, movimiento)
+│   ├── test_cazador_decisiones.py # Nuevo: Pruebas de decisiones del cazador (ataque, espera, movimiento)
+│   └── test_vista_partida.py    # Nuevo: La vista de la partida trae el costo de cada salida y la marca de cazador (FR-TER-024, T034b)
+├── vista/
+│   └── test_vista_consola.py    # Modificado: la vista de consola muestra el costo y la marca de cazador (FR-TER-024, T034b)
 └── aceptacion/
     ├── __init__.py              # Nuevo: carpeta nueva, necesario para que discover encuentre las pruebas
     ├── test_terreno_costos.py   # Nuevo: Escenarios de aceptación de costos y velocidad (FR-TER-001 a 006)
@@ -275,7 +281,7 @@ tests/
 | `cripta/modelo/comportamiento_enemigo.py` | Modificado | Añadir función `_decidir_cazador` y enlace en `decidir_accion_enemigo`. |
 | `cripta/modelo/efectos.py` | Modificado | `EfectoCierrePuerta` invalida `BuscadorRutas` al cerrar una puerta (T033); se verifica que `EfectoCambioVelocidad` llama a `calcular_tiempo_reprogramado` (T022). |
 | `cripta/modelo/enemigo.py` | Modificado | Exponer propiedad `rango` tomada de su ficha de catálogo. |
-| `cripta/modelo/partida.py` | Modificado | Usar costo de salida en `_mover`, costo de salida en `_turno_enemigo`, invalidar `BuscadorRutas` en eventos clave (`_mover`, `_abrir`, etc.) y agregar en `_activar_enemigos_de` el aviso de un cazador sin rango válido (FR-TER-008). |
+| `cripta/modelo/partida.py` | Modificado | Usar costo de salida en `_mover`, costo de salida en `_turno_enemigo`, invalidar `BuscadorRutas` en eventos clave (`_mover`, `_abrir`, etc.) y agregar en `_activar_enemigos_de` el aviso de un cazador sin rango válido (FR-TER-008). Al armar la vista, resolver el costo de cada salida con `CriptaMapa.costo_de_conexion` y marcar como cazador a los enemigos cuyo comportamiento lo es (FR-TER-024, T034c). |
 | `cripta/estructuras/heap_min.py` | Modificado | Añadir métodos `esta_vacio()` y `__len__()` sobre la lista existente. |
 | `cripta/bench/cargas_bench.py` | Modificado | Registrar cargas sintéticas `ruta_cazador` e `invalidacion`. |
 | `cripta/servicios/servicio_bench.py` | **Modificado** | Habilitar ejecución de las nuevas cargas de `--bench` (T038). |
@@ -283,8 +289,8 @@ tests/
 | `tests/cliente_falso.py` | **Modificado** | Implementar `obtener_llaves` para cumplir el protocolo `ClienteCripta` ampliado y contarla como solicitud (T001b, FR-TER-018). |
 | `DECISIONES.md` (raíz) | Modificado | Ampliar con la sección de la capacidad 001: decisiones, alternativas descartadas, resultados de `--bench` y límites conocidos (T043). |
 | `tests/controlador/test_controlador_errores.py` | **Modificado** | Ampliar con la prueba de FR-TER-023: desplazamiento rechazado sin consumir tiempo ni registrar en `partida.log` (T019b). |
-| `cripta/modelo/resultado_partida.py` | **Sin cambios** | Ningún requisito funcional (FR) de la especificación solicita cambios en las vistas del resultado ni DTOs de presentación. |
-| `cripta/vista/vista_consola.py` | **Sin cambios** | Ningún requisito funcional (FR) solicita modificaciones en la interfaz de consola en esta funcionalidad. |
+| `cripta/modelo/resultado_partida.py` | Modificado | `SalidaVista` agrega el costo resuelto de la salida (entero >= 1) y `EnemigoVista` agrega un indicador de cazador, para que la vista pueda mostrarlos sin consultar el modelo (FR-TER-024, T034c). |
+| `cripta/vista/vista_consola.py` | Modificado | Mostrar el costo junto a cada salida de la sala actual y una marca para los enemigos cazadores. No calcula costos ni decide quién es cazador, solo presenta lo que trae la vista de la partida (FR-TER-024, T034c). |
 | `cripta/constantes.py` | **Sin cambios** | Mantiene constantes de acciones y direcciones intactas. |
 | `cripta/excepciones.py` | **Sin cambios** | Reutiliza excepciones existentes de la Parte I: los DTO lanzan `ValueError` con el dato afectado en el mensaje (sala y dirección, o id de la ficha o de la llave), y el cliente lo convierte: `ClienteOffline` en `CriptaDatosInvalidosError` con la ruta del archivo y `ClienteHttp` en `CriptaApiError` con la operación, como en la Parte I. Solo `CriptaMapa` lanza `CriptaDatosInvalidosError` directamente, cuando los dos lados de una conexión declaran costos distintos. Un cazador sin rango válido no lanza excepción: se trata de forma pasiva (FR-TER-008). `CriptaApiError` queda para fallos de la comunicación HTTP. Así ya funcionaban los DTO de la Parte I (por ejemplo, `entidad_desde_json` lanza `ValueError` ante una clase desconocida). |
 | `cripta/modelo/actor.py` | **Sin cambios** | Atributos base de actor compatibles. |
@@ -298,6 +304,8 @@ tests/
 | `cripta/modelo/reloj.py` | **Sin cambios previstos** (se corrige solo si T020 o T025 fallan) | Se reutilizan `calcular_intervalo`, `calcular_tiempo_reprogramado` y `RelojEventos.reprogramar`. Se verifica con T020 y T025, y solo se corrige si esas pruebas fallan. |
 | `cripta/modelo/cripta_mapa.py` | Modificado | Resolver el costo de cada conexión desde ambos lados, como ya hace `datos_de_puerta` con la llave y el cierre automático: si solo un lado declara costo, rige para ambos; si los dos lados declaran costos distintos, lanzar `CriptaDatosInvalidosError` con operación «construir el mapa», ruta «esqueleto de la cripta» y las salas de la conexión en el detalle (FR-TER-002). En la Parte I la llave y el cierre automático pueden venir en un solo lado, y el contrato no garantiza que el costo venga en ambos. |
 | `tests/infraestructura/test_partida_log.py` | **Modificado** | Ampliar con la prueba de FR-TER-021: movimiento, espera y ataque de cazadores, errantes y rastreadores no generan líneas en `partida.log` (T035). |
+| `tests/modelo/test_vista_partida.py` | **Nuevo** | Probar que la vista de la partida trae el costo de cada salida (incluido el 100 por defecto) y el indicador de cazador de cada enemigo (FR-TER-024, T034b). |
+| `tests/vista/test_vista_consola.py` | **Modificado** | Ampliar con la prueba de que la vista de consola muestra el costo junto a cada salida y distingue a los cazadores (FR-TER-024, T034b). |
 
 ---
 
@@ -403,6 +411,7 @@ tests/
 | **FR-TER-021** (los turnos de enemigos no escriben en `partida.log`) | `cripta/infraestructura/partida_log.py` | `tests.infraestructura.test_partida_log` |
 | **FR-TER-022** (desempate de agenda por menor secuencia) | `cripta/modelo/reloj.py` (`RelojEventos`) | `tests.modelo.test_reloj` (Nuevo) |
 | **FR-TER-023** (desplazamientos rechazados sin tiempo ni log) | `cripta/modelo/partida.py` (`_despachar`) | `tests.controlador.test_controlador_errores` |
+| **FR-TER-024** (la vista muestra el costo de las salidas y distingue a los cazadores) | `cripta/modelo/resultado_partida.py`, `cripta/modelo/partida.py` (armado de la vista), `cripta/vista/vista_consola.py` | `tests.modelo.test_vista_partida` y `tests.vista.test_vista_consola` (T034b) |
 
 ---
 

@@ -60,6 +60,10 @@ Prefijo de requisitos: FR-TER-NNN. No menciones estructuras de datos, clases ni 
 
 - Q: ¿FR-TER-020 y SC-001 exigen el límite de 20 ms con los cazadores en persecución simultánea? (FR-TER-020) → A: No. P2 §6.1 fija el límite para la cripta de referencia con decenas de cazadores activos, y la condición se redacta así. En cripta-06 hay 36 cazadores activos y desde cualquier sala como máximo 8 tienen al jugador dentro de su rango a la vez, por lo que exigir persecución simultánea de decenas no se puede cumplir con esa cripta. El caso de decenas de cazadores que persiguen a la vez al mismo jugador (P2 §5.1) se mide con la carga sintética `ruta_cazador`, que compara el cálculo compartido contra el individual.
 
+### Sesión 2026-11-16 (vista)
+
+- Q: ¿Qué debe mostrar la vista de la sala actual sobre las salidas y los enemigos, y qué capacidad lo cubre? (FR-TER-024) → A: P2 §7.3 exige que la vista muestre los costos de las salidas de la sala actual y distinga a los cazadores de los demás enemigos. Los costos y el comportamiento cazador nacen en esta capacidad, así que el requisito se cubre aquí con FR-TER-024. Hasta ahora ningún requisito lo cubría, y la vista mostraba las salidas sin costo y los enemigos sin indicar si son cazadores.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Movimiento y costos variables del terreno para actores (Prioridad: P1)
@@ -78,6 +82,7 @@ Como jugador o entidad del juego (actor), al desplazarme entre salas conectadas 
 4. **Dado** un actor con velocidad inicial 100 que en el instante t = 0 se mueve a través de una salida con costo 400 (queda en la sala destino y su próxima acción se programa para t = 400), **Cuando** en el instante t = 100 su velocidad cambia a 200 por efecto de una poción de velocidad, **Entonces** el tiempo restante hasta su próxima acción se escala a 150 unidades, reprogramándola para el instante virtual t = 250.
 5. **Dado** un actor en una sala contigua a salidas de costos variables, **Cuando** el actor ejecuta una acción de esperar o atacar, **Entonces** el costo de dicha acción permanece inalterado en su valor base de 100 unidades, sin verse modificado por los costos de las salidas circundantes.
 6. **Dado** un enemigo errante o rastreador activo en una sala con salidas abiertas de costos heterogéneos, **Cuando** llega su turno de acción, **Entonces** el errante selecciona al azar una salida abierta y el rastreador selecciona la salida hacia la sala accesible con rastro más reciente menor a 400 unidades, utilizando en ambos casos el costo de la salida seleccionada para determinar el costo y la duración del movimiento.
+7. **Dado** un jugador en una sala con una salida abierta de costo 250, otra salida sin costo declarado y un cazador junto a otro enemigo, **Cuando** se muestra la sala, **Entonces** se ve el costo 250 junto a la primera salida y el costo 100 junto a la segunda, y el cazador aparece distinguido del otro enemigo.
 
 ---
 
@@ -176,6 +181,7 @@ Como sistema de juego, al consultar los datos del laberinto desde el servicio ex
 - **FR-TER-021**: Las decisiones, movimientos, ataques y esperas de los cazadores y demás enemigos constituyen eventos internos de la simulación, reproducibles por semilla, y no deben generar entradas en `partida.log`. Esta capacidad no agrega tipos de línea nuevos a `partida.log`, cuyas acciones del jugador conservan el formato de la primera parte; otras capacidades pueden agregar los suyos (por ejemplo, el comentario de «ir a» de P2 §3.4).
 - **FR-TER-022**: Ante eventos programados para el mismo instante de tiempo virtual en la agenda, el orden de despacho debe determinarse estrictamente por el menor número de secuencia asignado al programar el evento; ante activaciones simultáneas de enemigos al entrar a una sala, sus primeros turnos deben programarse en orden ascendente de su identificador de instancia.
 - **FR-TER-023**: Cualquier intento de acción de desplazamiento rechazado (como intentar atravesar una puerta cerrada o avanzar en una dirección sin salida existente) debe emitir un mensaje descriptivo de rechazo observable, no debe consumir tiempo en el reloj virtual (duración cero), no debe modificar el estado del juego ni el historial, y no debe generar ninguna línea en `partida.log`.
+- **FR-TER-024**: La vista de la sala actual debe mostrar el costo de cada una de sus salidas (el costo resuelto, que es 100 cuando la conexión no declara costo) y debe distinguir a los cazadores de los demás enemigos de la sala (P2 §7.3).
 
 ### Entidades Clave *(incluir si la funcionalidad involucra datos)*
 

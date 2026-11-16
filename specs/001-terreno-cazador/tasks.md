@@ -120,7 +120,7 @@
 
 **Objetivo**: Implementar el comportamiento del enemigo cazador: búsqueda de ruta compartida con estructuras propias, decisiones (ataque, movimiento, espera), desempate determinista, límite por rango, invalidación por eventos y ausencia de entradas de cazadores en `partida.log`.
 
-**Prueba independiente**: `py -m unittest tests.aceptacion.test_cazador_persecucion tests.modelo.test_buscador_rutas tests.modelo.test_equivalencia_rutas tests.modelo.test_cazador_decisiones tests.infraestructura.test_partida_log`
+**Prueba independiente**: `py -m unittest tests.aceptacion.test_cazador_persecucion tests.modelo.test_buscador_rutas tests.modelo.test_equivalencia_rutas tests.modelo.test_cazador_decisiones tests.infraestructura.test_partida_log tests.modelo.test_vista_partida tests.vista.test_vista_consola`
 
 ### C.1 — Pruebas del cazador (escribir antes que el código)
 
@@ -167,7 +167,12 @@
 - [X] T033 [US2] [US3] Modificar `cripta/modelo/partida.py` y `cripta/modelo/efectos.py` (Modificado): instanciar `BuscadorRutas` y usarlo en el turno del cazador; invalidar la tabla en `_mover` (el jugador cambia de sala), `_abrir` (puerta abierta), `EfectoCierrePuerta` (puerta cerrada), `_usar_pergamino` (retroceso), la activación de un cazador con `rango > _rango_max_calculado` y la carga de una partida guardada; conservar la tabla ante turnos de cazadores, muerte de enemigos y cambios de velocidad (FR-TER-015)
 - [X] T034 [US3] Verificar `cripta/modelo/partida.py` (Modificado si hace falta) → `_activar_enemigos_de`: confirmar con la prueba de T028 que las activaciones simultáneas programan sus primeros turnos en orden ascendente de identificador de instancia (FR-TER-022)
 
-**Punto de verificación Fase C**: `py -m unittest tests.modelo.test_buscador_rutas tests.modelo.test_equivalencia_rutas tests.modelo.test_cazador_decisiones tests.aceptacion.test_cazador_persecucion tests.infraestructura.test_partida_log` → todos en `OK`.
+### C.5 — Vista
+
+- [ ] T034b [US1] Crear `tests/modelo/test_vista_partida.py` (Nuevo) y ampliar `tests/vista/test_vista_consola.py` (Modificado): la vista de la partida trae el costo de cada salida de la sala actual (100 si la conexión no declara costo) y un indicador de cazador por enemigo, y la vista de consola muestra el costo junto a cada salida y distingue a los cazadores de los demás enemigos. Escribir antes que el código y comprobar que falla (FR-TER-024)
+- [ ] T034c [US1] Modificar `cripta/modelo/resultado_partida.py` (Modificado: `SalidaVista` con el costo resuelto y `EnemigoVista` con un indicador de cazador), `cripta/modelo/partida.py` (Modificado: al armar la vista, usar `CriptaMapa.costo_de_conexion` y el comportamiento del enemigo) y `cripta/vista/vista_consola.py` (Modificado: mostrar el costo junto a cada salida y una marca para los cazadores). Las pruebas de T034b deben quedar en `OK` (FR-TER-024)
+
+**Punto de verificación Fase C**: `py -m unittest tests.modelo.test_buscador_rutas tests.modelo.test_equivalencia_rutas tests.modelo.test_cazador_decisiones tests.aceptacion.test_cazador_persecucion tests.infraestructura.test_partida_log tests.modelo.test_vista_partida tests.vista.test_vista_consola` → todos en `OK`.
 
 ---
 
@@ -270,7 +275,7 @@ Fase A ──► Fase B ──► Fase C ──► Fase D ──► Fase E
 
 - Fase A: T001 → T001b → T002–T006, T004b y T006b (pruebas en paralelo) → T007, T008, T009, T014, T015 y T021b (en paralelo) → T009b (tras T004b, antes de la Fase C) → T010 → T011 y T012 → T013 → T016 → T017
 - Fase B: T018 → T019, T019b, T020 (pruebas) → T021 → T022 → T023 → T024 → T025 → T025b
-- Fase C: T026, T026b, T027, T028, T028b y T035 (pruebas en paralelo) → T028c (tras T028, mismo archivo, antes de C.4) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034
+- Fase C: T026, T026b, T027, T028, T028b y T035 (pruebas en paralelo) → T028c (tras T028, mismo archivo, antes de C.4) → T029–T030 (en paralelo) → T031 → T032 → T033 → T034 → T034b (prueba de la vista, FR-TER-024) → T034c
 - Fase D: T036 → T036b → T037 (mismo archivo) → T038 → T039b y T039c (en paralelo, no comparten archivo) → T039
 - Fase E: T040–T041 (en paralelo) → T042 → T043 → T044
 

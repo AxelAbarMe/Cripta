@@ -25,14 +25,16 @@ Como jugador, quiero consultar el estado de la partida en un instante anterior p
 3. **Dado** que a `t` le corresponde una decisión del jugador, **cuando** se consulta `historia t`, **entonces** se muestra el estado justo antes de esa decisión.
 4. **Dado** un instante válido, **cuando** se consulta `historia t`, **entonces** el resumen incluye como mínimo reloj, sala del jugador, vida y estadísticas, inventario, efectos activos, enemigos de esa sala con su vida y mapa conocido en ese momento.
 5. **Dado** un estado válido de la partida, **cuando** se consulta `historia t`, **entonces** la consulta no consume tiempo, no se registra como acción y no altera el estado actual ni el historial de retroceso.
+6. **Dado** que el jugador usó un pergamino y revirtió acciones, **cuando** consulta `historia`, **entonces** no se muestran las acciones revertidas.
+7. **Dado** un estado válido de la partida, **cuando** se consulta `historia t`, **entonces** la consulta no se registra en `partida.log`.
 
 ### Historia de usuario 2: Consultar antes de una acción (Prioridad: P1)
 
 Como jugador, quiero localizar un estado justo antes de una acción numerada para revisar la partida por su secuencia de decisiones.
 
-**Prioridad**: Permite consultar la historia por la referencia de acción que define el prompt.
+**Prioridad**: Garantiza que lo consultable en el pasado sobreviva al guardado y que ningún archivo antiguo se cargue sin avisar.
 
-**Prueba independiente**: Consultar `historia #k` y verificar que el resumen representa el estado justo antes de la acción `k`.
+**Prueba independiente**: Guardar y cargar una partida con historia y comparar `historia t` antes y después; cargar un archivo de la Parte I y verificar el resultado.
 
 **Escenarios de aceptación**:
 
@@ -51,6 +53,15 @@ Como persona que revisa una partida, quiero reproducir su bitácora hasta un ins
 1. **Dado** una bitácora reproducible, **cuando** se ejecuta `--replay partida.log --hasta t`, **entonces** se imprime el mismo resumen definido para `historia t` sin vista.
 2. **Dado** que la partida termina antes de `t`, **cuando** se ejecuta `--replay partida.log --hasta t`, **entonces** se muestra el estado final y se indica que la partida terminó antes de `t`.
 
+### Historia de usuario 4: Guardar y cargar la línea de tiempo (Prioridad: P2)
+
+Como jugador, quiero que la línea de tiempo se conserve al guardar y cargar una partida y que se identifiquen explícitamente los archivos guardados de la Parte I.
+
+**Escenarios de aceptación**:
+
+1. **Dado** una partida con una línea de tiempo, **cuando** se guarda y se carga, **entonces** se conserva la línea completa. (FR-LIN-010)
+2. **Dado** un archivo guardado de la Parte I, **cuando** se carga, **entonces** se reporta la incompatibilidad o se realiza una migración explícita, nunca se carga en silencio. (FR-LIN-011; la elección queda pendiente de FR-LIN-012)
+
 ### Casos límite
 
 - Una consulta a un instante posterior al reloj actual se rechaza.
@@ -68,7 +79,7 @@ Como persona que revisa una partida, quiero reproducir su bitácora hasta un ins
 - **FR-LIN-002**: Si en `t` corresponde una decisión del jugador, la consulta DEBE mostrar el estado justo antes de tomarla.
 - **FR-LIN-003**: El sistema DEBE permitir consultar el pasado mediante `historia <t>` y `historia #k`, donde `#k` identifica el estado justo antes de la acción `k` del jugador.
 - **FR-LIN-004**: La consulta DEBE mostrar como mínimo el reloj, la sala del jugador, su vida y estadísticas, el inventario, los efectos activos, los enemigos de la sala consultada con su vida y el mapa conocido en ese momento.
-- **FR-LIN-005**: La consulta histórica NO DEBE consumir tiempo, registrarse como acción, alterar el estado de la partida ni modificar el historial de retroceso.
+- **FR-LIN-005**: La consulta histórica NO DEBE consumir tiempo, registrarse como acción, aparecer en `partida.log`, alterar el estado de la partida ni modificar el historial de retroceso.
 - **FR-LIN-006**: El sistema DEBE rechazar la consulta de un instante posterior al reloj actual.
 - **FR-LIN-007**: Las acciones revertidas por pergaminos DEBEN dejar de existir en la línea de tiempo consultable.
 - **FR-LIN-008**: `--replay partida.log --hasta <t>` DEBE reproducir hasta `t` e imprimir el mismo resumen que la consulta histórica, sin instanciar la vista.
@@ -103,6 +114,7 @@ Como persona que revisa una partida, quiero reproducir su bitácora hasta un ins
 - **SC-LIN-003**: En una partida de al menos 5 000 acciones, la consulta tarda menos de 50 ms con el valor predeterminado de `K` justificado por mediciones del grupo.
 - **SC-LIN-004**: La memoria de la línea de tiempo crece con los cambios registrados y los puntos de control, sin crecer como acciones por tamaño del estado.
 - **SC-LIN-005**: La reproducción hasta un instante produce el mismo resumen histórico, o el estado final con indicación de final anticipado cuando corresponda.
+- **SC-LIN-006**: Guardar y cargar conserva la línea de tiempo completa y un archivo de la Parte I nunca se carga en silencio.
 
 ## Supuestos
 

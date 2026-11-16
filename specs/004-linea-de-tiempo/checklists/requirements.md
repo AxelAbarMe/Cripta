@@ -25,7 +25,9 @@
 ## Preparación de la funcionalidad
 
 - [x] Cada requisito funcional tiene escenarios o criterios de aceptación claros
-- [x] Los escenarios cubren consulta por instante, por acción y reproducción
+- [x] Los escenarios cubren consulta por instante, por acción, reproducción, acciones revertidas por pergamino y persistencia de la línea de tiempo
+- [x] La consulta no se registra en `partida.log`
+- [x] Los escenarios cubren el tratamiento explícito de archivos de la Parte I, con la elección pendiente en FR-LIN-012
 - [x] La funcionalidad se vincula con resultados medibles
 - [x] No se filtran detalles de implementación en la especificación
 

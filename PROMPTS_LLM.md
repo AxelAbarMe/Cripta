@@ -476,3 +476,10 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 **Prompt (resumido):** Aclarar ambigüedades de la línea de tiempo: numeración de «historia #k», pergamino, eventos simultáneos, rechazos, formato guardado y valor de K.
 
 **Para qué se usó:** <completar con las aclaraciones registradas en la spec>.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/004-linea-de-tiempo/spec.md y checklists/requirements.md: agrega el escenario de historia tras un pergamino, la precisión de que la consulta no va a partida.log, una historia de guardar y cargar con el caso del archivo de la Parte I y un criterio de éxito de persistencia; no fijes K ni resuelvas el marcador de FR-LIN-012."
+
+**Prompt (resumido):** Completar la cobertura de los escenarios del Apéndice B y de la persistencia en la especificación de la línea de tiempo.
+
+**Para qué se usó:** Cerrar dos escenarios del Apéndice B que solo estaban como casos límite y añadir historia y criterio para guardar y cargar.

@@ -505,3 +505,9 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 
 **Para qué se usó:** Dejar en la especificación el tratamiento de valores inválidos de K y de consultas rechazadas, y la lista de decisiones del grupo pendientes de confirmar con el profesor.
 
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-plan Sigue las instrucciones de prompts/p2/04-plan-004.md. SPECIFY_FEATURE_DIRECTORY=specs/004-linea-de-tiempo. [...] Solo crea o modifica archivos dentro de specs/004-linea-de-tiempo/. Puedes LEER (sin modificar) el código, specs/001-terreno-cazador/ y specs/002-niebla-ir-a/plan.md vía git show."
+
+**Prompt (resumido):** Generar el plan de la línea de tiempo con puntos de control: alternativas de reconstrucción, búsqueda del punto de control, recorte por pergamino, memoria frente a K, formato binario y trazabilidad.
+
+**Para qué se usó:** Obtener plan.md, research.md, data-model.md, contracts/ y quickstart.md de specs/004-linea-de-tiempo/.

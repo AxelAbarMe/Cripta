@@ -689,3 +689,10 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 **Prompt (resumido):** Se pidió corregir los hallazgos de /speckit-analyze y dos incoherencias detectadas en la revisión: archivos de pruebas ausentes del plan y una regla de cancelación que la especificación no fija.
 
 **Para qué se usó:** Alinear plan.md y tasks.md con la especificación antes del Pull Request de documentación.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "/speckit-analyze Sigue las instrucciones de prompts/p2/06-analyze-002.md. Solo lectura: no modifiques ningún archivo. Responde en español, con una tabla de hallazgos por gravedad con archivo y línea, y una lista de requisitos y escenarios sin cobertura."
+
+**Prompt (resumido):** Segunda ejecución del análisis de solo lectura de la capacidad de niebla de guerra e «ir a» después de las correcciones del primer análisis.
+
+**Para qué se usó:** Confirmó que los 24 requisitos, los escenarios y los seis casos del Apéndice B tienen tarea de prueba. Señaló la falta de claridad sobre cómo se usa el pergamino durante el viaje, que se resolvió con una aclaración del plan sin cambiar la especificación, y dos observaciones menores de etiquetas. La pendiente de guardado binario sigue bloqueada por la 004.

@@ -4,6 +4,8 @@
 
 Cada tarea cita FR, ruta, estado actual de la ruta, comando de validación y criterio de hecho. Las tareas están acotadas a un cambio revisable de hasta unos 90 minutos. Las pruebas se escriben antes de la implementación correspondiente.
 
+Las etiquetas Nuevo y Modificado indican el estado de la ruta al comenzar su primera tarea; las tareas posteriores sobre el mismo archivo lo marcan como Modificado.
+
 ## Fase A: Dominio puro del conocimiento
 
 **Objetivo**: mantener el conocimiento consultable y reversible en el modelo, sin red, disco ni vista.

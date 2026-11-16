@@ -462,3 +462,17 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 **Prompt (resumido):** Descarga de las llaves en el script de fixtures y documentación del formato.
 
 **Para qué se usó:** Agregar llaves.json al script y documentar los campos nuevos. El script se ejecutó a mano para cripta-02 a cripta-06.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-specify Sigue las instrucciones de prompts/p2/02-specify-004.md. SPECIFY_FEATURE_DIRECTORY=specs/004-linea-de-tiempo. [...] Solo crea o modifica archivos dentro de specs/004-linea-de-tiempo/. No agregues reglas del juego que no estén en el prompt ni en docs/CONTEXTO_CRIPTA2.md."
+
+**Prompt (resumido):** Generar la especificación de la línea de tiempo con puntos de control, con los escenarios del Apéndice B y la coordinación con niebla de guerra y formato binario.
+
+**Para qué se usó:** Obtener el borrador de specs/004-linea-de-tiempo/spec.md.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-clarify Sigue las instrucciones de prompts/p2/03-clarify-004.md. [...] Modifica solo specs/004-linea-de-tiempo/spec.md. Las respuestas a cada pregunta las doy yo; no decidas reglas del juego."
+
+**Prompt (resumido):** Aclarar ambigüedades de la línea de tiempo: numeración de «historia #k», pergamino, eventos simultáneos, rechazos, formato guardado y valor de K.
+
+**Para qué se usó:** <completar con las aclaraciones registradas en la spec>.

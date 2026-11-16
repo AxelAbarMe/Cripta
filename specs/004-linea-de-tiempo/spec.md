@@ -8,15 +8,15 @@
 
 **Entrada**: Prompt de usuario: `prompts/p2/02-specify-004.md`
 
-## Clarifications
+## Aclaraciones
 
-### Session 2026-11-16
+### Sesión 2026-11-16
 
-- Q: ¿Cómo debe numerarse k en historia #k y qué debe ocurrir si k es cero o no corresponde a una acción existente? → A: La primera acción es 1. Cero y cualquier valor sin acción correspondiente se rechazan. «Acción correspondiente» significa una acción que ya ocurrió y sigue vigente (no revertida por pergamino); el valor siguiente a la última acción vigente se rechaza, igual que t mayor que el reloj.
-- Q: ¿Una orden del jugador que se rechaza debe contar al numerar las acciones de historia #k? → A: Solo cuentan las acciones ejecutadas y registradas en partida.log; las órdenes rechazadas, las consultas de historia y del mapa, y las líneas de comentario de la bitácora no cuentan. Cada paso de un viaje «ir a» cuenta como una acción.
-- Q: Si `t` coincide con el momento de una decisión del jugador, ¿qué estado debe mostrar `historia t`? → A: Se incluyen todos los eventos con tiempo menor que t y los eventos de t que la agenda de la Parte I ejecuta antes de la decisión del jugador; se muestra el estado justo antes de esa decisión. La decisión misma y los eventos de t posteriores a ella no se incluyen. Si en t no hay decisión del jugador, se aplica FR-LIN-001: estado después de todos los eventos de t.
-- Q: Después de un pergamino que revierte eventos, ¿cómo debe tratarse `historia t` para un instante que pertenecía a esos eventos revertidos? → A: Tras un pergamino el reloj queda en el valor restaurado, así que un `t` posterior a ese reloj se rechaza igual que cualquier `t` mayor que el reloj actual; un `t` menor o igual se acepta y muestra el estado de la línea vigente en ese instante, sin las acciones revertidas. Lo mismo aplica a `historia #k`: si `k` corresponde a una acción revertida, se rechaza.
-- Q: Al cargar un archivo guardado de la Parte I, ¿debe el sistema reportar incompatibilidad o permitir una migración explícita? → A: Al cargar un archivo de la Parte I se reporta la incompatibilidad por versión y no se carga; nunca se carga en silencio ni se modifica o borra el archivo (la invalidación es por versión, como pide la capacidad de terreno y cazador). No se ofrece migración.
+- P: ¿Cómo debe numerarse k en historia #k y qué debe ocurrir si k es cero o no corresponde a una acción existente? → R: La primera acción es 1. Cero y cualquier valor sin acción correspondiente se rechazan. «Acción correspondiente» significa una acción que ya ocurrió y sigue vigente (no revertida por pergamino); el valor siguiente a la última acción vigente se rechaza, igual que t mayor que el reloj.
+- P: ¿Una orden del jugador que se rechaza debe contar al numerar las acciones de historia #k? → R: Solo cuentan las acciones ejecutadas y registradas en partida.log; las órdenes rechazadas, las consultas de historia y del mapa, y las líneas de comentario de la bitácora no cuentan. Cada paso de un viaje «ir a» cuenta como una acción.
+- P: Si `t` coincide con el momento de una decisión del jugador, ¿qué estado debe mostrar `historia t`? → R: Se incluyen todos los eventos con tiempo menor que t y los eventos de t que la agenda de la Parte I ejecuta antes de la decisión del jugador; se muestra el estado justo antes de esa decisión. La decisión misma y los eventos de t posteriores a ella no se incluyen. Si en t no hay decisión del jugador, se aplica FR-LIN-001: estado después de todos los eventos de t.
+- P: Después de un pergamino que revierte eventos, ¿cómo debe tratarse `historia t` para un instante que pertenecía a esos eventos revertidos? → R: Tras un pergamino el reloj queda en el valor restaurado, así que un `t` posterior a ese reloj se rechaza igual que cualquier `t` mayor que el reloj actual; un `t` menor o igual se acepta y muestra el estado de la línea vigente en ese instante, sin las acciones revertidas. Lo mismo aplica a `historia #k`: si `k` corresponde a una acción revertida, se rechaza.
+- P: Al cargar un archivo guardado de la Parte I, ¿debe el sistema reportar incompatibilidad o permitir una migración explícita? → R: Al cargar un archivo de la Parte I se reporta la incompatibilidad por versión y no se carga; nunca se carga en silencio ni se modifica o borra el archivo (la invalidación es por versión, como pide la capacidad de terreno y cazador). No se ofrece migración.
 
 ## Escenarios de usuario y pruebas
 
@@ -42,13 +42,16 @@ Como jugador, quiero consultar el estado de la partida en un instante anterior p
 
 Como jugador, quiero localizar un estado justo antes de una acción numerada para revisar la partida por su secuencia de decisiones.
 
-**Prioridad**: Garantiza que lo consultable en el pasado sobreviva al guardado y que ningún archivo antiguo se cargue sin avisar.
+**Prioridad**: Permite consultar la historia por la referencia de acción que define el prompt.
 
-**Prueba independiente**: Guardar y cargar una partida con historia y comparar `historia t` antes y después; cargar un archivo de la Parte I y verificar el resultado.
+**Prueba independiente**: Consultar `historia #k` y verificar que el resumen representa el estado justo antes de la acción `k`.
 
 **Escenarios de aceptación**:
 
-1. **Dado** que existe una acción vigente del jugador numerada `k` desde 1, **cuando** se consulta `historia #k`, **entonces** se muestra el estado justo antes de esa acción. Cero, cualquier valor sin acción vigente correspondiente y el valor siguiente a la última acción vigente se rechazan. Solo cuentan las acciones ejecutadas y registradas en `partida.log`; las órdenes rechazadas, las consultas de historia y del mapa, y las líneas de comentario de la bitácora no cuentan. Cada paso de un viaje «ir a» cuenta como una acción.
+1. **Dado** que existe una acción vigente del jugador numerada `k` desde 1, **cuando** se consulta `historia #k`, **entonces** se muestra el estado justo antes de esa acción.
+2. **Dado** que se consulta cero, un valor sin acción vigente correspondiente o el valor siguiente a la última acción vigente, **entonces** la consulta se rechaza.
+3. **Dado** que se consulta una acción numerada, **entonces** solo cuentan las acciones ejecutadas y registradas en `partida.log`; las órdenes rechazadas, las consultas de historia y del mapa, y las líneas de comentario de la bitácora no cuentan.
+4. **Dado** un viaje «ir a», **entonces** cada paso cuenta como una acción.
 
 ### Historia de usuario 3: Reproducir hasta un instante sin vista (Prioridad: P2)
 
@@ -66,6 +69,10 @@ Como persona que revisa una partida, quiero reproducir su bitácora hasta un ins
 ### Historia de usuario 4: Guardar y cargar la línea de tiempo (Prioridad: P2)
 
 Como jugador, quiero que la línea de tiempo se conserve al guardar y cargar una partida y que se identifiquen explícitamente los archivos guardados de la Parte I.
+
+**Prioridad**: Garantiza que lo consultable en el pasado sobreviva al guardado y que ningún archivo antiguo se cargue sin avisar.
+
+**Prueba independiente**: Guardar y cargar una partida con historia y comparar `historia t` antes y después; cargar un archivo de la Parte I y verificar el resultado.
 
 **Escenarios de aceptación**:
 

@@ -483,3 +483,25 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 **Prompt (resumido):** Completar la cobertura de los escenarios del Apéndice B y de la persistencia en la especificación de la línea de tiempo.
 
 **Para qué se usó:** Cerrar dos escenarios del Apéndice B que solo estaban como casos límite y añadir historia y criterio para guardar y cargar.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-clarify Sigue las instrucciones de prompts/p2/03-clarify-004.md. [...] Modifica solo specs/004-linea-de-tiempo/spec.md. Las respuestas a cada pregunta las doy yo; no decidas reglas del juego."
+
+**Prompt (resumido):** Aclarar ambigüedades de la línea de tiempo: numeración de «historia #k», acciones que cuentan, instante coincidente con una decisión, pergamino y archivo de la Parte I.
+
+**Para qué se usó:** Obtener cinco aclaraciones registradas en la Sesión 2026-11-16 de spec.md; la última resolvió FR-LIN-012 (incompatibilidad por versión, sin migración).
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/004-linea-de-tiempo/spec.md y checklists/requirements.md: traduce los encabezados de aclaraciones, restaura los campos de las historias 2 y 4, divide el escenario de la historia 2 en cuatro y actualiza el checklist sin cambiar ninguna regla."
+
+**Prompt (resumido):** Corrección de forma de la especificación tras el clarify: idioma, campos cruzados entre historias y escenarios.
+
+**Para qué se usó:** Dejar spec.md coherente con el formato de las demás capacidades y el checklist en 18/18.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/004-linea-de-tiempo/spec.md: registra en la sesión de aclaraciones dos decisiones del grupo (valores inválidos de --checkpoint-cada K y rechazo de consultas de historia sin efecto), agrega FR-LIN-022, FR-LIN-023 y SC-LIN-007 con sus escenarios, redacta los escenarios 2 a 4 de la historia 2 en formato dado/cuando/entonces y agrega las decisiones pendientes de confirmar al apartado de supuestos. No hagas preguntas ni agregues otras reglas."
+
+**Prompt (resumido):** Cierre de las aclaraciones de la línea de tiempo con respuestas ya decididas, sin una nueva ronda interactiva de /speckit-clarify.
+
+**Para qué se usó:** Dejar en la especificación el tratamiento de valores inválidos de K y de consultas rechazadas, y la lista de decisiones del grupo pendientes de confirmar con el profesor.
+

@@ -17,6 +17,8 @@
 - P: Si `t` coincide con el momento de una decisión del jugador, ¿qué estado debe mostrar `historia t`? → R: Se incluyen todos los eventos con tiempo menor que t y los eventos de t que la agenda de la Parte I ejecuta antes de la decisión del jugador; se muestra el estado justo antes de esa decisión. La decisión misma y los eventos de t posteriores a ella no se incluyen. Si en t no hay decisión del jugador, se aplica FR-LIN-001: estado después de todos los eventos de t.
 - P: Después de un pergamino que revierte eventos, ¿cómo debe tratarse `historia t` para un instante que pertenecía a esos eventos revertidos? → R: Tras un pergamino el reloj queda en el valor restaurado, así que un `t` posterior a ese reloj se rechaza igual que cualquier `t` mayor que el reloj actual; un `t` menor o igual se acepta y muestra el estado de la línea vigente en ese instante, sin las acciones revertidas. Lo mismo aplica a `historia #k`: si `k` corresponde a una acción revertida, se rechaza.
 - P: Al cargar un archivo guardado de la Parte I, ¿debe el sistema reportar incompatibilidad o permitir una migración explícita? → R: Al cargar un archivo de la Parte I se reporta la incompatibilidad por versión y no se carga; nunca se carga en silencio ni se modifica o borra el archivo (la invalidación es por versión, como pide la capacidad de terreno y cazador). No se ofrece migración.
+- P: ¿Qué valores acepta --checkpoint-cada K y qué ocurre con un valor inválido? → R: K debe ser un entero mayor o igual que 1. Un valor inválido (cero, negativo o no numérico) se rechaza al iniciar, informando el motivo, y la partida no inicia.
+- P: ¿Qué ocurre con una consulta de historia rechazada? → R: Toda consulta de historia rechazada (instante posterior al reloj, «#k» inválido o argumento mal formado) informa el motivo del rechazo y no produce ningún efecto: no consume tiempo, no se registra ni cambia el estado o el historial de retroceso.
 
 ## Escenarios de usuario y pruebas
 
@@ -37,6 +39,7 @@ Como jugador, quiero consultar el estado de la partida en un instante anterior p
 5. **Dado** un estado válido de la partida, **cuando** se consulta `historia t`, **entonces** la consulta no consume tiempo, no se registra como acción y no altera el estado actual ni el historial de retroceso.
 6. **Dado** que el jugador usó un pergamino y revirtió acciones, **cuando** consulta `historia`, **entonces** no se muestran las acciones revertidas.
 7. **Dado** un estado válido de la partida, **cuando** se consulta `historia t`, **entonces** la consulta no se registra en `partida.log`.
+8. **Dado** una consulta de historia con instante posterior al reloj, «#k» inválido o argumento mal formado, **cuando** se realiza la consulta, **entonces** se informa el motivo del rechazo y no se consume tiempo, no se registra ni cambia el estado o el historial de retroceso. (FR-LIN-023)
 
 ### Historia de usuario 2: Consultar antes de una acción (Prioridad: P1)
 
@@ -49,9 +52,9 @@ Como jugador, quiero localizar un estado justo antes de una acción numerada par
 **Escenarios de aceptación**:
 
 1. **Dado** que existe una acción vigente del jugador numerada `k` desde 1, **cuando** se consulta `historia #k`, **entonces** se muestra el estado justo antes de esa acción.
-2. **Dado** que se consulta cero, un valor sin acción vigente correspondiente o el valor siguiente a la última acción vigente, **entonces** la consulta se rechaza.
-3. **Dado** que se consulta una acción numerada, **entonces** solo cuentan las acciones ejecutadas y registradas en `partida.log`; las órdenes rechazadas, las consultas de historia y del mapa, y las líneas de comentario de la bitácora no cuentan.
-4. **Dado** un viaje «ir a», **entonces** cada paso cuenta como una acción.
+2. **Dado** que existe una acción vigente `k`, **cuando** se consulta `historia #k` con cero, un valor sin acción vigente correspondiente o el valor siguiente a la última acción vigente, **entonces** la consulta se rechaza.
+3. **Dado** que se numeran las acciones, **cuando** se consulta `historia #k`, **entonces** solo cuentan las acciones ejecutadas y registradas en `partida.log`, y no cuentan las órdenes rechazadas, las consultas de historia y del mapa ni las líneas de comentario de la bitácora.
+4. **Dado** un viaje «ir a», **cuando** se numeran las acciones, **entonces** cada paso cuenta como una acción.
 
 ### Historia de usuario 3: Reproducir hasta un instante sin vista (Prioridad: P2)
 
@@ -78,6 +81,18 @@ Como jugador, quiero que la línea de tiempo se conserve al guardar y cargar una
 
 1. **Dado** una partida con una línea de tiempo, **cuando** se guarda y se carga, **entonces** se conserva la línea completa. (FR-LIN-010)
 2. **Dado** un archivo guardado de la Parte I, **cuando** se intenta cargar, **entonces** se reporta la incompatibilidad por versión, no se carga, no se modifica ni se borra el archivo y no se ofrece una migración. (FR-LIN-011, FR-LIN-012)
+
+### Historia de usuario 5: Configurar los puntos de control (Prioridad: P2)
+
+Como jugador, quiero indicar cada cuántas acciones se guardan puntos de control para configurar la consulta de la línea de tiempo.
+
+**Prioridad**: Permite configurar la frecuencia máxima de los puntos de control.
+
+**Prueba independiente**: Iniciar con valores válidos e inválidos de `--checkpoint-cada K` y verificar que un valor inválido impide iniciar la partida e informa el motivo.
+
+**Escenarios de aceptación**:
+
+1. **Dado** un valor cero, negativo o no numérico para `K`, **cuando** se inicia con `--checkpoint-cada K`, **entonces** se rechaza al iniciar, se informa el motivo y la partida no inicia. (FR-LIN-022)
 
 ### Casos límite
 
@@ -113,6 +128,8 @@ Como jugador, quiero que la línea de tiempo se conserve al guardar y cargar una
 - **FR-LIN-019**: El mapa conocido mostrado en una consulta DEBE corresponder al conocimiento del jugador en ese momento, según la capacidad de niebla de guerra.
 - **FR-LIN-020**: Cada paso de un viaje «ir a» DEBE contar como una acción ordinaria del jugador para la línea de tiempo.
 - **FR-LIN-021**: El formato binario de guardado de esta capacidad DEBE incluir el estado que declaren las demás capacidades.
+- **FR-LIN-022**: `K` en `--checkpoint-cada K` DEBE ser un entero mayor o igual que 1. Un valor inválido DEBE rechazarse al iniciar, informando el motivo, y la partida NO DEBE iniciar.
+- **FR-LIN-023**: Toda consulta de historia rechazada por instante posterior al reloj, «#k» inválido o argumento mal formado DEBE informar el motivo del rechazo y NO DEBE producir efecto alguno: no consumir tiempo, no registrarse ni cambiar el estado o el historial de retroceso.
 
 ### Entidades clave
 
@@ -132,6 +149,7 @@ Como jugador, quiero que la línea de tiempo se conserve al guardar y cargar una
 - **SC-LIN-004**: La memoria de la línea de tiempo crece con los cambios registrados y los puntos de control, sin crecer como acciones por tamaño del estado.
 - **SC-LIN-005**: La reproducción hasta un instante produce el mismo resumen histórico, o el estado final con indicación de final anticipado cuando corresponda.
 - **SC-LIN-006**: Guardar y cargar conserva la línea de tiempo completa y un archivo de la Parte I nunca se carga en silencio.
+- **SC-LIN-007**: Un valor inválido de `K` y una consulta de historia rechazada informan su motivo y no producen efecto alguno.
 
 ## Supuestos
 
@@ -139,3 +157,7 @@ Como jugador, quiero que la línea de tiempo se conserve al guardar y cargar una
 - El conocimiento del mapa forma parte del estado de la partida y se consulta conforme a las reglas de la capacidad de niebla de guerra.
 - La selección del valor predeterminado de `K` se documentará tras las mediciones del grupo; no se fija en esta especificación.
 - Los archivos guardados de la Parte I se rechazan por incompatibilidad de versión, sin cargarlos, modificarlos ni borrarlos, y no se ofrece migración.
+- Decisiones del grupo tomadas en las sesiones de aclaraciones, pendientes de confirmar con el profesor porque el enunciado no las fija expresamente:
+  - Las acciones se numeran desde 1 en «historia #k»; solo cuentan las acciones ejecutadas y registradas, y los valores sin acción vigente correspondiente se rechazan.
+  - Los archivos guardados de la Parte I se rechazan por versión y no se ofrece migración (el enunciado permite también migrarlos explícitamente).
+  - `--checkpoint-cada K` exige un entero mayor o igual que 1; un valor inválido se rechaza al iniciar informando el motivo y la partida no inicia.

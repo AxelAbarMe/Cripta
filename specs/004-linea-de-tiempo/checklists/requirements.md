@@ -35,3 +35,4 @@
 
 - FR-LIN-012 quedó resuelto en la sesión de aclaraciones 2026-11-16: no se ofrece migración de archivos de la Parte I.
 - El valor predeterminado de `K` sigue sin fijarse; el grupo debe justificarlo mediante mediciones.
+- La sesión de aclaraciones 2026-11-16 también fija la validación de `K` (FR-LIN-022) y el rechazo sin efectos de las consultas de historia inválidas (FR-LIN-023); ambos tienen escenarios de aceptación.

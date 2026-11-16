@@ -645,11 +645,12 @@ class Partida:
     def vista(self) -> VistaPartida:
         sala = self._sala_actual()
         salidas = tuple(
-            SalidaVista(direccion, destino, not self._mapa.puerta_transitable(sala.id, direccion))
+            SalidaVista(direccion, destino, not self._mapa.puerta_transitable(sala.id, direccion),
+                        self._mapa.costo_de_conexion(sala.id, direccion))
             for direccion, destino in self._mapa.vecinos(sala.id)
         )
         enemigos = tuple(
-            EnemigoVista(e.etiqueta(), e.instancia_id, e.vida, e.vida_max)
+            EnemigoVista(e.etiqueta(), e.instancia_id, e.vida, e.vida_max, e.comportamiento == "cazador")
             for e in sala.enemigos_activos if e.esta_vivo()
         )
         objetos = tuple(ObjetoSueloVista(i, self._catalogo.obtener(i).nombre) for i in sala.objetos_en_suelo)

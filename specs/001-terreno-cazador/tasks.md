@@ -226,18 +226,18 @@
 
 **Objetivo**: Garantizar la compatibilidad con la Parte I, auditar importaciones prohibidas, verificar `--replay` y dejar documentadas la decisión y las invocaciones.
 
-- [ ] T040 [P] Ejecutar la suite completa y confirmar que las 222 pruebas de la Parte I terminan en `OK` junto con las nuevas (Principio VIII):
+- [X] T040 [P] Ejecutar la suite completa y confirmar que las 222 pruebas de la Parte I terminan en `OK` junto con las nuevas (Principio VIII):
 
   Comando exacto: `py -m unittest discover -s tests -t .`
 
-- [ ] T041 [P] Auditar importaciones prohibidas (Principio I):
+- [X] T041 [P] Auditar importaciones prohibidas (Principio I):
 
   ```powershell
   Select-String -Path (Get-ChildItem cripta -Recurse -Filter *.py).FullName -Pattern "heapq|bisect|collections|networkx|sorted\(|\.sort\("
   ```
   Resultado esperado: sin importaciones prohibidas; cada `sorted(` o `.sort(` se revisa a mano y solo se permite fuera de los ordenamientos evaluados. Los usos de `dict` y `set` como índice o caché se revisan a mano en el Pull Request, porque la búsqueda de texto no distingue los usos permitidos.
 
-- [ ] T042 Grabar ejemplos nuevos que muestren terreno con costo y cazadores (con los fixtures regenerados en T017), reemplazar los tres de `docs/ejemplos/` (que guardan el catálogo anterior y ya no se reproducen), actualizar la tabla de bitácoras de ejemplo del `README.md` y reproducir cada uno con `--replay` (Principio VIII):
+- [X] T042 Grabar ejemplos nuevos que muestren terreno con costo y cazadores (con los fixtures regenerados en T017), reemplazar los tres de `docs/ejemplos/` (que guardan el catálogo anterior y ya no se reproducen), actualizar la tabla de bitácoras de ejemplo del `README.md` y reproducir cada uno con `--replay` (Principio VIII):
 
   Comando exacto: `py -m cripta --offline --replay docs/ejemplos/partida_cripta-06.log`
 

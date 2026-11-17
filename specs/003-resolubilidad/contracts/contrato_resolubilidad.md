@@ -11,7 +11,7 @@ Este documento define formalmente los contratos externos e internos para la capa
 ### 1.1 Invocación con `--verificar <cripta>` (FR-RES-016, SC-005)
 - **Sintaxis**:
   ```powershell
-  python -m cripta [--offline] --verificar <id_cripta>
+  py -m cripta [--offline] --verificar <id_cripta>
   ```
 - **Comportamiento**:
   - Descarga u obtiene del almacenamiento local los datos generales de la cripta, todas las páginas del esqueleto y la consulta `/llaves`.
@@ -28,7 +28,7 @@ Este documento define formalmente los contratos externos e internos para la capa
 ### 1.2 Inicio de Partida Regular y Opción `--forzar` (FR-RES-013, FR-RES-014, FR-RES-015)
 - **Sintaxis**:
   ```powershell
-  python -m cripta [--offline] [--forzar]
+  py -m cripta [--offline] [--forzar]
   ```
 - **Comportamiento al Elegir una Cripta**:
   - Se ejecuta la verificación de resolubilidad automáticamente.
@@ -43,7 +43,7 @@ Este documento define formalmente los contratos externos e internos para la capa
 ### 1.3 Invocación de Medición en `--bench` (FR-RES-020, SC-007)
 - **Sintaxis**:
   ```powershell
-  python -m cripta --bench --solo resolubilidad
+  py -m cripta --bench --solo resolubilidad
   ```
 - **Salida esperada**:
   - Ejecución de la carga sintética determinista basada en `SEMILLA_BENCH`.

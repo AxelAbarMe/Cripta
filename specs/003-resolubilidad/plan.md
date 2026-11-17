@@ -29,7 +29,7 @@ Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta p
 
 **Almacenamiento**: Persistencia local en `datos/cache/` mediante `CacheDisco` (`cripta/infraestructura/cache.py`), utilizando la clave versionada `cripta.<id>.<ver>.llaves.json` para desacoplar el consumo de red de reintentos futuros (FR-RES-017).
 
-**Pruebas**: Módulo estándar `unittest` en `tests/`, ejecutado con `python -m unittest discover -s tests -t .`. Pruebas deterministas sin red apoyadas en `tests/cliente_falso.py` y fixtures sintéticos. Cada prueba de aceptación cita explícitamente el requisito `FR-RES-NNN` que cubre.
+**Pruebas**: Módulo estándar `unittest` en `tests/`, ejecutado con `py -m unittest discover -s tests -t .`. Pruebas deterministas sin red apoyadas en `tests/cliente_falso.py` y fixtures sintéticos. Cada prueba de aceptación cita explícitamente el requisito `FR-RES-NNN` que cubre.
 
 **Plataforma Objetivo**: Terminal de consola en Windows, Linux y macOS.
 
@@ -292,7 +292,7 @@ tests/
   - Se reporta la razón de aceleración con `_comparar`.
 - **Comando Exacto para Reproducir**:
   ```powershell
-  python -m cripta --bench --solo resolubilidad
+  py -m cripta --bench --solo resolubilidad
   ```
 - **Formato de salida (los valores se obtienen al medir)**:   [2 coincidencias]
   ```text
@@ -305,7 +305,7 @@ tests/
 - **Objetivo**: Verificar que la verificación sobre la cripta publicada más grande (hoy `cripta-06`, 300 salas; la carga la elige por el mayor total de salas del listado, sin fijar su id en el código, Principio IV) se ejecute en un tiempo estrictamente inferior a 200 ms (SC-001).
 - **Comando Exacto para Reproducir**:
   ```powershell
-  python -m cripta --bench --solo resolubilidad_cota
+  py -m cripta --bench --solo resolubilidad_cota
   ```
 - **Formato de salida (los valores se obtienen al medir)**:   [2 coincidencias]
   ```text

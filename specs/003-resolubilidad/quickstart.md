@@ -20,7 +20,7 @@ Esta guía detalla los comandos y escenarios ejecutables paso a paso para valida
 Verifica que las pruebas preexistentes y las nuevas pruebas de resolubilidad pasen en su totalidad.
 
 ```powershell
-python -m unittest discover -s tests -t .
+py -m unittest discover -s tests -t .
 ```
 - **Resultado esperado**: Todas las pruebas terminan en `OK` sin errores ni fallos. Las pruebas de resolubilidad en `tests/modelo/test_resolubilidad.py` y `tests/servicios/test_servicio_resolubilidad.py` cubren el 100% de los requisitos citando sus identificadores `FR-RES-NNN`.
 
@@ -32,13 +32,13 @@ Comprueba la auditoría automatizada sin instanciar la interfaz interactiva (FR-
 #### 2.1 Cripta Resoluble en Modo Offline
 Requisito previo: este escenario funciona solo cuando las Fases A, B y C (hasta la bandera `--verificar`) están implementadas y los datos de `cripta-02` están guardados para `--offline`.
 ```powershell
-python -m cripta --offline --verificar cripta-02
+py -m cripta --offline --verificar cripta-02
 ```
 - **Resultado esperado**: Código de salida `0`. Emite en `sys.stdout` el reporte con `Estado: RESOLUBLE` y la secuencia determinista de llaves obtenibles. No se abre interfaz ni se solicita entrada al usuario.
 
 #### 2.2 Cripta No Resoluble (se valida con una cripta sintética de prueba)
 ```powershell
-python -m unittest tests.modelo.test_resolubilidad -k NoResoluble
+py -m unittest tests.modelo.test_resolubilidad -k NoResoluble
 ```
 - **Resultado esperado**: Código de salida `0`. Emite el reporte con `Estado: NO RESOLUBLE`, detallando llaves inalcanzables, puertas de la frontera bloqueada y ciclos de dependencia encontrados.
 
@@ -49,14 +49,14 @@ Valida la compuerta de seguridad al arrancar una partida interactiva (FR-RES-013
 
 #### 3.1 Cripta No Resoluble sin `--forzar`
 ```powershell
-python -m cripta --offline
+py -m cripta --offline
 ```
 - **Acción del usuario**: Elegir una cripta no resoluble desde el menú.
 - **Resultado esperado**: La vista presenta el reporte de advertencia indicando que la cripta es imposible de ganar; la partida **no inicia** y el sistema retorna inmediatamente al menú principal sin entrar a la simulación.
 
 #### 3.2 Cripta No Resoluble con `--forzar`
 ```powershell
-python -m cripta --offline --forzar
+py -m cripta --offline --forzar
 ```
 - **Acción del usuario**: Elegir una cripta no resoluble.
 - **Resultado esperado**: La vista muestra el reporte de advertencia informando el inicio forzado y arranca la partida normalmente.
@@ -67,7 +67,7 @@ python -m cripta --offline --forzar
 Evalúa el rendimiento empírico del recorrido incremental frente a la alternativa descartada de repetir el recorrido por llave (FR-RES-020, SC-007).
 
 ```powershell
-python -m cripta --bench --solo resolubilidad
+py -m cripta --bench --solo resolubilidad
 ```
 - **Resultado esperado**:
   - Salida con código `0`.
@@ -80,7 +80,7 @@ python -m cripta --bench --solo resolubilidad
 Verifica que el tiempo cronológico en el entorno de referencia sea estrictamente inferior a 200 ms (SC-001).
 
 ```powershell
-python -m cripta --bench --solo resolubilidad_cota
+py -m cripta --bench --solo resolubilidad_cota
 ```
 - **Resultado esperado**: La verificación de resolubilidad sobre la cripta publicada de mayor tamaño (hoy `cripta-06`, 300 salas) se ejecuta en un tiempo $< 200\text{ ms}$.
 
@@ -90,7 +90,7 @@ python -m cripta --bench --solo resolubilidad_cota
 Ejecutar la suite focalizada en los escenarios del enunciado:
 
 ```powershell
-python -m unittest tests/modelo/test_resolubilidad.py -k ApendiceB
+py -m unittest tests/modelo/test_resolubilidad.py -k ApendiceB
 ```
 - **Casos cubiertos**:
   1. Llave de salida tras la única puerta que ella misma abre: clasificada como no resoluble; reporte señala el ciclo de dependencia circular exacto (`itm_llave_salida -> itm_llave_salida`).

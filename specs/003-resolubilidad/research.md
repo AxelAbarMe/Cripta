@@ -209,11 +209,11 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
   - Se registra en `CARGAS` bajo el nombre `"resolubilidad"`.
 - **Comando Exacto para Reproducción**:
   ```powershell
-  python -m cripta --bench --solo resolubilidad
+  py -m cripta --bench --solo resolubilidad
   ```
 - **Medición de Cota sobre Cripta Publicada**:
   ```powershell
-  python -m cripta --bench --solo resolubilidad_cota
+  py -m cripta --bench --solo resolubilidad_cota
   ```
   La carga elige la cripta publicada más grande por su total de salas (hoy `cripta-06`, 300 salas), sin fijar su id en el código, y el tiempo medido se registra tras implementar.
 

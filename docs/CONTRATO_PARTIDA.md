@@ -107,7 +107,7 @@ Cuando `desenlace` deja de ser `"en_curso"`, `ejecutar_accion` ya no acepta más
 | `partida.puntaje()` | Datos para la tabla de puntajes: acciones ejecutadas, enemigos derrotados, tiempo final. ResumenPuntaje; el nombre y la versión de la cripta los agrega ServicioPartida. |
 | `partida.fichas_en_uso()` | ids de ficha que la caché no puede liberar (inventario, suelo y trampas de la sala actual, enemigos vivos); se la pasa ServicioPartida al catálogo.
 
-`VistaPartida` incluye: sala actual (id y nombre), salidas (dirección, destino, si está cerrada), enemigos presentes (etiqueta como “Rata gigante [e-201]”, instancia, vida y vida máxima), objetos del suelo (ficha_id y nombre), trampas (nombre y si está armada), estadísticas del jugador (vida, vida máxima, ataque y defensa con el equipo puesto, velocidad), efectos activos, inventario (objeto actual y su posición, cantidad, capacidad, arma y armadura equipadas), pergaminos y retrocesos_posibles, tiempo virtual y desenlace.
+`VistaPartida` incluye: sala actual (id y nombre), salidas (dirección, destino, si está cerrada y su costo de atravesarla, 100 si la conexión no declara), enemigos presentes (etiqueta como “Rata gigante [e-201]”, instancia, vida, vida máxima y si es cazador), objetos del suelo (ficha_id y nombre), trampas (nombre y si está armada), estadísticas del jugador (vida, vida máxima, ataque y defensa con el equipo puesto, velocidad), efectos activos, inventario (objeto actual y su posición, cantidad, capacidad, arma y armadura equipadas), pergaminos y retrocesos_posibles, tiempo virtual y desenlace.
 
 ---
 

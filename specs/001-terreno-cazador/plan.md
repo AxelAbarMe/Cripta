@@ -36,7 +36,7 @@ Todas las afirmaciones de rendimiento de este plan son hipótesis a confirmar co
 **Tipo de Proyecto**: Juego de mazmorra por turnos y simulador de eventos discretos en arquitectura MVC estricta con CLI y modo `--offline` desacoplado.
 
 **Objetivos de Rendimiento**:
-- Ciclo de eventos completo entre dos decisiones del jugador $< 20\text{ ms}$ en la cripta de referencia, aun con decenas de cazadores activos en persecución simultánea (FR-TER-020).
+- Ciclo de eventos completo entre dos decisiones del jugador $< 20\text{ ms}$ en la cripta de referencia, con decenas de cazadores activos (FR-TER-020, P2 §6.1). El caso de decenas de cazadores que persiguen a la vez al mismo jugador (P2 §5.1) se mide aparte con `ruta_cazador`.
 - Tiempo de decisión por cazador en modo compartido: $O(1)$ tras la búsqueda inicial (hipótesis a confirmar con `--bench` de sobrecosto marginal).
 
 **Restricciones**:
@@ -44,7 +44,7 @@ Todas las afirmaciones de rendimiento de este plan son hipótesis a confirmar co
 - Los turnos de los enemigos (cazadores incluidos) no escriben en `partida.log`; esta capacidad no agrega tipos de línea (FR-TER-021).
 - Compatibilidad retroactiva: las 222 pruebas de la Parte I deben seguir terminando en `OK`.
 
-**Escala/Alcance**: Laberintos de hasta 1 000 salas, con decenas de cazadores activos simultáneos y rangos de 1 a 1 000 unidades de costo (valores de diseño para las cargas sintéticas, no datos de una cripta concreta).
+**Escala/Alcance**: Laberintos de hasta 1 000 salas, con decenas de cazadores activos simultáneos y rangos de cazador de hasta 2 400 unidades de costo (valores reales del servidor: 600 y 2 400).
 
 ---
 
@@ -103,11 +103,14 @@ cripta/
 │   ├── cripta_mapa.py           # Modificado: costo de cada conexión resuelto desde ambos lados
 │   ├── efectos.py               # Modificado: EfectoCierrePuerta invalida BuscadorRutas (T033); se verifica EfectoCambioVelocidad (T022)
 │   ├── enemigo.py               # Modificado: expone propiedad rango de la ficha
-│   └── partida.py               # Modificado: costos variables en movimiento, invalidación, agenda
+│   ├── partida.py               # Modificado: costos variables en movimiento, invalidación, agenda, costo y marca de cazador al armar la vista
+│   └── resultado_partida.py     # Modificado: SalidaVista con el costo resuelto y EnemigoVista con indicador de cazador
 ├── estructuras/
 │   └── heap_min.py              # Modificado: agrega métodos esta_vacio() y __len__()
 ├── servicios/
 │   └── servicio_bench.py        # Modificado: habilita las cargas ruta_cazador e invalidacion (T038)
+├── vista/
+│   └── vista_consola.py         # Modificado: muestra el costo junto a cada salida y una marca para los cazadores (FR-TER-024)
 └── bench/
     └── cargas_bench.py          # Modificado: añade cargas ruta_cazador e invalidacion
 
@@ -132,7 +135,10 @@ tests/
 │   ├── test_buscador_rutas.py   # Nuevo: Pruebas unitarias de Dijkstra, poda por rango y desempate
 │   ├── test_equivalencia_rutas.py # Nuevo: Decisión con reutilización igual a la de calcular desde cero (FR-TER-015)
 │   ├── test_cripta_mapa_costos.py # Nuevo: Costo de la conexión resuelto desde ambos lados (FR-TER-001 y 002, T006b)
-│   └── test_cazador_decisiones.py # Nuevo: Pruebas de decisiones del cazador (ataque, espera, movimiento)
+│   ├── test_cazador_decisiones.py # Nuevo: Pruebas de decisiones del cazador (ataque, espera, movimiento)
+│   └── test_vista_partida.py    # Nuevo: La vista de la partida trae el costo de cada salida y la marca de cazador (FR-TER-024, T034b)
+├── vista/
+│   └── test_vista_consola.py    # Modificado: la vista de consola muestra el costo y la marca de cazador (FR-TER-024, T034b)
 └── aceptacion/
     ├── __init__.py              # Nuevo: carpeta nueva, necesario para que discover encuentre las pruebas
     ├── test_terreno_costos.py   # Nuevo: Escenarios de aceptación de costos y velocidad (FR-TER-001 a 006)
@@ -275,7 +281,7 @@ tests/
 | `cripta/modelo/comportamiento_enemigo.py` | Modificado | Añadir función `_decidir_cazador` y enlace en `decidir_accion_enemigo`. |
 | `cripta/modelo/efectos.py` | Modificado | `EfectoCierrePuerta` invalida `BuscadorRutas` al cerrar una puerta (T033); se verifica que `EfectoCambioVelocidad` llama a `calcular_tiempo_reprogramado` (T022). |
 | `cripta/modelo/enemigo.py` | Modificado | Exponer propiedad `rango` tomada de su ficha de catálogo. |
-| `cripta/modelo/partida.py` | Modificado | Usar costo de salida en `_mover`, costo de salida en `_turno_enemigo`, invalidar `BuscadorRutas` en eventos clave (`_mover`, `_abrir`, etc.) y agregar en `_activar_enemigos_de` el aviso de un cazador sin rango válido (FR-TER-008). |
+| `cripta/modelo/partida.py` | Modificado | Usar costo de salida en `_mover`, costo de salida en `_turno_enemigo`, invalidar `BuscadorRutas` en eventos clave (`_mover`, `_abrir`, etc.) y agregar en `_activar_enemigos_de` el aviso de un cazador sin rango válido (FR-TER-008). Al armar la vista, resolver el costo de cada salida con `CriptaMapa.costo_de_conexion` y marcar como cazador a los enemigos cuyo comportamiento lo es (FR-TER-024, T034c). |
 | `cripta/estructuras/heap_min.py` | Modificado | Añadir métodos `esta_vacio()` y `__len__()` sobre la lista existente. |
 | `cripta/bench/cargas_bench.py` | Modificado | Registrar cargas sintéticas `ruta_cazador` e `invalidacion`. |
 | `cripta/servicios/servicio_bench.py` | **Modificado** | Habilitar ejecución de las nuevas cargas de `--bench` (T038). |
@@ -283,8 +289,8 @@ tests/
 | `tests/cliente_falso.py` | **Modificado** | Implementar `obtener_llaves` para cumplir el protocolo `ClienteCripta` ampliado y contarla como solicitud (T001b, FR-TER-018). |
 | `DECISIONES.md` (raíz) | Modificado | Ampliar con la sección de la capacidad 001: decisiones, alternativas descartadas, resultados de `--bench` y límites conocidos (T043). |
 | `tests/controlador/test_controlador_errores.py` | **Modificado** | Ampliar con la prueba de FR-TER-023: desplazamiento rechazado sin consumir tiempo ni registrar en `partida.log` (T019b). |
-| `cripta/modelo/resultado_partida.py` | **Sin cambios** | Ningún requisito funcional (FR) de la especificación solicita cambios en las vistas del resultado ni DTOs de presentación. |
-| `cripta/vista/vista_consola.py` | **Sin cambios** | Ningún requisito funcional (FR) solicita modificaciones en la interfaz de consola en esta funcionalidad. |
+| `cripta/modelo/resultado_partida.py` | Modificado | `SalidaVista` agrega el costo resuelto de la salida (entero >= 1) y `EnemigoVista` agrega un indicador de cazador, para que la vista pueda mostrarlos sin consultar el modelo. La descripción de `VistaPartida` en `docs/CONTRATO_PARTIDA.md` se actualiza con los dos campos (FR-TER-024, T034c). |
+| `cripta/vista/vista_consola.py` | Modificado | Mostrar el costo junto a cada salida de la sala actual y una marca para los enemigos cazadores. No calcula costos ni decide quién es cazador, solo presenta lo que trae la vista de la partida (FR-TER-024, T034c). |
 | `cripta/constantes.py` | **Sin cambios** | Mantiene constantes de acciones y direcciones intactas. |
 | `cripta/excepciones.py` | **Sin cambios** | Reutiliza excepciones existentes de la Parte I: los DTO lanzan `ValueError` con el dato afectado en el mensaje (sala y dirección, o id de la ficha o de la llave), y el cliente lo convierte: `ClienteOffline` en `CriptaDatosInvalidosError` con la ruta del archivo y `ClienteHttp` en `CriptaApiError` con la operación, como en la Parte I. Solo `CriptaMapa` lanza `CriptaDatosInvalidosError` directamente, cuando los dos lados de una conexión declaran costos distintos. Un cazador sin rango válido no lanza excepción: se trata de forma pasiva (FR-TER-008). `CriptaApiError` queda para fallos de la comunicación HTTP. Así ya funcionaban los DTO de la Parte I (por ejemplo, `entidad_desde_json` lanza `ValueError` ante una clase desconocida). |
 | `cripta/modelo/actor.py` | **Sin cambios** | Atributos base de actor compatibles. |
@@ -298,6 +304,8 @@ tests/
 | `cripta/modelo/reloj.py` | **Sin cambios previstos** (se corrige solo si T020 o T025 fallan) | Se reutilizan `calcular_intervalo`, `calcular_tiempo_reprogramado` y `RelojEventos.reprogramar`. Se verifica con T020 y T025, y solo se corrige si esas pruebas fallan. |
 | `cripta/modelo/cripta_mapa.py` | Modificado | Resolver el costo de cada conexión desde ambos lados, como ya hace `datos_de_puerta` con la llave y el cierre automático: si solo un lado declara costo, rige para ambos; si los dos lados declaran costos distintos, lanzar `CriptaDatosInvalidosError` con operación «construir el mapa», ruta «esqueleto de la cripta» y las salas de la conexión en el detalle (FR-TER-002). En la Parte I la llave y el cierre automático pueden venir en un solo lado, y el contrato no garantiza que el costo venga en ambos. |
 | `tests/infraestructura/test_partida_log.py` | **Modificado** | Ampliar con la prueba de FR-TER-021: movimiento, espera y ataque de cazadores, errantes y rastreadores no generan líneas en `partida.log` (T035). |
+| `tests/modelo/test_vista_partida.py` | **Nuevo** | Probar que la vista de la partida trae el costo de cada salida (incluido el 100 por defecto) y el indicador de cazador de cada enemigo (FR-TER-024, T034b). |
+| `tests/vista/test_vista_consola.py` | **Modificado** | Ampliar con la prueba de que la vista de consola muestra el costo junto a cada salida y distingue a los cazadores (FR-TER-024, T034b). |
 
 ---
 
@@ -305,15 +313,17 @@ tests/
 
 ### 1. Carga `ruta_cazador` (Cálculo Compartido vs Alternativa Descartada Individual)
 - **Comando**: `py -m cripta --bench --solo ruta_cazador`
-- **Configuración Sintética**: Cripta sintética generada de forma determinista con semilla fija (`SEMILLA_BENCH = 42`), 400 salas, salidas con costos pseudoaleatorios entre 10 y 250 (valores de diseño de la carga, no datos de una cripta publicada).
+- **Configuración Sintética**: Cripta sintética generada de forma determinista con semilla fija (`SEMILLA_BENCH = 42`), 400 salas, salidas con costos pseudoaleatorios entre 20 y 490 (el intervalo de los costos de salida del servidor, sin copiar datos de una cripta publicada).
 - **Escenarios Evaluados**:
-  - $H = 1, 10, 30$ cazadores activos simultáneos.
-  - Rangos de persecución: pequeño ($R = 100$) vs amplio ($R = 500$).
-  - Un caso de rangos heterogéneos: un cazador de rango amplio y varios de rango pequeño.
+  - $H = 1, 10, 30$ cazadores que persiguen a la vez al mismo jugador (P2 §5.1).
+  - Rangos de persecución: $R = 600$ (sabueso óseo) y $R = 2400$ (espectro acechador), valores reales del servidor.
+  - Un caso de rangos heterogéneos con la proporción de cripta-06 (25 cazadores de rango 600 y 11 de rango 2400), escalada a $H$ y con al menos un cazador de cada rango.
 - **Métricas a Reportar**:
   - Tiempo por ciclo con **cálculo compartido** (decisión elegida). «Ciclo» es un ciclo completo de `Partida` entre dos decisiones del jugador (agenda, turnos de enemigos, búsqueda e invalidación), sin red ni vista, que es lo que exige FR-TER-020; el tiempo de la búsqueda sola se reporta aparte.
+  - Tiempo dedicado a consultar costos de salida (`costo_de_conexion`) durante el ciclo, reportado aparte (Límite Conocido 6).
   - Tiempo por ciclo con **cálculo individual desde cada cazador** (alternativa descartada).
   - Razón $\text{Tiempo}_{\text{individual}} / \text{Tiempo}_{\text{compartido}}$.
+- **Alcance**: `ruta_cazador` compara el cálculo compartido contra el individual con `H=30` en persecución simultánea (P2 §5.1) y no verifica el límite de §6.1, que verifica `ciclo_referencia`.
 - **Criterio de Aceptación**: Hipótesis: con 30 cazadores el cálculo compartido mantiene el ciclo por debajo de 20 ms, y el individual crece con $H$. Se reportan los resultados tal como salgan. Si la hipótesis no se cumple, se documenta como límite conocido y se revisa la decisión.
 
 ---
@@ -332,7 +342,7 @@ tests/
 
 ### 3. Mediciones de Regresión de la Parte I
 - **Comandos**:
-  - `py -m cripta --bench --solo ciclo` (regresión de la Parte I, sin cazadores: verificar que sigue por debajo de $20\text{ ms}$ con los costos variables). FR-TER-020 se verifica con cripta-06 (300 salas, P2 §6.1) cargada desde `fixtures/`, con decenas de cazadores activos. La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar alternativas.
+  - `py -m cripta --bench --solo ciclo` (regresión de la Parte I, sin cazadores: verificar que sigue por debajo de $20\text{ ms}$ con los costos variables). FR-TER-020 se verifica con `py -m cripta --bench --solo ciclo_referencia`: cripta-06 (300 salas, P2 §6.1) cargada desde `fixtures/`, con decenas de cazadores activos. Reporta los cazadores activos y el promedio en persecución por ciclo (en cripta-06 como máximo 8 tienen al jugador en rango a la vez). La carga sintética de 400 salas y `ruta_cazador` (`H=30`) se mantienen solo para comparar el cálculo compartido contra el individual (P2 §5.1).
   - `py -m cripta --bench --solo agenda` (verificar el rendimiento de `HeapMinimo` con intervalos variables y reprogramaciones frecuentes).
   - `py -m cripta --bench --solo historial` (verificar el costo de registrar y revertir acciones cuando hay muchos cazadores moviéndose).
 
@@ -350,6 +360,8 @@ tests/
    - El diseño usa que $\text{dist}(u, S_J) = \text{dist}(S_J, u)$ porque FR-TER-002 establece costos simétricos. `CriptaMapa` la garantiza resolviendo el costo desde ambos lados de la conexión y rechazando como dato inválido dos costos distintos. Con los fixtures regenerados se comprueba en qué lado declara el servicio el costo.
 5. **Regeneración de Fixtures y Reproducción de Registros Existentes**:
    - `scripts/generar_fixtures.py` descarga datos del servicio y sobrescribe `fixtures/`. El servidor ya cambió: cripta-01 no existe, hay cripta-05 y cripta-06, y el catálogo pasó de be68d322d2f5 a 4b9e75a42be5. Por eso los tres registros de `docs/ejemplos/` (que guardan el catálogo anterior) ya no se reproducen con `--replay` y se reemplazan en la Fase E por ejemplos nuevos de terreno y cazador. El respaldo de los fixtures anteriores es el commit e6d52ac. cripta-01, el catálogo anterior y `criptas.json` se mueven a `tests/datos/` como datos de prueba congelados, y las 4 pruebas que los usan leen de allí.
+6. **Costo de la Consulta `costo_de_conexion` en la Búsqueda**:
+   - La búsqueda consulta el costo de cada arista con `CriptaMapa.costo_de_conexion`, que cuesta $O(\log n)$ por consulta. Se mantiene así y se mide: la carga `ruta_cazador` reporta aparte el tiempo dedicado a esas consultas. La alternativa es precalcular los costos en una tabla plana al construir el mapa, con $O(1)$ por consulta. Queda como alternativa a evaluar si la medición muestra que la consulta pesa, y se documenta en `DECISIONES.md` (T043).
 
 ---
 
@@ -363,6 +375,12 @@ tests/
    - *Decisión Parte I*: Registro de operaciones inversas para los últimos 5 intervalos, sin copias completas del estado.
    - *Impacto Parte II*: Con muchos cazadores moviéndose entre dos acciones del jugador, un solo intervalo podría acumular muchas operaciones inversas.
    - *Riesgo a medir*: Se medirá con `--bench --solo historial` el costo de registrar y revertir con muchos cazadores. El resultado se informa al responsable de la capacidad 004 (línea de tiempo), que es quien decide si este mecanismo es adecuado para su carga. Este plan no extrae conclusiones sobre esa capacidad.
+3. **Carga partida de la Parte I (P2 §5.6) y el recolector de memoria de Python**:
+   - *Problema*: El peor caso de la carga partida de la Parte I supera 20 ms con 400 salas (29.5, 43.8 y 48.2 ms en Windows con Python 3.14). La Parte I lo documentó con la causa sin aislar.
+   - *Evidencia*: La causa son las pausas del recolector de memoria. Con el recolector apagado el peor caso baja a unos 15 ms y la mediana no cambia. En una partida de 400 salas con 1287 acciones, una limpieza completa encuentra 0 objetos de basura cíclica y la memoria es igual con o sin limpiezas (8.5 MB), así que las pausas recorren objetos vivos, sobre todo el historial de retroceso, sin recuperar nada. Con `gc.freeze()` al terminar cada acción del jugador el peor caso queda en 11.1, 15.7 y 17.4 ms en Windows con Python 3.14 (en Linux con Python 3.10 baja de 55-66 ms a 14-15.6 ms), con la mediana igual y un costo de unos 0.01 ms por llamada.
+   - *Alternativas descartadas*: (a) apagar el recolector, porque deja de recoger basura cíclica nueva. (b) limpiar con `gc.collect()` en el tiempo ocioso tras cada acción, porque cada limpieza cuesta 35 a 72 ms con 400 salas. (c) subir el umbral de la generación 2, porque el recolector de Python 3.14 trabaja distinto y la solución no es portable.
+   - *Decisión*: Llamar a `gc.freeze()` al final de `Partida.ejecutar_accion` en `cripta/modelo/partida.py`. Ese punto cubre el juego, `--replay` y `--bench`, porque las cargas del cazador llaman a `Partida` directamente sin pasar por `ServicioPartida`. Las tareas son T039b (prueba y cambio) y T039c (prueba de humo de las cargas). Las mediciones definitivas de T039 se toman después de T039b y T043 documenta el antes y el después.
+   - *Riesgo*: La basura cíclica entre objetos congelados no se recoge. Se midió 0 objetos en la partida de 400 salas y se documenta como límite conocido en `DECISIONES.md` (T043).
 
 ---
 
@@ -389,10 +407,11 @@ tests/
 | **FR-TER-017** (lectura del cazador y su rango en el catálogo) | `cripta/dto/enemigo_dto.py`, `cripta/infraestructura/serializacion.py` | `tests.dto.test_enemigo_dto` |
 | **FR-TER-018** (consulta `/llaves`, presupuesto y portador) | `cripta/infraestructura/cliente_http.py` | `tests.infraestructura.test_cliente_offline_llaves` |
 | **FR-TER-019** (invalidación formal por versión de cripta) | `cripta/infraestructura/cache.py` | `tests.infraestructura.test_cache_llaves` |
-| **FR-TER-020** (ciclo de eventos $< 20\text{ ms}$ con cazadores) | `cripta/modelo/buscador_rutas.py` | `--bench --solo ruta_cazador ciclo` / Escenario Quickstart 5 |
+| **FR-TER-020** (ciclo de eventos $< 20\text{ ms}$ con decenas de cazadores activos) | `cripta/modelo/buscador_rutas.py` | `--bench --solo ciclo_referencia` (§6.1) y `ruta_cazador` (§5.1) / Escenario Quickstart 5 |
 | **FR-TER-021** (los turnos de enemigos no escriben en `partida.log`) | `cripta/infraestructura/partida_log.py` | `tests.infraestructura.test_partida_log` |
 | **FR-TER-022** (desempate de agenda por menor secuencia) | `cripta/modelo/reloj.py` (`RelojEventos`) | `tests.modelo.test_reloj` (Nuevo) |
 | **FR-TER-023** (desplazamientos rechazados sin tiempo ni log) | `cripta/modelo/partida.py` (`_despachar`) | `tests.controlador.test_controlador_errores` |
+| **FR-TER-024** (la vista muestra el costo de las salidas y distingue a los cazadores) | `cripta/modelo/resultado_partida.py`, `cripta/modelo/partida.py` (armado de la vista), `cripta/vista/vista_consola.py` | `tests.modelo.test_vista_partida` y `tests.vista.test_vista_consola` (T034b) |
 
 ---
 

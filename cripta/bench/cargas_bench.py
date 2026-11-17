@@ -6,11 +6,13 @@ cripta real: todo son datos generados aquí (o en tests/cripta_artificial.py) co
 `escala` multiplica los tamaños de las cargas (1.0 = rápido; 5.0 = mediciones más finas).
 """
 import copy
+import gc
 import os
 import random
 import tempfile
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 from cripta.dto.entidad_dto import entidad_desde_json
 from cripta.estructuras.lista_doble_enlazada import ListaDobleEnlazada
@@ -21,6 +23,7 @@ from cripta.infraestructura import guardado_binario as gb
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
 from cripta.infraestructura.cache import CacheDisco
 from cripta.infraestructura.cliente_general import ClienteGeneral
+from cripta.infraestructura.cliente_offline import ClienteOffline
 from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
 from cripta.infraestructura.estado_guardado import (
     EnemigoGuardado, EstadoPartida, EstadoRNG, EventoGuardado, JugadorGuardado,
@@ -28,6 +31,7 @@ from cripta.infraestructura.estado_guardado import (
 )
 from cripta.modelo import combate
 from cripta.modelo.accion import Accion
+from cripta.modelo.buscador_rutas import BuscadorRutas
 from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.historial_retroceso import HistorialRetroceso
 from cripta.modelo.jugador import Jugador
@@ -44,6 +48,7 @@ class Resultado:
     segundos: float
     operaciones: int
     nota: str = ""
+    es_razon: bool = False
 
     @property
     def micros_por_operacion(self) -> float:
@@ -418,7 +423,7 @@ def bench_ciclo_eventos(escala: float = 1.0):
         azar = random.Random(SEMILLA_BENCH)
         jugador = Jugador(type("J", (), {"vida_max": 10**9, "ataque": 6, "defensa": 2, "velocidad": 100})(), 1, 10)
         ficha = type("F", (), {"id": "ent_rata", "nombre": "Rata", "vida_max": 10**9, "ataque": 5, "defensa": 1,
-                               "velocidad": 150, "comportamiento": "rastreador", "suelta": ()})()
+                               "velocidad": 150, "comportamiento": "rastreador", "suelta": (), "rango": None})()
         reloj = RelojEventos()
         enemigos = [Enemigo(f"e-{i}", ficha, 1) for i in range(actores)]
 
@@ -565,6 +570,359 @@ def bench_solicitudes(escala: float = 1.0):
     return resultados
 
 
+# ============================== 10. CAZADORES (capacidad 001, FR-TER-020)
+SEMILLA_CARGAS_TERRENO = 42
+RANGO_SABUESO_BENCH = 600
+RANGO_ESPECTRO_BENCH = 2400
+COSTO_SALIDA_MIN_BENCH = 20
+COSTO_SALIDA_MAX_BENCH = 490
+LADO_CRIPTA_TERRENO = 20
+CAZADORES_POR_ESCENARIO = (1, 10, 30)
+MEZCLA_SABUESOS = 25
+MEZCLA_ESPECTROS = 11
+CAZADORES_INVALIDACION = 20
+TICKS_INVALIDACION = 100
+PASOS_ALEJAMIENTO = 8
+VELOCIDAD_CAZADOR_INVALIDACION = 25
+PUERTAS_INESTABLES = 5
+PERIODO_CIERRE_TICKS = 15
+TICK_REAPERTURA = 7
+CRIPTA_REFERENCIA = "cripta-06"
+PASOS_CALENTAMIENTO_REFERENCIA = 150
+LIMITE_CICLO_MS = 20.0
+DIRECTORIO_FIXTURES_BENCH = Path(__file__).resolve().parents[2] / "fixtures"
+
+
+class _Medidor:
+    """Acumula segundos y cantidad de llamadas de lo que se mide."""
+
+    def __init__(self):
+        self.segundos = 0.0
+        self.llamadas = 0
+
+
+class _BuscadorContado(BuscadorRutas):
+    """BuscadorRutas que cuenta decisiones y ejecuciones de Dijkstra, y su tiempo si se pide."""
+
+    def __init__(self, medir_tiempo: bool = False):
+        super().__init__()
+        self.busquedas = _Medidor()
+        self.decisiones = 0
+        self._medir_tiempo = medir_tiempo
+
+    def decidir_paso(self, cazador, sala_jugador_id, mapa):
+        # Cuenta la decisión y delega en la búsqueda original
+        self.decisiones += 1
+        return super().decidir_paso(cazador, sala_jugador_id, mapa)
+
+    def _calcular(self, mapa, sala_jugador_id, rango_max):
+        # Cuenta la ejecución y, si se pide, acumula su tiempo
+        self.busquedas.llamadas += 1
+        if not self._medir_tiempo:
+            super()._calcular(mapa, sala_jugador_id, rango_max)
+            return
+        t0 = time.perf_counter()
+        super()._calcular(mapa, sala_jugador_id, rango_max)
+        self.busquedas.segundos += time.perf_counter() - t0
+
+
+class _BuscadorRecalculaSiempre(_BuscadorContado):
+    """ALTERNATIVA DESCARTADA: cada decisión de cazador ejecuta su propia búsqueda con su rango."""
+
+    def calcular_o_reutilizar(self, mapa, sala_jugador_id, rango_max):
+        # Nunca reutiliza la tabla ni la comparte entre cazadores
+        self._calcular(mapa, sala_jugador_id, rango_max)
+
+
+def _conexiones_cripta_terreno():
+    """Cuadrícula cuadrada con costos de salida pseudoaleatorios de semilla fija."""
+    azar = random.Random(SEMILLA_CARGAS_TERRENO)
+    lado = LADO_CRIPTA_TERRENO
+    conexiones = []
+    for fila in range(lado):
+        for columna in range(lado):
+            sala = fila * lado + columna + 1
+            if columna < lado - 1:
+                conexiones.append((sala, "E", sala + 1, azar.randint(COSTO_SALIDA_MIN_BENCH, COSTO_SALIDA_MAX_BENCH)))
+            if fila < lado - 1:
+                conexiones.append((sala, "S", sala + lado, azar.randint(COSTO_SALIDA_MIN_BENCH, COSTO_SALIDA_MAX_BENCH)))
+    return conexiones
+
+
+def _rangos_mixtos(cantidad: int):
+    """Rangos con la proporción de sabuesos y espectros de la mezcla, con al menos un espectro."""
+    total = MEZCLA_SABUESOS + MEZCLA_ESPECTROS
+    espectros = max(1, (cantidad * MEZCLA_ESPECTROS + total // 2) // total)
+    return [RANGO_SABUESO_BENCH] * (cantidad - espectros) + [RANGO_ESPECTRO_BENCH] * espectros
+
+
+def _armar_partida_terreno(salidas, rangos, buscador, velocidad_cazador: int = 100):
+    """Partida sobre la cripta sintética con todos los cazadores en la sala 1 y el buscador indicado."""
+    # Import local: tests/ no es parte del paquete cripta
+    from tests.cripta_cazadores import armar_partida
+    cazadores = [(1, f"cz-{i:03d}", rango) for i, rango in enumerate(rangos)]
+    partida, mapa = armar_partida(salidas, cazadores, velocidad_jugador=100, velocidad_cazador=velocidad_cazador,
+                                  semilla=SEMILLA_CARGAS_TERRENO)
+    partida._jugador.vida_max = partida._jugador.vida = 10 ** 9
+    partida._buscador = buscador
+    return partida, mapa
+
+
+def _envolver_consulta_de_costos(mapa) -> _Medidor:
+    """Mide costo_de_conexion envolviendo la llamada en esta instancia, sin tocar CriptaMapa."""
+    medidor = _Medidor()
+    original = mapa.costo_de_conexion
+
+    def medida(sala_id, direccion):
+        t0 = time.perf_counter()
+        try:
+            return original(sala_id, direccion)
+        finally:
+            medidor.segundos += time.perf_counter() - t0
+            medidor.llamadas += 1
+    mapa.costo_de_conexion = medida
+    return medidor
+
+
+def _dar_paso_aleatorio(partida, mapa, azar, prohibido: int) -> None:
+    """Mueve al jugador por una salida abierta al azar, o espera si no puede moverse."""
+    origen = partida._jugador.sala_actual
+    opciones = [d for d, destino in mapa.vecinos(origen)
+                if destino != prohibido and mapa.puerta_transitable(origen, d)]
+    if opciones:
+        inicio = azar.randrange(len(opciones))
+        for k in range(len(opciones)):
+            if partida.ejecutar_accion(Accion("mover", opciones[(inicio + k) % len(opciones)])).aceptada:
+                return
+    partida.ejecutar_accion(Accion("esperar"))
+
+
+def _tiempos_de_pasos(partida, mapa, azar, ciclos: int, prohibido: int):
+    """Tiempo de cada ciclo completo entre dos decisiones del jugador."""
+    tiempos = []
+    gc.collect()   # cada escenario no paga la basura acumulada por los anteriores
+    for _ in range(ciclos):
+        t0 = time.perf_counter()
+        _dar_paso_aleatorio(partida, mapa, azar, prohibido)
+        tiempos.append(time.perf_counter() - t0)
+    return tiempos
+
+
+def _correr_terreno(salidas, rangos, ciclos: int, fabrica_buscador, medir_consultas: bool = False):
+    """Una corrida de ruta_cazador. Devuelve los tiempos, el buscador y el medidor de consultas."""
+    partida, mapa = _armar_partida_terreno(salidas, rangos, fabrica_buscador())
+    medidor = _envolver_consulta_de_costos(mapa) if medir_consultas else None
+    tiempos = _tiempos_de_pasos(partida, mapa, random.Random(SEMILLA_CARGAS_TERRENO), ciclos, max(salidas))
+    return tiempos, partida._buscador, medidor
+
+
+def _tiempos_limpios(salidas, rangos, ciclos: int, corridas: int, fabrica_buscador):
+    """Tiempos de ciclo de varias corridas sin instrumentos de medición."""
+    tiempos = []
+    for _ in range(corridas):
+        tiempos.extend(_correr_terreno(salidas, rangos, ciclos, fabrica_buscador)[0])
+    return tiempos
+
+
+def _ms(segundos: float) -> str:
+    return f"{segundos * 1000:.3f}"
+
+
+def bench_ruta_cazador(escala: float = 1.0, corridas: int = 2):
+    """Cálculo compartido (elegida) contra cálculo individual por cazador (descartada) en una cripta sintética."""
+    # Import local: tests/ no es parte del paquete cripta
+    from tests.cripta_cazadores import grafo
+    salidas = grafo(_conexiones_cripta_terreno())
+    ciclos = max(20, int(60 * escala))
+    resultados = []
+    for etiqueta, rango in (("R=600", RANGO_SABUESO_BENCH), ("R=2400", RANGO_ESPECTRO_BENCH), ("mixto 25:11", None)):
+        for h in CAZADORES_POR_ESCENARIO:
+            if rango is None and h < 2:
+                continue
+            rangos = _rangos_mixtos(h) if rango is None else [rango] * h
+            caso = f"{etiqueta}, H={h}"
+            t_comp = _tiempos_limpios(salidas, rangos, ciclos, corridas, BuscadorRutas)
+            t_ind = _tiempos_limpios(salidas, rangos, ciclos, corridas, _BuscadorRecalculaSiempre)
+            med_comp, med_ind = _mediana(t_comp), _mediana(t_ind)
+            _t, bus_comp, cons_comp = _correr_terreno(salidas, rangos, ciclos, lambda: _BuscadorContado(True), True)
+            _t, bus_ind, cons_ind = _correr_terreno(salidas, rangos, ciclos, lambda: _BuscadorRecalculaSiempre(True), True)
+            resultados.append(Resultado(
+                "ruta_cazador", f"{caso}: ciclo con cálculo compartido (elegida)", med_comp, 1,
+                f"mediana de {len(t_comp)} ciclos, peor {_ms(max(t_comp))} ms"))
+            resultados.append(Resultado(
+                "ruta_cazador", f"{caso}: compartido, búsqueda sola", bus_comp.busquedas.segundos, ciclos,
+                f"{bus_comp.busquedas.llamadas} búsquedas para {bus_comp.decisiones} decisiones, "
+                f"total de la corrida de {ciclos} ciclos, no por ciclo"))
+            resultados.append(Resultado(
+                "ruta_cazador", f"{caso}: compartido, consultas de costo_de_conexion", cons_comp.segundos, ciclos,
+                f"{cons_comp.llamadas} consultas ({cons_comp.segundos / max(1, cons_comp.llamadas) * 1e6:.2f} µs cada una), "
+                f"medidas con envoltura que suma su propio costo"))
+            resultados.append(Resultado(
+                "ruta_cazador", f"{caso}: ciclo con cálculo individual (descartada)", med_ind, 1,
+                f"mediana de {len(t_ind)} ciclos, peor {_ms(max(t_ind))} ms"))
+            resultados.append(Resultado(
+                "ruta_cazador", f"{caso}: individual, búsqueda sola", bus_ind.busquedas.segundos, ciclos,
+                f"{bus_ind.busquedas.llamadas} búsquedas para {bus_ind.decisiones} decisiones, "
+                f"total de la corrida de {ciclos} ciclos, no por ciclo"))
+            resultados.append(Resultado(
+                "ruta_cazador", f"{caso}: individual, consultas de costo_de_conexion", cons_ind.segundos, ciclos,
+                f"{cons_ind.llamadas} consultas ({cons_ind.segundos / max(1, cons_ind.llamadas) * 1e6:.2f} µs cada una)"))
+            resultados.append(Resultado(
+                "ruta_cazador", f"{caso}: razón individual/compartido", 0.0, 1,
+                f"razón de tiempo {med_ind / med_comp:.2f} y de búsquedas "
+                f"{bus_ind.busquedas.llamadas / max(1, bus_comp.busquedas.llamadas):.2f}", es_razon=True))
+    return resultados
+
+
+def _puertas_a_dos_pasos(partida, mapa):
+    """Conexiones que parten de las vecinas de la sala del jugador sin volver a ella."""
+    origen = partida._jugador.sala_actual
+    elegidas = []
+    for _d, vecina in mapa.vecinos(origen):
+        for direccion, lejana in mapa.vecinos(vecina):
+            if lejana != origen and len(elegidas) < PUERTAS_INESTABLES:
+                elegidas.append((vecina, direccion))
+    return elegidas
+
+
+def _correr_invalidacion(salidas, fabrica_buscador, inestable: bool):
+    """Alejamiento del jugador y luego los ticks de espera. Devuelve segundos, buscador y puertas usadas."""
+    partida, mapa = _armar_partida_terreno(salidas, [RANGO_ESPECTRO_BENCH] * CAZADORES_INVALIDACION,
+                                           fabrica_buscador(), VELOCIDAD_CAZADOR_INVALIDACION)
+    azar = random.Random(SEMILLA_CARGAS_TERRENO)
+    for _ in range(PASOS_ALEJAMIENTO):
+        partida.ejecutar_accion(Accion("mover", ("E", "S")[azar.randrange(2)]))
+    partida._buscador.busquedas = _Medidor()
+    partida._buscador.decisiones = 0
+    puertas = _puertas_a_dos_pasos(partida, mapa) if inestable else []
+    cerradas = False
+    gc.collect()   # cada escenario no paga la basura acumulada por los anteriores
+    t0 = time.perf_counter()
+    for tick in range(1, TICKS_INVALIDACION + 1):
+        if puertas and tick % PERIODO_CIERRE_TICKS == 0:
+            for sala, direccion in puertas:
+                mapa.cerrar_puerta(sala, direccion)
+            partida._buscador.invalidar()
+            cerradas = True
+        elif puertas and cerradas and tick % PERIODO_CIERRE_TICKS == TICK_REAPERTURA:
+            for sala, direccion in puertas:
+                mapa.abrir_puerta(sala, direccion)
+            partida._buscador.invalidar()
+            cerradas = False
+        partida.ejecutar_accion(Accion("esperar"))
+    return time.perf_counter() - t0, partida._buscador, len(puertas)
+
+
+def bench_invalidacion(escala: float = 1.0):
+    """Invalidación selectiva (elegida) contra recalcular en cada turno de cazador (descartada)."""
+    # Import local: tests/ no es parte del paquete cripta
+    from tests.cripta_cazadores import grafo
+    salidas = grafo(_conexiones_cripta_terreno())
+    resultados = []
+    for etiqueta, inestable in (("puertas estables", False),
+                                (f"{PUERTAS_INESTABLES} puertas con cierre cada {PERIODO_CIERRE_TICKS} ticks", True)):
+        total_e, bus_e, usadas = _correr_invalidacion(salidas, lambda: _BuscadorContado(True), inestable)
+        total_d, bus_d, _usadas = _correr_invalidacion(salidas, lambda: _BuscadorRecalculaSiempre(True), inestable)
+        caso = f"{CAZADORES_INVALIDACION} cazadores, {TICKS_INVALIDACION} ticks, {etiqueta}"
+        resultados.append(Resultado(
+            "invalidacion", f"{caso}: invalidación selectiva (elegida)", total_e, TICKS_INVALIDACION,
+            f"{bus_e.busquedas.llamadas} búsquedas para {bus_e.decisiones} decisiones "
+            f"(total de los {TICKS_INVALIDACION} ticks, no por ciclo), "
+            f"{_ms(bus_e.busquedas.segundos)} ms en búsquedas, {usadas} puertas inestables"))
+        resultados.append(Resultado(
+            "invalidacion", f"{caso}: recalcular siempre (descartada)", total_d, TICKS_INVALIDACION,
+            f"{bus_d.busquedas.llamadas} búsquedas para {bus_d.decisiones} decisiones "
+            f"(total de los {TICKS_INVALIDACION} ticks, no por ciclo), "
+            f"{_ms(bus_d.busquedas.segundos)} ms en búsquedas"))
+        resultados.append(Resultado(
+            "invalidacion", f"{caso}: razón recalcular siempre/selectiva", 0.0, 1,
+            f"razón de tiempo {total_d / total_e:.2f} y de búsquedas "
+            f"{bus_d.busquedas.llamadas / max(1, bus_e.busquedas.llamadas):.2f}", es_razon=True))
+    return resultados
+
+
+def _cazadores_activos(mapa):
+    activos = []
+    for sala in mapa.todas_las_salas():
+        for enemigo in sala.enemigos_activos:
+            if enemigo.comportamiento == "cazador":
+                activos.append(enemigo)
+    return activos
+
+
+def _activar_cazadores_reales(partida, mapa) -> None:
+    """Carga cada sala como lo hace el juego al entrar y activa los cazadores reales que tenga."""
+    for sala_id in [sala.id for sala in mapa.todas_las_salas()]:
+        with partida._historial.sin_registrar():
+            sala = partida._precarga.preparar_sala(sala_id)
+        partida._marcar_preparada(sala.id)
+        if any(e.comportamiento == "cazador" for e in sala.enemigos_dormidos):
+            partida._activar_enemigos_de(sala)
+
+
+def _correr_referencia(ciclos: int, calentamiento: int):
+    """Una corrida sobre la cripta de referencia. Devuelve tiempos, activos y perseguidores por ciclo."""
+    servicio = ServicioPartida(ClienteGeneral(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))),
+                               ContadorSolicitudes(), asincrono=False)
+    servicio.iniciar_nueva(CRIPTA_REFERENCIA, semilla=SEMILLA_BENCH)
+    partida = servicio.partida
+    mapa = partida._mapa
+    partida._jugador.vida_max = partida._jugador.vida = 10 ** 9
+    prohibido = servicio.datos_generales.sala_salida
+    azar = random.Random(SEMILLA_CARGAS_TERRENO)
+    _activar_cazadores_reales(partida, mapa)
+    activos = len(_cazadores_activos(mapa))
+    for _ in range(calentamiento):
+        _dar_paso_aleatorio(partida, mapa, azar, prohibido)
+    tiempos, perseguidores = [], []
+    gc.collect()   # cada escenario no paga la basura acumulada por los anteriores
+    for _ in range(ciclos):
+        t0 = time.perf_counter()
+        _dar_paso_aleatorio(partida, mapa, azar, prohibido)
+        tiempos.append(time.perf_counter() - t0)
+        perseguidores.append(_cazadores_en_rango(partida, mapa))   # fuera de la medición del ciclo
+    servicio.cerrar()
+    return tiempos, activos, perseguidores
+
+
+def _cazadores_en_rango(partida, mapa) -> int:
+    """Cazadores activos cuya distancia al jugador no supera su rango. Usa un buscador aparte para no alterar la medición."""
+    activos = _cazadores_activos(mapa)
+    rangos = [c.rango for c in activos if c.rango is not None]
+    if not rangos:
+        return 0
+    contador = BuscadorRutas()
+    contador.calcular_o_reutilizar(mapa, partida._jugador.sala_actual, max(rangos))
+    cantidad = 0
+    for cazador in activos:
+        distancia = contador.distancia(cazador.sala_actual)
+        if cazador.rango is not None and distancia is not None and distancia <= cazador.rango:
+            cantidad += 1
+    return cantidad
+
+
+def bench_ciclo_referencia(escala: float = 1.0, corridas: int = 3):
+    """Ciclo completo de Partida sobre la cripta de referencia de fixtures con muchos cazadores activos."""
+    ciclos = max(20, int(100 * escala))
+    calentamiento = max(60, int(PASOS_CALENTAMIENTO_REFERENCIA * escala))
+    peores, medianas, en_rango = [], [], []
+    for _ in range(corridas):
+        tiempos, activos, perseguidores = _correr_referencia(ciclos, calentamiento)
+        peores.append(max(tiempos))
+        medianas.append(_mediana(tiempos))
+        en_rango.extend(perseguidores)
+    peor = _mediana(peores)
+    cumple = "CUMPLE" if peor * 1000 < LIMITE_CICLO_MS else "NO CUMPLE"
+    detalle = ", ".join(_ms(p) for p in peores)
+    return [Resultado(
+        "ciclo_referencia", f"{CRIPTA_REFERENCIA}, {activos} cazadores activos al medir, "
+                            f"en persecución por ciclo: promedio {sum(en_rango) / len(en_rango):.1f} y máximo {max(en_rango)}, "
+                            f"{ciclos} ciclos x {corridas} corridas",
+        peor, 1,
+        f"ciclo típico {_ms(_mediana(medianas))} ms, peor caso {_ms(peor)} ms (peor de cada corrida: {detalle} ms) "
+        f"-> {cumple} el límite de {LIMITE_CICLO_MS:.0f} ms")]
+
+
 CARGAS = (
     ("agenda", bench_agenda),
     ("cache", bench_cache),
@@ -576,4 +934,7 @@ CARGAS = (
     ("ciclo", bench_ciclo_eventos),
     ("partida", bench_partida_real),
     ("solicitudes", bench_solicitudes),
+    ("ruta_cazador", bench_ruta_cazador),
+    ("invalidacion", bench_invalidacion),
+    ("ciclo_referencia", bench_ciclo_referencia),
 )

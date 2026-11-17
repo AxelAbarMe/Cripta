@@ -4,6 +4,7 @@ No conoce HTTP, archivos ni la vista: recibe sus dependencias ya construidas.
 El jugador y los enemigos son eventos del mismo reloj virtual; el orden sale solo de
 (tiempo, secuencia). Toda la aleatoriedad sale de una única random.Random(semilla).
 """
+import gc
 import random
 from contextlib import nullcontext
 
@@ -21,6 +22,7 @@ from cripta.infraestructura.estado_guardado import (
 )
 from cripta.modelo import combate
 from cripta.modelo.bitacora_mensajes import BitacoraMensajes
+from cripta.modelo.buscador_rutas import BuscadorRutas
 from cripta.modelo.comportamiento_enemigo import decidir_accion_enemigo
 
 from cripta.modelo.efectos import (
@@ -69,6 +71,7 @@ class Partida:
         self._reloj = RelojEventos()
         self._jugador = Jugador(datos_generales.jugador, datos_generales.sala_inicial, datos_generales.inventario_max)
         self._bitacora = BitacoraMensajes()
+        self._buscador = BuscadorRutas()         # tabla de rutas compartida por todos los cazadores
         self._historial = HistorialRetroceso()
         self._conectar_retroceso()
         self._desenlace = EN_CURSO
@@ -170,6 +173,7 @@ class Partida:
             self._bitacora.agregar(mensaje)
         self._siguiente_instancia = siguiente_instancia_tras(self._jugador.inventario)
         self._turno_listo = True                    # solo se guarda cuando al jugador le toca decidir
+        self._buscador.invalidar()
         self._mensajes_nuevos = []
         self._iniciada = True
 
@@ -260,6 +264,10 @@ class Partida:
         for enemigo in sala.activar_enemigos_dormidos():
             self._con_retroceso(enemigo)
             enemigo.activar()
+            if enemigo.comportamiento == "cazador":
+                self._buscador.invalidar()
+                if enemigo.rango is None:
+                    self._decir(f"{enemigo.etiqueta()} ({enemigo.tipo_catalogo}) es un cazador sin rango válido y no persigue al jugador.")
             self._programar_turno_enemigo(enemigo, COSTO_MOVER)
 
     def _programar_turno_enemigo(self, enemigo, costo: int) -> None:
@@ -273,9 +281,10 @@ class Partida:
     def _turno_enemigo(self, enemigo) -> None:
         if not enemigo.esta_vivo() or self._desenlace != EN_CURSO:
             return
-        tipo, direccion = decidir_accion_enemigo(
-            enemigo, self._jugador.sala_actual, self._mapa, self._azar, self._reloj.tiempo_actual
+        decision = decidir_accion_enemigo(
+            enemigo, self._jugador.sala_actual, self._mapa, self._azar, self._reloj.tiempo_actual, self._buscador
         )
+        tipo, direccion = decision[0], decision[1]
         if tipo == "atacar":
             daño = combate.atacar(enemigo, self._jugador, self._azar)
             self._decir(f"{enemigo.etiqueta()} te ataca y te hace {daño} de daño.")
@@ -285,8 +294,8 @@ class Partida:
                 return
             costo = COSTO_ATACAR
         elif tipo == "mover":
+            costo = decision[2] if len(decision) == 3 else self._mapa.costo_de_conexion(enemigo.sala_actual, direccion)
             self._mover_enemigo(enemigo, direccion)
-            costo = COSTO_MOVER
         else:
             costo = COSTO_ESPERAR
         self._programar_turno_enemigo(enemigo, costo)
@@ -307,6 +316,11 @@ class Partida:
 
     # ------------------------------------------------------------- acciones
     def ejecutar_accion(self, accion) -> ResultadoAccion:
+        resultado = self._ejecutar_accion(accion)
+        gc.freeze()   # congela los objetos vivos para que el recolector no vuelva a recorrerlos (P2 §5.6)
+        return resultado
+
+    def _ejecutar_accion(self, accion) -> ResultadoAccion:
         self._mensajes_nuevos = []
         if not self._iniciada:
             raise RuntimeError("Hay que llamar a iniciar() antes de ejecutar acciones.")
@@ -353,6 +367,7 @@ class Partida:
         if not self._historial.hay_intervalo_para_deshacer():
             return self._rechazar("No hay ninguna acción que deshacer.")
         self._historial.deshacer_ultimo_intervalo()
+        self._buscador.invalidar()
         with self._historial.sin_registrar():
             inventario.quitar_primero_de_clase("pergamino_retroceso")
         self._decir("Usas un pergamino de retroceso: el tiempo vuelve atrás.")
@@ -373,6 +388,7 @@ class Partida:
             return self._rechazar(f"No hay salida hacia el {direccion}.")
         if not self._mapa.puerta_transitable(sala.id, direccion):
             return self._rechazar("La puerta está cerrada.")
+        costo_salida = self._mapa.costo_de_conexion(sala.id, direccion)
         # El contenido de la sala destino debe estar en memoria antes de confirmar el movimiento (§2.5).
         # Si todavía no llegó, esta llamada espera: la espera real no mueve el reloj virtual.
         with self._historial.sin_registrar():   # cargar contenido es infraestructura, no estado del juego
@@ -381,6 +397,7 @@ class Partida:
         tiempo = self._reloj.tiempo_actual
         sala.marcar_visita(tiempo)
         self._jugador.sala_actual = destino.id
+        self._buscador.invalidar()
         destino.marcar_visita(tiempo)   # el rastro de la sala destino es el instante en que se entra
         self._decir(f"Entras a {destino.esqueleto.nombre}.")
         self._activar_enemigos_de(destino)
@@ -390,7 +407,7 @@ class Partida:
         if (self._jugador.esta_vivo() and destino.id == self._datos.sala_salida and self._puerta_exige_llave_de_salida(sala.id, direccion)):
             self._desenlace = VICTORIA
             self._decir("¡Has llegado a la salida! Ganas la partida.")
-        self._terminar_accion_jugador(accion.costo_base)
+        self._terminar_accion_jugador(costo_salida)
         return self._aceptar()
 
     def _puerta_exige_llave_de_salida(self, origen_id: int, direccion: str) -> bool:
@@ -431,6 +448,7 @@ class Partida:
             return self._rechazar("No tienes la llave de esta puerta.")
         sala.marcar_visita(self._reloj.tiempo_actual)
         self._mapa.abrir_puerta(sala.id, direccion)
+        self._buscador.invalidar()
         self._decir(f"Abres la puerta hacia el {direccion}.")
         if cierre is not None:
             EfectoCierrePuerta(
@@ -442,6 +460,7 @@ class Partida:
 
     def _avisar_cierre_de_puerta(self) -> None:
         # El efecto cierra los dos lados; quien ya cruzó se queda donde está (solo se impide volver a atravesar)
+        self._buscador.invalidar()
         self._decir("Una puerta se cierra sola.")
 
 
@@ -626,11 +645,12 @@ class Partida:
     def vista(self) -> VistaPartida:
         sala = self._sala_actual()
         salidas = tuple(
-            SalidaVista(direccion, destino, not self._mapa.puerta_transitable(sala.id, direccion))
+            SalidaVista(direccion, destino, not self._mapa.puerta_transitable(sala.id, direccion),
+                        self._mapa.costo_de_conexion(sala.id, direccion))
             for direccion, destino in self._mapa.vecinos(sala.id)
         )
         enemigos = tuple(
-            EnemigoVista(e.etiqueta(), e.instancia_id, e.vida, e.vida_max)
+            EnemigoVista(e.etiqueta(), e.instancia_id, e.vida, e.vida_max, e.comportamiento == "cazador")
             for e in sala.enemigos_activos if e.esta_vivo()
         )
         objetos = tuple(ObjetoSueloVista(i, self._catalogo.obtener(i).nombre) for i in sala.objetos_en_suelo)

@@ -1,0 +1,9 @@
+{"id_cripta": "cripta-06", "version_cripta": "f9ed9afa683d", "version_catalogo": "4b9e75a42be5", "semilla": 2761125816, "tipo": "encabezado"}
+{"tipo": "mover", "direccion": "E"}
+{"tipo": "mover", "direccion": "O"}
+{"tipo": "mover", "direccion": "N"}
+{"tipo": "mover", "direccion": "E"}
+{"tipo": "mover", "direccion": "E"}
+{"tipo": "mover", "direccion": "O"}
+{"tipo": "esperar"}
+{"tipo": "esperar"}

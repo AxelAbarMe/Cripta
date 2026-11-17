@@ -17,8 +17,9 @@
 
 ## Reproducir hasta un instante
 
-- Forma: `py -m cripta --replay partida.log --hasta <t>`.
-- Reproduce el prefijo temporal conforme a las reglas de FR-LIN-001 y FR-LIN-002 e imprime el mismo resumen histórico.
+- Forma: `py -m cripta --replay partida.log --hasta <t>`. `--hasta` solo se acepta junto con `--replay`.
+- Reproduce la bitácora completa para construir la misma línea vigente que la partida viva y consulta con el mismo componente que `historia <t>`.
+- Si `<t>` supera el reloj final, limita la consulta al reloj final e indica que la partida terminó antes de `<t>`.
 - Si la partida termina antes de `<t>`, imprime el estado final e indica el final anticipado.
 - No inicia la vista interactiva.
 

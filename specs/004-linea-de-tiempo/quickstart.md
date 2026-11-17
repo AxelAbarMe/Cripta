@@ -27,7 +27,10 @@ Esperado: todas las pruebas pasan e identifican en su docstring o nombre de prue
 3. Consultar un tiempo posterior al reloj y un `#k` inválido. Confirmar rechazo con motivo y sin efecto.
 4. Guardar, cargar y repetir una consulta válida. Comparar el resumen antes y después de cargar.
 5. Intentar cargar un guardado P1 de prueba. Confirmar incompatibilidad por versión y verificar que sus bytes siguen intactos; no debe ofrecerse migración.
-6. Reproducir una bitácora con `--replay partida.log --hasta t`. Comparar su resumen con `historia t`. Si el log finaliza antes, debe indicar final anticipado.
+6. Reproducir una bitácora con `--replay partida.log --hasta t`. Comparar su resumen con `historia t`. La prueba de equivalencia debe usar una bitácora con pergamino y verificar que se reproduce completa antes de consultar; `docs/ejemplos/partida_cripta-02.log` no contiene pergamino. Si el log finaliza antes de t, se consulta el reloj final y se indica final anticipado.
+7. Usar un pergamino y comprobar que `partida.log` conserva su línea y las acciones revertidas, mientras `historia #k` numera solo las acciones vigentes y el pergamino no recibe número. Confirmar que el siguiente número continúa desde la última acción vigente. Verificar que `historia` del reloj actual muestra el mismo inventario que la partida viva, incluidos los ajustes de las instancias afectadas, y que el resumen no depende de la posición del cursor.
+8. Verificar en la reconstrucción aislada que `HistorialRetroceso.sin_registrar()` está activo, no se emiten mensajes ni se escribe bitácora, y no se realizan solicitudes ni se consume presupuesto. La restauración debe tomar el contenido estático de las salas materializadas en la partida viva o cargada y aplicar el estado dinámico sin llamar a `precarga.preparar_sala`.
+9. Comparar la memoria estimada de checkpoints con los costos de salida de la proyección 002 incluidos. La posibilidad de recalcularlos desde el esqueleto queda como límite conocido si el costo resulta excesivo.
 
 ## Medición requerida
 
@@ -35,7 +38,7 @@ Esperado: todas las pruebas pasan e identifican en su docstring o nombre de prue
 py -m cripta --bench --solo linea_tiempo --escala 1
 ```
 
-Esperado: ejecución determinista con semilla declarada, al menos 5 000 acciones sintéticas, cripta de referencia elegida por mayor cantidad de salas, y reporte de memoria/consulta para K=100, 500, 1000 y sin checkpoints. Debe incluir la alternativa de reconstrucción por inversión y búsqueda lineal de checkpoint. No se presupone resultado ni valor predeterminado. El grupo selecciona K después de medir y verifica consulta <50 ms.
+Esperado: ejecución determinista con semilla declarada, al menos 5 000 acciones sintéticas, cripta de referencia elegida por mayor cantidad de salas, y reporte de memoria/consulta para K=100, 500, 1000 y sin checkpoints. Debe incluir la alternativa de reconstrucción por inversión, búsqueda lineal para convertir t en límite de acción y comparación de restauración actual (que llama `precarga.preparar_sala`) frente a la vía elegida (contenido estático materializado, estado dinámico del checkpoint, sin esa llamada), incluyendo la E/S por consulta. No se presupone resultado ni valor predeterminado. El grupo selecciona K después de medir y verifica consulta <50 ms.
 
 ## Compatibilidad de la suite
 

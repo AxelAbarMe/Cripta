@@ -21,7 +21,7 @@
           },
           "enemigo": {
             "type": ["string", "null"],
-            "description": "Identificador del enemigo que porta la llave. Si es null o ausente, la llave se ubica en el suelo de la sala"
+            "description": "Identificador del enemigo que porta la llave. Si es null o ausente, la llave se ubica en el suelo de la sala. Una cadena vacía es un dato inválido que se rechaza (FR-TER-018)"
           }
         }
       }

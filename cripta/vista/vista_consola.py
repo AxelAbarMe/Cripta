@@ -229,12 +229,13 @@ class VistaConsola(VistaBase):
         return lineas
 
     def _paneles_izquierdos(self, vista) -> list[str]:
-        salidas = ", ".join(f"{s.direccion}->{s.destino}" + (" [CERRADA]" if s.cerrada else "") for s in vista.salidas)
-        sala = [f"{vista.sala_nombre}  (sala {vista.sala_id})", "Salidas: " + (salidas or "ninguna")]
+        salidas = [f"{s.direccion}->{s.destino} ({s.costo})" + (" [CERRADA]" if s.cerrada else "") for s in vista.salidas]
+        sala = [f"{vista.sala_nombre}  (sala {vista.sala_id})"]
+        sala += [("Salidas: " if n == 0 else " " * 9) + s for n, s in enumerate(salidas)] or ["Salidas: ninguna"]
         if vista.trampas:
             sala.append("Trampas: " + ", ".join(
                 f"{t.nombre} ({'armada' if t.armada else 'desarmada'})" for t in vista.trampas))
-        enemigos = [f"{n}. {e.etiqueta}   PV {e.vida}/{e.vida_max}" for n, e in enumerate(vista.enemigos, start=1)]
+        enemigos = [f"{n}. {e.etiqueta}   PV {e.vida}/{e.vida_max}" + ("  [CAZADOR]" if e.es_cazador else "") for n, e in enumerate(vista.enemigos, start=1)]
         suelo = [f"{n}. {o.nombre}" for n, o in enumerate(vista.objetos_suelo, start=1)]
         lleno = 0 if vista.vida_max <= 0 else max(0, min(10, vista.vida * 10 // vista.vida_max))
         jugador = [f"Vida {vista.vida}/{vista.vida_max}  [{'#' * lleno}{'.' * (10 - lleno)}]",

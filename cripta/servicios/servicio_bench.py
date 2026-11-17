@@ -56,8 +56,8 @@ class ServicioBench:
             total += duracion
             lineas.append(f"\n=== {nombre.upper()}  ({duracion:.2f} s) ===")
             for r in resultados:
-                base = f"  {r.caso}: {r.segundos * 1000:.3f} ms"
-                if r.operaciones > 1:
+                base = f"  {r.caso}: razón" if r.es_razon else f"  {r.caso}: {r.segundos * 1000:.3f} ms"
+                if r.operaciones > 1 and not r.es_razon:
                     base += f" totales, {r.micros_por_operacion:.2f} µs/op ({r.operaciones} ops)"
                 if r.nota:
                     base += f"\n      -> {r.nota}"
@@ -71,14 +71,17 @@ class ServicioBench:
         lineas = ["| Subsistema | Caso | Tiempo | Nota |", "|---|---|---:|---|"]
         for nombre, (_duracion, resultados) in salida.items():
             for r in resultados:
-                tiempo = (f"{r.micros_por_operacion:.2f} µs/op" if r.operaciones > 1
-                          else f"{r.segundos * 1000:.3f} ms")
+                if r.es_razon:
+                    tiempo = "razón"
+                else:
+                    tiempo = (f"{r.micros_por_operacion:.2f} µs/op" if r.operaciones > 1
+                              else f"{r.segundos * 1000:.3f} ms")
                 lineas.append(f"| {nombre} | {r.caso} | {tiempo} | {r.nota} |")
         return "\n".join(lineas)
 
     def verificar_limite_ciclo(self, salida: dict, limite_ms: float = 20.0) -> bool:
-        """True si TODOS los casos de 'ciclo' y 'partida' cumplieron el límite de §5.2."""
-        for nombre in ("ciclo", "partida"):
+        """True si TODOS los casos de 'ciclo', 'partida' y 'ciclo_referencia' cumplieron el límite de §5.2."""
+        for nombre in ("ciclo", "partida", "ciclo_referencia"):
             if nombre in salida and any("NO CUMPLE" in (r.nota or "") for r in salida[nombre][1]):
                 return False
         return True

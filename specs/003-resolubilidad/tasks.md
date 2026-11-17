@@ -134,7 +134,7 @@ Depende de Fase B completa.
 
 ### Pruebas de controlador — se escriben primero
 
-- [ ] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación, inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
+- [ ] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación (caso del Apéndice B, método con sufijo `_ApendiceB`), el reporte se imprime con el formato del §3 del contrato (métodos con `reporte` en el nombre), inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015, FR-RES-016, SC-005
   - Comando: `python -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: archivo existe, todos los casos fallan por `ImportError`.
@@ -151,7 +151,7 @@ Depende de Fase B completa.
 - [ ] T014 [P] Implementar `mostrar_reporte_resolubilidad` en `cripta/vista/vista_consola.py`: imprime por `sys.stdout` el reporte formateado según el esquema de `contracts/contrato_resolubilidad.md` §3 (ancho 81 caracteres con `=`, sección de llaves obtenidas o diagnóstico de no resolubilidad, puertas de frontera, ciclos); acepta `forzada: bool` para agregar la advertencia de inicio forzado — **Modificado**: `cripta/vista/vista_consola.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
   - Comando: `python -m unittest tests.controlador.test_controlador_resolubilidad`
-  - Hecho: T012 pasa; salida coincide con el formato del §3 del contrato.
+  - Hecho: `py -m unittest tests.controlador.test_controlador_resolubilidad -k reporte` pasa y la salida coincide con el formato del §3 del contrato.
 
 - [ ] T015 Integrar verificación en `cripta/servicios/servicio_partida.py`: antes de instanciar `Partida`, invocar `ServicioResolubilidad.verificar(id_cripta)` y adjuntar el `ResultadoResolubilidad` al objeto devuelto al controlador — **Modificado**: `cripta/servicios/servicio_partida.py`
   - Requisitos: FR-RES-013
@@ -184,12 +184,12 @@ Depende de Fase A completa (el verificador ya funciona); puede solaparse con Fas
   - Comando: `python -m cripta --bench --solo resolubilidad`
   - Hecho: función importable; generador produce siempre la misma cripta para `SEMILLA_BENCH = 20260928`.
 
-- [ ] T019 Registrar carga `"resolubilidad"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad()` que llama `_generar_cripta_encadenada(40, 20, SEMILLA_BENCH)`, ejecuta `VerificadorResolubilidad.verificar()` y `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` cada una 3 veces con `_medir`, reporta con `_comparar` la aceleración sin escribir cifras de rendimiento fijas en el código fuente — **Modificado**: `cripta/bench/cargas_bench.py`
-  - Requisitos: FR-RES-018, FR-RES-020, SC-007
+- [ ] T019 Registrar carga `"resolubilidad"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad(escala: float = 1.0)` que llama `_generar_cripta_encadenada(k, 20, SEMILLA_BENCH)` para al menos tres valores crecientes de `k` (proporcionales a `escala`), ejecuta `VerificadorResolubilidad.verificar()` y `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` cada una 3 veces con `_medir` (así se evidencia el costo aproximadamente lineal, SC-002), reporta con `_comparar` la aceleración sin escribir cifras de rendimiento fijas en el código fuente — **Modificado**: `cripta/bench/cargas_bench.py`
+  - Requisitos: FR-RES-018, FR-RES-020, SC-002, SC-007
   - Comando: `python -m cripta --bench --solo resolubilidad`
   - Hecho: salida con formato `=== RESOLUBILIDAD ... ===` y línea `recorrido_ingenuo_reiniciado es N.Nx más lento que recorrido_incremental`.
 
-- [ ] T020 Registrar carga `"resolubilidad_cota"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad_cota()` que descarga (o lee de `CacheDisco`) la lista de criptas publicadas, elige la de mayor total de salas **sin fijar su id en el código** (Principio IV), ejecuta `VerificadorResolubilidad.verificar()` una vez, mide el tiempo con `_medir` y lo compara contra el límite de 200 ms; imprime `CUMPLE` o `FALLA` — **Modificado**: `cripta/bench/cargas_bench.py`
+- [ ] T020 Registrar carga `"resolubilidad_cota"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad_cota()` que descarga (o lee de `CacheDisco`) la lista de criptas publicadas, elige la de mayor total de salas **sin fijar su id en el código** (Principio IV), ejecuta `VerificadorResolubilidad.verificar()` con `_medir` (se mide solo la verificación, sin contar la descarga de datos) y lo compara contra el límite de 200 ms; imprime `CUMPLE` o `FALLA` — **Modificado**: `cripta/bench/cargas_bench.py`
   - Requisitos: FR-RES-020, SC-001, SC-002
   - Comando: `python -m cripta --bench --solo resolubilidad_cota`
   - Hecho: salida con formato `=== RESOLUBILIDAD_COTA ... ===` indicando `(límite 200.0 ms: CUMPLE)`; el id de cripta se obtiene dinámicamente del catálogo.

@@ -47,6 +47,7 @@ Como evaluador o administrador del sistema, deseo ejecutar la verificación de r
 
 1. **Dado** el identificador de una cripta resoluble, **Cuando** se ejecuta el comando `--verificar <id_cripta>`, **Entonces** el sistema emite el reporte indicando que es resoluble junto con la secuencia determinista de llaves, sin iniciar ninguna vista interactiva.
 2. **Dado** el identificador de una cripta no resoluble, **Cuando** se ejecuta el comando `--verificar <id_cripta>`, **Entonces** el sistema emite el reporte detallando las llaves inalcanzables, puertas bloqueadas y ciclos detectados, retornando el control a la terminal sin iniciar la vista interactiva.
+3. **Dado** una invocación de `--verificar`, **Cuando** la verificación termina con éxito, detecta datos inválidos en el esqueleto o encuentra un error externo de infraestructura, **Entonces** termina respectivamente con código `0` (Verificación completada con éxito (sea la cripta resoluble o no resoluble)), `1` (Error de datos inválidos en el esqueleto (`CriptaDatosInvalidosError`, por ejemplo costos contradictorios)) o `2` (Error externo de infraestructura (`CriptaLimiteError` por presupuesto agotado, `ApiError` de red, o archivo dañado irrecuperable)).
 
 ---
 
@@ -137,6 +138,7 @@ Como jugador, deseo que el análisis de resolubilidad considere que las llaves q
 - **FR-RES-021**: Si los datos del esqueleto de la cripta presentan costos contradictorios en una misma conexión entre dos salas, la verificación (tanto con `--verificar` como al iniciar una partida) DEBE informar el error de datos inválidos y terminar inmediatamente su ejecución, sin emitir ningún reporte de resolubilidad.
 - **FR-RES-022**: Si una conexión entre dos salas está declarada como cerrada pero no especifica llave requerida, el sistema DEBE tratarla como permanentemente infranqueable e incluirla en la frontera bloqueada indicando que no tiene llave. Si una puerta cerrada exige una llave que no aparece en la consulta de llaves, el sistema DEBE clasificarla y reportarla como "llave sin ubicación", contabilizándola como no obtenible dentro del reporte de resolubilidad.
 - **FR-RES-023**: La verificación de resolubilidad (tanto en `--verificar` como al inicio de una partida) DEBE aplicar las mismas reglas de contabilidad y límite de presupuesto de solicitudes que una partida regular, consumiendo presupuesto por la consulta de datos generales, cada página del esqueleto y la consulta de llaves. Si el presupuesto se agota antes de disponer de todos los datos necesarios y estos no se encuentran almacenados localmente para la versión activa de la cripta, el sistema DEBE abortar la ejecución informando el error de presupuesto agotado, sin emitir ningún reporte de resolubilidad. Las lecturas desde almacenamiento local y las realizadas con `--offline` no consumen presupuesto de solicitudes.
+- **FR-RES-024**: La invocación `--verificar` DEBE definir estos códigos de salida: `0`: Verificación completada con éxito (sea la cripta resoluble o no resoluble). `1`: Error de datos inválidos en el esqueleto (`CriptaDatosInvalidosError`, por ejemplo costos contradictorios). `2`: Error externo de infraestructura (`CriptaLimiteError` por presupuesto agotado, `ApiError` de red, o archivo dañado irrecuperable).
 
 ---
 
@@ -175,3 +177,6 @@ Como jugador, deseo que el análisis de resolubilidad considere que las llaves q
 - Se asume que la posición de recolección de una llave portada por cualquier enemigo (errante, rastreador o cazador) corresponde exactamente a la sala donde ese enemigo inicia la partida, con independencia de su patrón de movimiento posterior durante la simulación.
 - Se asume que los mecanismos dinámicos de juego (activación y rearme de trampas, cierre periódico o automático de puertas) no alteran las conexiones fundamentales para la alcanzabilidad de la cripta.
 - Se asume que la bandera `--forzar` actúa como una decisión de política de ejecución a nivel de interfaz de usuario y no altera el dictamen técnico emitido por el algoritmo de resolubilidad.
+- Pendiente de confirmar con el profesor porque el enunciado no lo fija: la secuencia de obtención incluye todas las llaves obtenibles.
+- Pendiente de confirmar con el profesor porque el enunciado no lo fija: se informa un ciclo representativo por cada grupo de llaves que se bloquean entre sí.
+- Pendiente de confirmar con el profesor porque el enunciado no lo fija: una puerta cerrada sin llave es infranqueable.

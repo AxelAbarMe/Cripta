@@ -700,15 +700,6 @@ Revisa la especificación generada con spec-kit para la capacidad 002 (niebla de
 **Prompt:**
 ```text
 $speckit-clarify
-(pegar aquí el texto completo del prompt anterior)
-```
-
-**Prompt (resumido):** Se pidió resolver, con un máximo de cinco preguntas de una en una y cada una con recomendación, las ambigüedades de la especificación de niebla de guerra e «ir a»: puertas de salas exploradas solo con antorcha, motivos de detención simultáneos, órdenes degeneradas, registro y consumo de tiempo del mapa y de la orden, y comportamiento de la antorcha y del pergamino.
-
-**Para qué se usó:** Dejar la especificación sin ambigüedades en las reglas observables antes de pasar al plan.### 2026-11-14 — Codex CLI (versión y modelo: completar con /status)
-**Prompt:**
-```text
-$speckit-clarify
 SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
 Contexto: ya estoy en la rama 002-niebla-ir-a. No crees ni cambies de rama y no hagas commit ni push. Redacta todo en español. Solo modifica specs/002-niebla-ir-a/spec.md. No modifiques checklists/requirements.md y no ejecutes plan. Puedes LEER (sin modificar) docs/enunciados/Parte2.md (§3.3, §3.4, §5.3, §6.1 y Apéndice B), .specify/memory/constitution.md y specs/001-terreno-cazador/spec.md (solo FR-TER-021 y FR-TER-023, por coherencia con el registro de partida.log). Si la respuesta a una duda ya está en el enunciado, no la preguntes: cítala y aplícala. No inventes reglas: lo que no esté en el enunciado queda como decisión del grupo, escrita en Supuestos.
 
@@ -863,7 +854,7 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 
 **Prompt (resumido):** Análisis de solo lectura de la consistencia de la capacidad de niebla de guerra e «ir a» entre especificación, plan, tareas y constitución.
 
-**Para qué se usó:** completar con los hallazgos y lo que se corrigió.
+**Para qué se usó:** Correciones al plan y tasks entregadas desde speckit.
 
 ### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
 **Prompt:** "$speckit-analyze Sigue las instrucciones de prompts/p2/06-analyze-002.md. Solo lectura: no modifiques ningún archivo. Responde en español, con una tabla de hallazgos por gravedad con archivo y línea, y una lista de requisitos y escenarios sin cobertura."

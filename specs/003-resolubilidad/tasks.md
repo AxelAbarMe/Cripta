@@ -28,7 +28,7 @@ Cada tarea cita el o los `FR-RES-NNN` que atiende, la ruta real del archivo que 
 
 - **[P]**: puede ejecutarse en paralelo con otra tarea del mismo bloque (distintos archivos, sin dependencias sin cumplir).
 - **[US1]–[US5]**: a qué historia de usuario de `spec.md` pertenece la tarea.
-- Orden de dependencias entre fases: **A → B → C → D → E** (cada fase comienza solo cuando la anterior está completa).
+- Orden de dependencias entre fases: **A → B → C**, **A → D** (D puede avanzar en paralelo con B y C) y **E** al final, cuando A, B, C y D estén completas.
 
 ---
 
@@ -39,7 +39,7 @@ aislada de red, disco y vista. Las pruebas van primero.
 
 **Punto de corte / PR**: Cuando todas las tareas A estén en ✅ y `python -m unittest tests.modelo.test_resolubilidad` pase sin errores, se cierra el PR de Fase A.
 
-> **⚠️ CRÍTICO**: Las subtareas de prueba (A-01 a A-04) se escriben y deben **fallar** antes de implementar el código (A-05 a A-09).
+> **⚠️ CRÍTICO**: Las tareas de prueba (T001 a T004) se escriben y deben **fallar** antes de implementar el código (T005 a T009).
 
 ---
 
@@ -148,7 +148,7 @@ Depende de Fase B completa.
   - Comando: `python -m unittest discover -s tests -t .`
   - Hecho: `VistaBase` define el método abstracto; `python -c "from cripta.vista.vista_base import VistaBase"` sin error; `py -m unittest discover -s tests -t .` sigue en OK.
 
-- [ ] T014 [P] Implementar `mostrar_reporte_resolubilidad` en `cripta/vista/vista_consola.py`: imprime por `sys.stdout` el reporte formateado según el esquema de `contracts/contrato_resolubilidad.md` §3 (ancho 81 caracteres con `=`, sección de llaves obtenidas o diagnóstico de no resolubilidad, puertas de frontera, ciclos); acepta `forzada: bool` para agregar la advertencia de inicio forzado — **Modificado**: `cripta/vista/vista_consola.py`
+- [ ] T014 Implementar `mostrar_reporte_resolubilidad` en `cripta/vista/vista_consola.py`: imprime por `sys.stdout` el reporte formateado según el esquema de `contracts/contrato_resolubilidad.md` §3 (ancho 81 caracteres con `=`, sección de llaves obtenidas o diagnóstico de no resolubilidad, puertas de frontera, ciclos); acepta `forzada: bool` para agregar la advertencia de inicio forzado — **Modificado**: `cripta/vista/vista_consola.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
   - Comando: `python -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: `py -m unittest tests.controlador.test_controlador_resolubilidad -k reporte` pasa y la salida coincide con el formato del §3 del contrato.

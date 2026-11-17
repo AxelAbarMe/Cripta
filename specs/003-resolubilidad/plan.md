@@ -295,7 +295,7 @@ tests/
   ```powershell
   py -m cripta --bench --solo resolubilidad
   ```
-- **Formato de salida (los valores se obtienen al medir)**:   [2 coincidencias]
+- **Formato de salida (los valores se obtienen al medir)**:
   ```text
   === RESOLUBILIDAD  (X.XX s) ===
     40 llaves encadenadas, 800 salas: recorrido incremental: X.XXX ms
@@ -303,15 +303,16 @@ tests/
   ```
 
 ### 5.2 Medición de la Cota de 200 ms en la Cripta Publicada más Grande
-- **Objetivo**: Verificar que la verificación sobre la cripta publicada más grande (hoy `cripta-06`, 300 salas; la carga la elige por el mayor total de salas del listado, sin fijar su id en el código, Principio IV) se ejecute en un tiempo estrictamente inferior a 200 ms (SC-001).
+- **Objetivo**: Verificar que la verificación sobre la cripta publicada con mayor total de salas (seleccionada dinámicamente del listado, sin fijar su id en el código, Principio IV) se ejecute en un tiempo estrictamente inferior a 200 ms (SC-001). La carga lee el listado y los datos desde `fixtures/` mediante `ClienteOffline`, siguiendo el patrón de `ciclo_referencia` de la capacidad 001; no usa red.
+- **Ejecución mínima**: La carga `resolubilidad_cota` admite `escala=0.01` y se ejecuta sin red, porque `tests/bench/test_cargas_bench.py` recorre todas las cargas de `CARGAS` a escala mínima. La carga sintética `resolubilidad` también admite esa escala y se ejecuta sin red.
 - **Comando Exacto para Reproducir**:
   ```powershell
   py -m cripta --bench --solo resolubilidad_cota
   ```
-- **Formato de salida (los valores se obtienen al medir)**:   [2 coincidencias]
+- **Formato de salida (los valores se obtienen al medir)**:
   ```text
   === RESOLUBILIDAD_COTA  (X.XX s) ===
-    verificación cripta-06 (300 salas): X.XXX ms  (límite 200.0 ms: CUMPLE)
+    verificación <id seleccionado> (<total> salas): X.XXX ms  (límite 200.0 ms: CUMPLE)
   ```
 
 ---

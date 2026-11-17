@@ -143,7 +143,7 @@ Depende de Fase B completa.
 
 ### Implementación de CLI y vista
 
-- [ ] T013 [P] Agregar método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False) -> None` a `cripta/vista/vista_base.py` — **Modificado**: `cripta/vista/vista_base.py` y las vistas falsas que heredan de `VistaBase` en `tests/controlador/test_controlador_cripta.py` (se les agrega un `mostrar_reporte_resolubilidad` vacío para que sigan instanciándose)
+- [ ] T013 [P] Agregar método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False) -> None` a `cripta/vista/vista_base.py` — **Modificado**: `cripta/vista/vista_base.py` y las vistas falsas que heredan de `VistaBase` en `tests/controlador/test_controlador_cripta.py` (se les agrega un `mostrar_reporte_resolubilidad` vacío para que sigan instanciándose). Hacer T014 inmediatamente después y no ejecutar la suite completa entre ambas, porque `VistaConsola` no podrá instanciarse hasta que implemente el método
   - Requisitos: FR-RES-013
   - Comando: `py -m unittest discover -s tests -t .`
   - Hecho: `VistaBase` define el método abstracto; `py -c "from cripta.vista.vista_base import VistaBase"` sin error; `py -m unittest discover -s tests -t .` sigue en OK.

@@ -243,7 +243,7 @@
 
   Resultado esperado: código de salida `0` para cada ejemplo nuevo, sin ejemplos con el catálogo be68d322d2f5.
 
-- [ ] T043 Ampliar `DECISIONES.md` (raíz) con la sección de la capacidad 001: problema, alternativas y razón de descarte, decisión, complejidad, resultados de `--bench` de T036, T036b, T037 y T039 con el comando exacto, el antes y el después de la revisión de `gc.freeze()` de T039b (P2 §5.6, con el límite conocido de la basura cíclica entre objetos congelados), el tiempo de consulta de costos medido en T036 y, si pesa, la alternativa de precalcular los costos en una tabla plana al construir el mapa (O(1) por consulta, frente a O(log n) de la consulta actual), límites conocidos y enlaces a `spec.md` y `plan.md` (Principio VI)
+- [X] T043 Ampliar `DECISIONES.md` (raíz) con la sección de la capacidad 001: problema, alternativas y razón de descarte, decisión, complejidad, resultados de `--bench` de T036, T036b, T037 y T039 con el comando exacto, el antes y el después de la revisión de `gc.freeze()` de T039b (P2 §5.6, con el límite conocido de la basura cíclica entre objetos congelados), el tiempo de consulta de costos medido en T036 y, si pesa, la alternativa de precalcular los costos en una tabla plana al construir el mapa (O(1) por consulta, frente a O(log n) de la consulta actual), límites conocidos y enlaces a `spec.md` y `plan.md` (Principio VI)
 - [ ] T044 Registrar en `PROMPTS_LLM.md` las invocaciones de la implementación (por ejemplo `/speckit-implement`), con fecha, herramienta, prompt textual y para qué se usó (Flujo de Trabajo de la Constitución)
 
 ---

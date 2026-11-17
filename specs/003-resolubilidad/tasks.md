@@ -134,7 +134,7 @@ Depende de Fase B completa.
 
 ### Pruebas de controlador — se escriben primero
 
-- [ ] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación (caso del Apéndice B, método con sufijo `_ApendiceB`), el reporte se imprime con el formato del §3 del contrato (métodos con `reporte` en el nombre), inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
+- [ ] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación (caso del Apéndice B, método con sufijo `_ApendiceB`), el reporte se imprime con el formato del §3 del contrato (métodos con `reporte` en el nombre), inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista, y devuelve el código 0 (cripta resoluble o no resoluble), 1 (datos inválidos) o 2 (error externo) según el contrato §1.1 (métodos con `codigo_salida` en el nombre) — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015, FR-RES-016, SC-005
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: archivo existe, todos los casos fallan por `ImportError`.

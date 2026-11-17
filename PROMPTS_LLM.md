@@ -891,3 +891,224 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 **Prompt (resumido):** Segunda corrección de tasks.md de la 002 tras la revisión del Pull Request: referencias, etiquetas y ubicación de la comparación de costos.
 
 **Para qué se usó:** Dejar las tareas consistentes con la spec y el plan antes de fusionar el PR de documentación.
+
+
+### 2026-11-10 — Antigravity CLI 1.5.4 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-specify
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Contexto: ya estoy en la rama 003-resolubilidad. No crees ni cambies de rama y no hagas commit. Redacta todo en español. Solo crea o modifica archivos dentro de specs/003-resolubilidad/ y .specify/feature.json. No ejecutes clarify.
+
+Capacidad: verificación de resolubilidad de una cripta antes de jugar.
+
+Supuestos: el jugador atraviesa cualquier salida abierta y cualquier cerrada cuya llave ya obtuvo;
+las llaves no se consumen; todo enemigo puede derrotarse; una llave que suelta un enemigo se
+considera obtenible en la sala donde ese enemigo inicia (incluye enemigos errantes); trampas y
+cierres automáticos no bloquean.
+Resoluble: partiendo de la sala inicial, el jugador puede obtener la llave de salida y llegar a la
+sala de salida a través de una puerta que la requiere.
+Resultado si es resoluble: un orden de obtención de llaves donde cada llave aparece después de
+todas las necesarias para alcanzarla; determinista (dos ejecuciones, mismo orden).
+Resultado si no lo es: llaves que no pueden obtenerse; puertas de la frontera bloqueada (cerradas,
+adyacentes a la región alcanzable) con la llave que exige cada una; dónde está cada una de esas
+llaves; y, si una llave está tras puertas que solo ella abre (directamente o por cadena), el ciclo
+concreto de dependencia.
+Sin --forzar, una cripta no resoluble no inicia y se muestra el reporte. --verificar <cripta> ejecuta
+solo la verificación, sin vista. El reporte se muestra al iniciar una partida.
+Usa los datos del esqueleto y la ubicación de llaves del servicio (nueva consulta que cuenta
+dentro del presupuesto de solicitudes y puede persistirse con la versión de la cripta).
+Rendimiento: < 200 ms en la cripta publicada más grande; costo total aproximadamente lineal en
+salas, salidas y llaves; el reporte sale del mismo recorrido (sin recorridos adicionales por llave).
+
+Escenarios del Apéndice B:
+- llave de salida tras la única puerta que ella misma abre: no resoluble; el reporte señala el ciclo
+- llave en el campo suelta de un enemigo errante: se ubica en la sala inicial del enemigo
+- varios órdenes válidos: dos ejecuciones producen el mismo orden
+- cripta no resoluble sin --forzar: la partida no inicia y se muestra el reporte
+
+Prefijo: FR-RES-NNN. Sin estructuras, clases ni módulos.
+```
+
+**Prompt (resumido):** Se pidió generar la especificación de la capacidad de resolubilidad con sus supuestos, resultados esperados, banderas, rendimiento y los cuatro escenarios del enunciado, sin detalles de implementación.
+
+**Para qué se usó:** Generar el borrador de specs/003-resolubilidad/spec.md y su lista de control, que luego se revisa y se corrige en la fase de aclaraciones.
+
+### 2026-11-10 — Antigravity CLI 1.5.4 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-clarify
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Contexto: ya estoy en la rama 003-resolubilidad. No crees ni cambies de rama y no hagas commit. Redacta todo en español. Solo modifica archivos dentro de specs/003-resolubilidad/. No leas otros archivos del repositorio, no modifiques checklists/requirements.md y no ejecutes plan.
+
+PASO 1. Antes de hacer preguntas, aplica estas correcciones directas a spec.md sin preguntar. Conserva los identificadores existentes; los requisitos y criterios nuevos van al final de su lista con la numeración siguiente, sin renumerar.
+1. Idioma: traduce al español todos los encabezados y etiquetas de la plantilla (Rama de la funcionalidad, Creado, Estado, Entrada, Escenarios de usuario y pruebas, Historia de usuario, Prioridad, Por qué esta prioridad, Prueba independiente, Escenarios de aceptación, Dado/Cuando/Entonces, Casos límite, Requisitos funcionales, Entidades clave, Criterios de éxito, Resultados medibles, Supuestos). Conserva FR-RES-NNN y SC-NNN.
+2. En FR-RES-005 y en la historia de usuario 5, sustituye "estáticos" por "cualquier enemigo" (los tipos reales son errantes, rastreadores y cazadores).
+3. FR-RES-017: no definas la consulta de llaves, su DTO ni su caché por versión; di que la 003 usa el contrato de datos de la capacidad 001 (specs/001-terreno-cazador/contracts/contrato_datos_p2.md), sin escribir la ruta del endpoint. En SC-006, sustituye "como máximo una unidad del presupuesto" por "una solicitud, más los reintentos por 429 si los hay".
+4. En la entidad Salida/Puerta elimina la mención a salidas unidireccionales: en este proyecto toda salida conecta dos salas.
+5. Puertas declaradas en un solo lado: una conexión está cerrada si cualquiera de sus dos lados lo declara, y la llave exigida es la declarada en cualquiera de los dos lados. Añádelo como requisito.
+6. En FR-RES-010 sustituye "región actualmente alcanzable" por "región alcanzable final" (después de usar todas las llaves obtenibles).
+7. Determinismo: añade que el ciclo reportado, el orden de las llaves, el de las puertas de la frontera y el de los ciclos son deterministas (misma cripta, mismo reporte), con desempate por menor identificador en orden ascendente.
+8. Añade un requisito y un criterio de éxito: --bench compara el recorrido incremental contra la alternativa ingenua de repetir el recorrido por cada llave, con criptas sintéticas de muchas llaves encadenadas, deterministas por semilla. Sin decir cómo se implementa.
+9. Añade un caso límite con escenario: llegar a la sala de salida por una puerta abierta no cuenta; hay que entrar por una puerta que exige llave_salida.
+10. Añade un requisito: si el esqueleto trae costos contradictorios en una misma conexión, --verificar informa el error de datos inválidos y termina, sin reporte de resolubilidad.
+
+PASO 2. Después formula como máximo estas 4 preguntas, de una en una, cada una con tu recomendación, y actualiza spec.md con cada respuesta:
+a) ¿El orden de obtención incluye todas las llaves obtenibles o solo las necesarias para llegar a llave_salida?
+b) Cuando hay varios ciclos de dependencia, ¿el reporte muestra uno o todos? (reconcilia FR-RES-012 con el caso límite de varios ciclos).
+c) Datos incoherentes: una puerta cerrada sin llave, ¿es infranqueable o dato inválido? Una llave exigida por una puerta que no aparece en la consulta de llaves, ¿se reporta como "llave sin ubicación"?
+d) Presupuesto de solicitudes: --verificar necesita datos generales, páginas del esqueleto y llaves, y todo cuenta. ¿Se aplica el presupuesto igual que en una partida y qué hace el sistema si se agota (con o sin datos de llaves persistidos)?
+
+Al terminar, muestra un resumen breve de lo cambiado.
+```
+
+**Prompt (resumido):** Se pidió corregir la redacción de la especificación según la revisión hecha con apoyo de Claude y resolver las ambigüedades restantes con un máximo de cuatro preguntas, cada una con una recomendación.
+
+**Para qué se usó:** Dejar la especificación en español, coherente con el contrato de datos de la capacidad de terreno y cazador y sin ambigüedades antes de pasar al plan.
+
+
+### 2026-11-11 — Antigravity CLI 1.5.4 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-plan
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Contexto: ya estoy en la rama 003-resolubilidad. No crees ni cambies de rama y no hagas commit. Redacta todo en español. Solo crea o modifica archivos dentro de specs/003-resolubilidad/. No modifiques spec.md ni checklists/requirements.md y no ejecutes tasks. Puedes LEER (sin modificar) docs/MAPA_CODIGO.md, specs/001-terreno-cazador/ (plan.md, tasks.md y contracts/contrato_datos_p2.md) y el código de cripta/ para citar rutas reales.
+
+Restricciones obligatorias (constitución): implementar a mano las estructuras; PROHIBIDO heapq, bisect, collections, networkx, set y dict como índice, caché o tabla de búsqueda, y list.sort()/sorted() donde aplique. Permitido list como almacenamiento contiguo indexado por posición entera. Reutiliza estructuras de la Parte I cuando sean adecuadas y cita el archivo. Clases, métodos y atributos nuevos en español. Errores de programación heredan de IndexError o ValueError; CriptaError solo para fallos externos. El modelo no importa red ni archivos; --verificar, --replay y --bench no instancian la vista.
+
+El plan debe incluir:
+1. Problema y operaciones reales con su frecuencia esperada.
+2. Al menos DOS alternativas por problema y la razón concreta de descarte de cada una.
+3. Decisión (estructura y estrategia) y complejidad de las operaciones más frecuentes.
+4. Impacto en código existente: archivo por archivo (ruta real) o "sin cambios".
+5. Mediciones --bench previstas, incluida la de la alternativa descartada, con el comando exacto para reproducirlas.
+6. Límites conocidos de la decisión.
+7. Revisión de decisiones de la Parte I que esta carga pueda invalidar.
+8. Trazabilidad: tabla FR-RES -> componente -> medición/prueba. Incluye los SC-001 a SC-008 y los casos del Apéndice B.
+No agregues reglas del juego que no estén en spec.md. Si falta una regla, detente y pregunta.
+
+Aspectos que el plan debe resolver para resolubilidad:
+- Recorrido incremental único: obtener una llave desbloquea regiones sin reiniciar el recorrido. La frontera bloqueada, las llaves no obtenibles y las dependencias salen de ese mismo recorrido, sin recorridos adicionales por llave.
+- Cómo asociar puertas cerradas pendientes con su llave y cómo identificar llaves (ids de texto) sin dict ni set ni bisect.
+- Cómo garantizar el desempate por menor identificador en el orden de llaves, en las puertas de la frontera y en los ciclos.
+- Detección determinista de un ciclo concreto por grupo de llaves, con costo aproximadamente lineal.
+- Alternativa ingenua (repetir el recorrido por llave) implementada y medida con --bench sobre criptas sintéticas de muchas llaves encadenadas, deterministas por semilla.
+- Reutilizar lo ya definido por la capacidad 001: obtener_llaves, LlaveUbicacionDTO, la caché de llaves por versión, el cliente falso (tests/cliente_falso.py) y CriptaMapa para resolver puertas declaradas en un solo lado y costos contradictorios (CriptaDatosInvalidosError). No redefinirlos.
+- Flujo de --verificar y de inicio de partida (--forzar), adaptadores y presupuesto de solicitudes, sin que el modelo conozca red ni disco.
+- Dónde se muestra el reporte (vista) sin que --verificar ni --bench la instancien.
+- Medición de la cota de 200 ms en la cripta publicada más grande.
+
+Al terminar, muestra un resumen breve de los archivos creados.
+```
+
+**Prompt (resumido):** Se pidió generar el plan técnico de la capacidad de resolubilidad con problema, al menos dos alternativas por decisión, complejidad, impacto en el código existente, mediciones con --bench y trazabilidad, respetando las restricciones de la constitución y reutilizando el contrato de datos de la capacidad de terreno y cazador.
+
+**Para qué se usó:** Generar plan.md y sus artefactos asociados para la capacidad de resolubilidad, a revisar antes de pasar a las tareas.
+
+### 2026-11-11 — Antigravity CLI 1.5.4 (Claude Sonnet 4.6 Thinking)
+**Prompt:**
+```text
+/speckit-tasks
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Contexto: ya estoy en la rama 003-resolubilidad. No crees ni cambies de rama y no hagas commit. Redacta todo en español, incluidos los títulos de las fases y secciones de la plantilla. Solo crea o modifica specs/003-resolubilidad/tasks.md. Usa solo spec.md, plan.md, research.md, data-model.md, quickstart.md y contracts/ de esa carpeta, y puedes LEER (sin modificar) el código de cripta/ y tests/ para citar rutas reales. No agregues reglas del juego ni decisiones de diseño que no estén en esos documentos. Si falta algo, detente y pregunta.
+
+Reglas de la constitución que las tareas deben cumplir:
+- Cada tarea cita los identificadores FR-RES-NNN que atiende, la ruta real del archivo que toca (marca "Nuevo" o "Modificado" según exista, comprobándolo en el repositorio), el comando de prueba que la valida y su criterio de "hecho". Máximo unos 90 minutos por tarea y ninguna tarea sin requisito.
+- Cada escenario de aceptación de spec.md, incluidos los cuatro casos del Apéndice B, y cada SC-001 a SC-008 tiene al menos una tarea de prueba automatizada con unittest que cita el requisito. Las pruebas van antes que el código que las hace pasar. Las carpetas de pruebas nuevas llevan su __init__.py.
+- Ninguna tarea usa heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Se reutilizan las estructuras propias de la Parte I citadas en plan.md (Cola, HeapMinimo, ordenamientos) y list solo como almacenamiento contiguo indexado por entero.
+- Los errores de programación heredan de IndexError o ValueError; CriptaError solo para fallos externos. Se reutilizan CriptaDatosInvalidosError y CriptaLimiteError sin redefinirlos.
+- El modelo no importa red ni archivos. --verificar y --bench no instancian la vista.
+- Ninguna tarea contiene commits ni push, ni códigos de tarea ni nombres de personas en mensajes de commit.
+- Ninguna tarea escribe cifras de rendimiento antes de medirlas. La cota de 200 ms se mide sobre la cripta publicada más grande, elegida por el mayor total de salas del listado y sin fijar su id en el código.
+
+Organización obligatoria:
+1. Fase A, dominio puro: pruebas primero y luego cripta/modelo/resolubilidad.py (catálogo de llaves ordenado con búsqueda binaria manual, recorrido incremental con Cola y HeapMinimo, condición de entrada a la sala de salida por una puerta que exige llave_salida, frontera bloqueada, ubicaciones, ciclos por DFS tricolor y alternativa ingenua verificar_ingenuo_reiniciado).
+2. Fase B, servicio: ServicioResolubilidad con ClienteCripta, CacheDisco y presupuesto de solicitudes, costos contradictorios y presupuesto agotado sin reporte parcial.
+3. Fase C, CLI y vista: --verificar sin vista, --forzar, compuerta al iniciar partida en el controlador y mostrar_reporte_resolubilidad en la vista.
+4. Fase D, mediciones --bench: carga resolubilidad (incremental frente a la alternativa ingenua, criptas sintéticas encadenadas por semilla) y carga resolubilidad_cota, cada tarea con el comando exacto.
+5. Fase E, cierre: las 222 pruebas de la Parte I en OK, auditoría de importaciones prohibidas con el Select-String del quickstart de la 001 y una tarea final "Sección de DECISIONES.md".
+
+Marca [P] solo las tareas que tocan archivos distintos y no dependen entre sí. Indica el orden de dependencias entre fases y el punto de corte de cada Pull Request. El registro de este comando en PROMPTS_LLM.md se hace fuera de las tareas.
+```
+
+**Prompt (resumido):** Se pidió generar la lista de tareas de la capacidad de resolubilidad en cinco fases (dominio, servicio, CLI y vista, mediciones --bench, cierre), con cada tarea citando sus requisitos FR-RES, la ruta real del archivo y su prueba, y con las pruebas antes del código.
+
+**Para qué se usó:** Generar tasks.md en specs/003-resolubilidad/, a revisar contra spec.md y plan.md antes de /speckit-analyze.
+
+
+### 2026-11-17 — Antigravity CLI 1.5.4 (Claude Sonnet 4.6 Thinking)
+**Prompt:**
+```text
+/speckit-analyze
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Contexto: ya estoy en la rama 003-resolubilidad. No crees ni cambies de rama y no hagas commit. Es un análisis de SOLO LECTURA: no crees ni modifiques ningún archivo; entrega el informe únicamente en el chat. Redacta todo en español. Analiza la consistencia entre specs/003-resolubilidad/spec.md, plan.md, research.md, data-model.md, quickstart.md, contracts/, tasks.md y la constitución. Puedes leer cripta/ y tests/ solo para verificar rutas y nombres; no releas el repositorio completo.
+
+Verifica en particular:
+1. Cada FR-RES-001 a 023 y cada SC-001 a 008 tiene al menos una tarea y una prueba que lo cita; ninguna tarea cita un requisito inexistente.
+2. Los cuatro casos del Apéndice B y cada escenario de aceptación de spec.md tienen una prueba prevista antes del código que los hace pasar.
+3. spec.md no nombra estructuras, clases, módulos ni rutas de endpoint, y plan.md no agrega reglas del juego que no estén en spec.md.
+4. Ningún documento propone heapq, bisect, collections, networkx, set, dict como índice o caché, ni list.sort() o sorted().
+5. Cada cifra de rendimiento cita un comando de --bench o está marcada como hipótesis.
+6. Las rutas de archivo y las marcas Nuevo/Modificado coinciden entre plan.md y tasks.md, y existen en el repositorio cuando dicen Modificado.
+7. El orden de dependencias entre fases, las marcas [P] y los puntos de corte de los Pull Requests son coherentes.
+8. Puntos a vigilar: los códigos de salida 0/1/2 de --verificar son decisión del plan y no vienen de la spec; la herencia de CriptaDatosInvalidosError; la semántica de las aristas del grafo de dependencias; quickstart.md no cita fixtures inexistentes ni exige datos offline sin explicarlo; la carga resolubilidad_cota está registrada en CARGAS; la prueba de --verificar (T012) vive en __main__.py, que se implementa en otra tarea; y cualquier cifra fija del número total de pruebas.
+
+Informe: tabla con ID, gravedad (CRÍTICA, ALTA, MEDIA, BAJA), archivo y línea, problema y corrección sugerida. Máximo 25 hallazgos, los más graves primero, y cierra con una lista de requisitos sin tarea y tareas sin requisito (o "ninguno").
+```
+
+**Prompt (resumido):** Se pidió un análisis de solo lectura de la consistencia entre spec.md, plan.md, tasks.md, los anexos y la constitución de la capacidad de resolubilidad, con informe en el chat clasificado por gravedad.
+
+**Para qué se usó:** Detectar requisitos sin tarea, reglas nuevas en el plan, estructuras prohibidas y rutas incoherentes antes de /speckit-implement.
+
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo archivos dentro de specs/003-resolubilidad/ (spec.md, plan.md y tasks.md). No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego salvo lo pedido aquí; si algo cambia el resultado observable y no está decidido, detente y pregunta.
+
+Spec primero:
+1. spec.md: agrega al final de Supuestos las decisiones del grupo pendientes de confirmar con el profesor porque el enunciado no las fija: el orden incluye todas las llaves obtenibles, se informa un ciclo representativo por grupo, y una puerta cerrada sin llave es infranqueable. Agrega también los códigos de salida de --verificar (0 si la verificación termina, sea resoluble o no; 1 por datos inválidos; 2 por error externo) como requisito FR-RES-024 con su escenario, tomando el texto de contracts/contrato_resolubilidad.md §1.1 sin cambiarlo.
+
+Plan y tareas (después de la spec):
+2. tasks.md T013 y T014: fusiónalas en una sola tarea (método abstracto en vista_base.py, vistas falsas de las pruebas e implementación en vista_consola.py) para que la suite completa no se rompa entre ambas.
+3. Unifica el ancho del reporte entre plan.md §4 y la tarea de la vista, tomando el valor de contracts/contrato_resolubilidad.md §3.
+4. Agrega, antes de las tareas de bench, una tarea de prueba (tests/servicios/test_servicio_bench.py, Nuevo o Modificado según exista en esta rama, comprobándolo) para FR-RES-020 y SC-007: el generador sintético y las cargas producen la misma salida con la misma semilla; usa el nombre test_bench_resolubilidad_reproducible del plan.
+5. Agrega una tarea que ejecute py -m cripta --bench --solo resolubilidad y py -m cripta --bench --solo resolubilidad_cota, y guarde los resultados en docs/bench/. La tarea de DECISIONES.md pasa a la sección «5.4 Resolubilidad», con alternativas, complejidad, evidencia medida y límites conocidos, y depende de esa tarea.
+6. plan.md §3.2 y §7: declara el factor O(E log V) de CriptaMapa.obtener o indica que el verificador copia las salas a listas planas en una pasada, y ajusta la complejidad total. §5.1: alinea K = 40 y V = 800 con las tres escalas crecientes que pide la tarea de la carga. Agrega el «#» a la primera línea del plan.
+7. Renumera las tareas y actualiza dependencias y trazabilidad.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/003-resolubilidad/.
+```
+
+**Prompt (resumido):** Aplicar la revisión del Pull Request de la capacidad de resolubilidad a la especificación, el plan y las tareas: supuestos del grupo, códigos de salida de --verificar, fusión de tareas de la vista, ancho del reporte, prueba de reproducibilidad del bench, tarea de mediciones, complejidad declarada y formato del plan.
+
+**Para qué se usó:** Atender los seis puntos bloqueantes y las sugerencias de la revisión antes de fusionar el PR de documentación.
+
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo plan.md y tasks.md dentro de specs/003-resolubilidad/. No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego; si algo cambia el resultado observable y no está decidido, detente y pregunta.
+1. [Solo si ls-files imprimió la ruta] tests/servicios/test_servicio_bench.py ya existe en esta rama: marca T017 y la fila del plan §4 como Modificado, agregando test_bench_resolubilidad_reproducible sin alterar las pruebas existentes.
+2. tasks.md: corrige el diagrama de dependencias entre fases, porque la Fase C va de T012 a T016, y cualquier otro rango desplazado.
+3. tasks.md T012: agrega FR-RES-024 a Requisitos, porque prueba los códigos de salida de --verificar.
+4. tasks.md T020 y plan.md §5.2: la carga resolubilidad_cota no usa red. Lee el listado de criptas desde fixtures/ con ClienteOffline, como hace ciclo_referencia de la 001, y elige la de mayor total de salas sin fijar su id. Agrega que T019 y T020 deben ejecutarse a escala mínima, porque la prueba de tests/bench/ recorre todas las cargas de CARGAS.
+5. [Solo si los comandos lo detectaron] Elimina de plan.md el texto suelto «[2 coincidencias]» y el BOM del inicio.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/003-resolubilidad/.
+```
+
+**Prompt (resumido):** Ajustes finales de la 003 tras la revisión: rangos de fases, requisito de T012, origen de datos offline de la carga de cota y limpieza del plan.
+
+**Para qué se usó:** Cerrar inconsistencias detectadas al revisar los cambios aplicados al PR de la 003 antes de aprobarlo.
+
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo plan.md y tasks.md dentro de specs/003-resolubilidad/. No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego; si algo cambia el resultado observable y no está decidido, detente y pregunta.
+1. tasks.md: corrige el diagrama de dependencias entre fases, porque la Fase C va de T012 a T016, y cualquier otro rango desplazado por la numeración actual.
+2. tasks.md T012: agrega FR-RES-024 a Requisitos, porque prueba los códigos de salida de --verificar.
+3. tasks.md T020 y plan.md §5.2: la carga resolubilidad_cota no usa red. Lee el listado de criptas desde fixtures/ con ClienteOffline, como hace ciclo_referencia de la capacidad 001 (verifícalo en cripta/bench/cargas_bench.py), y elige la de mayor total de salas sin fijar su id en el código. Agrega que T019 y T020 deben ejecutarse a escala mínima y sin red, porque tests/bench/test_cargas_bench.py recorre todas las cargas de CARGAS.
+4. plan.md: elimina el texto suelto «[2 coincidencias]» de §5.1 y §5.2.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/003-resolubilidad/.
+```
+
+**Prompt (resumido):** Ajustes finales de la 003 tras la revisión: rangos de fases, requisito de T012, origen de datos offline de la carga de cota y limpieza del plan.
+
+**Para qué se usó:** Cerrar inconsistencias detectadas al revisar los cambios aplicados al PR de la 003 antes de aprobarlo.

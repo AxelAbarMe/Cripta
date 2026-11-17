@@ -30,6 +30,7 @@ python -m unittest discover -s tests -t .
 Comprueba la auditoría automatizada sin instanciar la interfaz interactiva (FR-RES-016, SC-005).
 
 #### 2.1 Cripta Resoluble en Modo Offline
+Requisito previo: este escenario funciona solo cuando las Fases A, B y C (hasta la bandera `--verificar`) están implementadas y los datos de `cripta-02` están guardados para `--offline`.
 ```powershell
 python -m cripta --offline --verificar cripta-02
 ```

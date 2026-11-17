@@ -11,7 +11,7 @@ description: "Lista de tareas para la implementación de la Verificación de Res
 
 **Principio**: Las pruebas se escriben **antes** del código que las hace pasar (TDD estricto).
 Cada tarea cita el o los `FR-RES-NNN` que atiende, la ruta real del archivo que toca
-(marcada **Nuevo** o **Modificado**), el comando de prueba que la valida y el criterio de "hecho".
+(marcada **Modificado**), el comando de prueba que la valida y el criterio de "hecho".
 
 **Restricciones que toda tarea respeta**:
 - Sin `heapq`, `bisect`, `collections`, `networkx`, `set` ni `dict` como índice/caché/tabla.
@@ -45,7 +45,7 @@ aislada de red, disco y vista. Las pruebas van primero.
 
 ### Pruebas de dominio — se escriben primero
 
-- [ ] T001 [P] [US1][US2][US3] Crear `tests/modelo/__init__.py` (si no existe) y esqueleto de `tests/modelo/test_resolubilidad.py` con los fixtures sintéticos reutilizables (cripta lineal simple, cripta con ciclo, cripta con enemigo errante, cripta con varios órdenes válidos); todos los casos de prueba del bloque T002–T004 se colocan en este archivo — **Nuevo**: `tests/modelo/test_resolubilidad.py`
+- [ ] T001 [P] [US1][US2][US3] Crear el esqueleto de `tests/modelo/test_resolubilidad.py` con los fixtures sintéticos reutilizables (cripta lineal simple, cripta con ciclo, cripta con enemigo errante, cripta con varios órdenes válidos); todos los casos de prueba del bloque T002–T004 se colocan en este archivo — **Nuevo**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-001 a FR-RES-012, FR-RES-018, FR-RES-019, FR-RES-022, SC-003, SC-004
   - Comando: `python -m unittest tests.modelo.test_resolubilidad`
   - Hecho: el archivo existe, `discover` lo encuentra, todos los casos fallan con `ImportError` o `AttributeError` (aún no hay implementación).
@@ -107,7 +107,7 @@ Depende de Fase A completa (T001–T009 en ✅).
 
 ### Pruebas de servicio — se escriben primero
 
-- [ ] T010 [P] Crear `tests/servicios/__init__.py` (ya existe) y escribir `tests/servicios/test_servicio_resolubilidad.py` con casos: obtiene llaves por red y persiste en caché, segunda llamada usa caché sin consumir presupuesto, presupuesto agotado antes de llaves lanza `CriptaLimiteError` sin reporte parcial, costos contradictorios en esqueleto lanzan `CriptaDatosInvalidosError`, retorna `ResultadoResolubilidad` completo sobre fixture resoluble — **Nuevo**: `tests/servicios/test_servicio_resolubilidad.py`
+- [ ] T010 [P] Escribir `tests/servicios/test_servicio_resolubilidad.py` con casos: obtiene llaves por red y persiste en caché, segunda llamada usa caché sin consumir presupuesto, presupuesto agotado antes de llaves lanza `CriptaLimiteError` sin reporte parcial, costos contradictorios en esqueleto lanzan `CriptaDatosInvalidosError`, retorna `ResultadoResolubilidad` completo sobre fixture resoluble — **Nuevo**: `tests/servicios/test_servicio_resolubilidad.py`
   - Requisitos: FR-RES-017, FR-RES-021, FR-RES-023, SC-006, SC-008
   - Comando: `python -m unittest tests.servicios.test_servicio_resolubilidad`
   - Hecho: archivo existe, `discover` lo encuentra, todos los casos fallan por `ImportError`.
@@ -134,7 +134,7 @@ Depende de Fase B completa.
 
 ### Pruebas de controlador — se escriben primero
 
-- [ ] T012 [P] Crear `tests/controlador/__init__.py` (ya existe) y escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación, inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
+- [ ] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación, inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015, FR-RES-016, SC-005
   - Comando: `python -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: archivo existe, todos los casos fallan por `ImportError`.
@@ -143,10 +143,10 @@ Depende de Fase B completa.
 
 ### Implementación de CLI y vista
 
-- [ ] T013 [P] Agregar método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False) -> None` a `cripta/vista/vista_base.py` — **Modificado**: `cripta/vista/vista_base.py`
+- [ ] T013 [P] Agregar método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False) -> None` a `cripta/vista/vista_base.py` — **Modificado**: `cripta/vista/vista_base.py` y las vistas falsas que heredan de `VistaBase` en `tests/controlador/test_controlador_cripta.py` (se les agrega un `mostrar_reporte_resolubilidad` vacío para que sigan instanciándose)
   - Requisitos: FR-RES-013
   - Comando: `python -m unittest discover -s tests -t .`
-  - Hecho: `VistaBase` define el método abstracto; `python -c "from cripta.vista.vista_base import VistaBase"` sin error.
+  - Hecho: `VistaBase` define el método abstracto; `python -c "from cripta.vista.vista_base import VistaBase"` sin error; `py -m unittest discover -s tests -t .` sigue en OK.
 
 - [ ] T014 [P] Implementar `mostrar_reporte_resolubilidad` en `cripta/vista/vista_consola.py`: imprime por `sys.stdout` el reporte formateado según el esquema de `contracts/contrato_resolubilidad.md` §3 (ancho 81 caracteres con `=`, sección de llaves obtenidas o diagnóstico de no resolubilidad, puertas de frontera, ciclos); acepta `forzada: bool` para agregar la advertencia de inicio forzado — **Modificado**: `cripta/vista/vista_consola.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
@@ -218,10 +218,10 @@ Depende de Fases A–D completas.
     ```
   - Hecho: no aparece ninguna importación prohibida; cada `sorted(` o `.sort(` que aparezca se revisa a mano y solo se permite fuera de los ordenamientos evaluados; el uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request.
 
-- [ ] T023 Redactar sección `## 003 Verificación de Resolubilidad` en `docs/DECISIONES.md` (o crear el archivo si no existe): registrar (a) razón de adoptar recorrido incremental frente a reinicio BFS, (b) razón de búsqueda binaria manual frente a `bisect`, (c) razón de DFS tricolor frente a Tarjan, (d) razón de desempate con `HeapMinimo` propio frente a `sorted()`, (e) límites conocidos (identificadores dispersos, escala de catálogo) según plan §6 — **Nuevo** o **Modificado**: `docs/DECISIONES.md`
+- [ ] T023 Redactar sección `## 003 Verificación de Resolubilidad` en `DECISIONES.md` (en la raíz del repositorio): registrar (a) razón de adoptar recorrido incremental frente a reinicio BFS, (b) razón de búsqueda binaria manual frente a `bisect`, (c) razón de DFS tricolor frente a Tarjan, (d) razón de desempate con `HeapMinimo` propio frente a `sorted()`, (e) límites conocidos (identificadores dispersos, escala de catálogo) según plan §6 — **Modificado**: `DECISIONES.md`
   - Requisitos: Principio VII de la Constitución; plan §6
   - Comando: (ninguno automatizable; revisión manual)
-  - Hecho: sección presente, cita los cuatro requisitos de justificación del plan y no incluye cifras de rendimiento sin medir.
+  - Hecho: sección presente, cita las cinco decisiones (a) a (e) y no incluye cifras de rendimiento sin medir.
 
 ---
 

@@ -91,7 +91,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["llaves", "descripcion"],
+        "required": ["llaves", "formato"],
         "properties": {
           "llaves": {
             "type": "array",
@@ -100,7 +100,7 @@
             },
             "minItems": 2
           },
-          "descripcion": {
+          "formato": {
             "type": "string"
           }
         }

@@ -25,14 +25,14 @@ Todas las clases de datos son inmutables (`frozen=True, slots=True`) y están re
                                     │ 1
                ┌────────────────────┼────────────────────┐
                │ *                  │ *                  │ *
-┌──────────────▼─────────────┐ ┌────▼────────────────┐ ┌─▼────────────────────────┐
-│  FronteraBloqueadaPuerta   │ │  CicloDependencia   │ │  UbicacionLlaveDiagnostico │
-├────────────────────────────┤ ├─────────────────────┤ ├────────────────────────────┤
-│ + sala_origen: int         │ │ + llaves: tuple[str]│ │ + id_llave: str            │
-│ + direccion: str           │ │ + descripcion(): str│ │ + sala: int | None         │
-│ + llave: str | None        │ └─────────────────────┘ │ + enemigo: str | None      │
-│ + sala_destino: int        │                         │ + estado: str              │
-└────────────────────────────┘                         └────────────────────────────┘
+┌──────────────▼─────────────┐ ┌───────────▼──────────────┐ ┌─▼──────────────────────────┐
+│  FronteraBloqueadaPuerta   │ │  CicloDependenciaLlaves  │ │  UbicacionLlaveDiagnostico │
+├────────────────────────────┤ ├──────────────────────────┤ ├────────────────────────────┤
+│ + sala_origen: int         │ │ + llaves: tuple[str, ...]│ │ + id_llave: str            │
+│ + direccion: str           │ │ + formato(): str         │ │ + sala: int | None         │
+│ + llave: str | None        │ └──────────────────────────┘ │ + enemigo: str | None      │
+│ + sala_destino: int        │                              │ + estado: str              │
+└────────────────────────────┘                              └────────────────────────────┘
 ```
 
 ---
@@ -72,6 +72,7 @@ Todas las clases de datos son inmutables (`frozen=True, slots=True`) y están re
   - `llaves` (`tuple[str, ...]`): Cadena ordenada de identificadores de llaves que forman el ciclo cerrado. Comienza y termina obligatoriamente con el mismo identificador, el cual debe ser la llave léxicamente menor de todo el ciclo (p. ej. `("itm_a", "itm_b", "itm_a")`).
 - **Métodos**:
   - `formato() -> str`: Devuelve la representación textual de la cadena (p. ej. `"itm_a -> itm_b -> itm_a"`).
+  - Una llave encerrada tras una puerta que la exige a ella misma forma un ciclo de una sola llave y se escribe `("itm_a", "itm_a")`, con la misma forma que cualquier otro ciclo.
 
 ---
 

@@ -97,7 +97,7 @@ Este documento consolida las decisiones de arquitectura, diseño de estructuras 
      - Al concluir el recorrido incremental, se identifican las salas no alcanzadas $V \setminus R$.
      - Un único pase O(V + E) etiqueta las salas inalcanzables en bloques conectados por salidas abiertas. Cada puerta cerrada que entra a un bloque aporta una arista bloque -> llave exigida, y cada llave no obtenida aporta una arista llave -> bloque donde está. El grafo tiene a lo sumo K + E aristas y ninguna sala se visita más de una vez.
   2. **Detección Tricolor de Ciclos Representativos**:
-     - Sobre el grafo de llaves $G_{dep}$, se ejecuta una búsqueda en profundidad utilizando un arreglo de estados `color: list[int]` de tamaño $K_{no}$ con tres valores:
+     - Sobre el grafo de llaves $G_{dep}$, se ejecuta una búsqueda en profundidad utilizando un arreglo de estados `color: list[int]` de tamaño $K_{no}$ más el número de bloques, con tres valores:
        - `0 (BLANCO)`: nodo no visitado.
        - `1 (GRIS)`: nodo en la ruta de recursión actual (en la pila de exploración).
        - `2 (NEGRO)`: nodo completamente explorado y libre de nuevos ciclos.

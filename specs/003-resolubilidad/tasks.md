@@ -135,7 +135,7 @@ Depende de Fase B completa.
 ### Pruebas de controlador — se escriben primero
 
 - [ ] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación (caso del Apéndice B, método con sufijo `_ApendiceB`), el reporte se imprime con el formato del §3 del contrato (métodos con `reporte` en el nombre), inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista, y devuelve el código 0 (cripta resoluble o no resoluble), 1 (datos inválidos) o 2 (error externo) según el contrato §1.1 (métodos con `codigo_salida` en el nombre) — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
-  - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015, FR-RES-016, SC-005
+  - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015, FR-RES-016, FR-RES-024, SC-005
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: archivo existe, todos los casos fallan por `ImportError`.
 
@@ -183,15 +183,15 @@ Depende de Fase A completa (el verificador ya funciona); puede solaparse con Fas
   - Comando: `py -m cripta --bench --solo resolubilidad`
   - Hecho: función importable; generador produce siempre la misma cripta para `SEMILLA_BENCH = 20260928`.
 
-- [ ] T019 Registrar carga `"resolubilidad"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad(escala: float = 1.0)` que llama `_generar_cripta_encadenada(k, 20, SEMILLA_BENCH)` para tres escalas crecientes: `k` de 10, 20 y 40 (ajustados por `escala`), con 200, 400 y 800 salas respectivamente; ejecuta `VerificadorResolubilidad.verificar()` y `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` cada una 3 veces con `_medir`, reporta con `_comparar` la aceleración sin fijar cifras de rendimiento en el código fuente — **Modificado**: `cripta/bench/cargas_bench.py`
+- [ ] T019 Registrar carga `"resolubilidad"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad(escala: float = 1.0)` que llama `_generar_cripta_encadenada(k, 20, SEMILLA_BENCH)` para tres escalas crecientes: `k` de 10, 20 y 40 (ajustados por `escala`), con 200, 400 y 800 salas respectivamente; ejecuta `VerificadorResolubilidad.verificar()` y `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` cada una 3 veces con `_medir`, reporta con `_comparar` la aceleración sin fijar cifras de rendimiento en el código fuente. Debe funcionar sin red y admitir ejecución a escala mínima (`escala=0.01`), como la recorre `tests/bench/test_cargas_bench.py`  El valor de `k` y las salas por segmento nunca bajan de 1 (por ejemplo con `max(1, int(k * escala))`), para que el generador reciba siempre una cripta con al menos una llave — **Modificado**: `cripta/bench/cargas_bench.py`
   - Requisitos: FR-RES-018, FR-RES-020, SC-002, SC-007
   - Comando: `py -m cripta --bench --solo resolubilidad`
-  - Hecho: salida con formato `=== RESOLUBILIDAD ... ===` y línea `recorrido_ingenuo_reiniciado es N.Nx más lento que recorrido_incremental`.
+  - Hecho: salida con formato `=== RESOLUBILIDAD ... ===` y línea `recorrido_ingenuo_reiniciado es N.Nx más lento que recorrido_incremental`; `py -m unittest tests.bench.test_cargas_bench` pasa con la carga registrada.
 
-- [ ] T020 Registrar carga `"resolubilidad_cota"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad_cota()` que descarga (o lee de `CacheDisco`) la lista de criptas publicadas, elige la de mayor total de salas **sin fijar su id en el código** (Principio IV), ejecuta `VerificadorResolubilidad.verificar()` con `_medir` (se mide solo la verificación, sin contar la descarga de datos) y lo compara contra el límite de 200 ms; imprime `CUMPLE` o `FALLA` — **Modificado**: `cripta/bench/cargas_bench.py`
+- [ ] T020 Registrar carga `"resolubilidad_cota"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad_cota(escala: float = 1.0)` que lee sin red el listado de criptas publicadas desde `fixtures/` mediante `ClienteOffline`, siguiendo el patrón de `ciclo_referencia` de la capacidad 001; elige la cripta con mayor total de salas **sin fijar su id en el código** (Principio IV), carga los datos necesarios desde fixtures y ejecuta `VerificadorResolubilidad.verificar()` con `_medir` (se mide solo la verificación, sin contar la lectura de datos) y lo compara contra el límite de 200 ms; imprime `CUMPLE` o `FALLA`. Debe admitir escala mínima (`escala=0.01`) y ejecutarse sin red, como la recorre `tests/bench/test_cargas_bench.py` — **Modificado**: `cripta/bench/cargas_bench.py`
   - Requisitos: FR-RES-020, SC-001, SC-002
   - Comando: `py -m cripta --bench --solo resolubilidad_cota`
-  - Hecho: salida con formato `=== RESOLUBILIDAD_COTA ... ===` indicando `(límite 200.0 ms: CUMPLE)`; el id de cripta se obtiene dinámicamente del catálogo.
+  - Hecho: salida con formato `=== RESOLUBILIDAD_COTA ... ===` indicando `(límite 200.0 ms: CUMPLE)`; el id de cripta se obtiene dinámicamente del listado; `py -m unittest tests.bench.test_cargas_bench` pasa con la carga registrada.
 
 ---
 
@@ -238,7 +238,7 @@ Depende de Fases A–D completas.
 ### Dependencias entre fases
 
 ```
-Fase A (T001–T009)  ──►  Fase B (T010–T011)  ──►  Fase C (T012–T015)
+Fase A (T001–T009)  ──►  Fase B (T010–T011)  ──►  Fase C (T012–T016)
                     │                                        │
                     └──────────────────────────────────────► Fase D (T017–T021)
                                                              │
@@ -267,7 +267,7 @@ T001 ──► T002 ──► T005 ──► T006 ──► T007 ──► T008 
 
 - **[P] dentro de Fase A**: T002, T003 y T004 pueden escribirse simultáneamente (mismo archivo de pruebas, distintos métodos).
 - **[P] dentro de Fase B**: ninguna; T010 empieza cuando la Fase A está completa.
-- **[P] dentro de Fase C**: T012 puede iniciarse en paralelo con tareas de otros archivos; T013 integra base, vistas falsas y consola en una tarea atómica.
+- **[P] dentro de Fase C**: T012 puede iniciarse en paralelo con tareas de otros archivos; T013 integra base, vistas falsas y consola en una tarea atómica. Fase C comprende T012–T016.
 - **[P] Fases C y D**: pueden avanzar en paralelo una vez Fase B esté completa.
 - **[P] dentro de Fase E**: T022 y T023 pueden ejecutarse simultáneamente.
 

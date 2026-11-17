@@ -760,3 +760,17 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 **Prompt (resumido):** Segunda corrección de tasks.md de la 002 tras la revisión del Pull Request: referencias, etiquetas y ubicación de la comparación de costos.
 
 **Para qué se usó:** Dejar las tareas consistentes con la spec y el plan antes de fusionar el PR de documentación.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo archivos dentro de specs/004-linea-de-tiempo/: el uso del pergamino no es una acción numerada (spec primero); relación entre la línea vigente y partida.log; fuente del contenido de salas en la reconstrucción aislada; problema de pasar t al número de acción; registro de retroceso pausado; proyección compartida entre historia y replay; borde del recorte; tratamiento de lo no reversible; coordinación de archivos compartidos; --hasta solo con --replay; un solo cambio de versión del formato por esta capacidad con el conocimiento de la 002 en los checkpoints, incluidos los costos de salida; vistas de la 001. [...]"
+
+**Prompt (resumido):** Corregir huecos de diseño del plan de la línea de tiempo y una aclaración de la especificación sobre el pergamino, con la coordinación de las capacidades 001 y 002.
+
+**Para qué se usó:** Dejar el plan y sus artefactos consistentes con partida.log, el pergamino y la versión final de la 002.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo archivos dentro de specs/004-linea-de-tiempo/: numeración tras el pergamino (el número de una acción revertida se reutiliza), mecanismo de ajuste de inventario por el pergamino, replay completo con pergamino, fuente del contenido al reconstruir sin precarga, definición del punto de control, búsqueda binaria de t a número de acción y corrección de una fila del pergamino. [...]"
+
+**Prompt (resumido):** Segunda corrección de la especificación y el plan de la línea de tiempo tras la revisión: numeración, estado vivo tras el pergamino, replay y reconstrucción sin E/S por consulta.
+
+**Para qué se usó:** Cerrar las contradicciones de numeración y los huecos de diseño detectados antes de generar las tareas.

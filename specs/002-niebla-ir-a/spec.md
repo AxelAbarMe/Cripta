@@ -18,6 +18,8 @@
 - P: ¿Consultar el mapa conocido consume tiempo, se registra o altera el historial de retroceso, y qué registro deja una orden «ir a» rechazada o sin pasos? → R: Consultar el mapa no consume tiempo, no se registra ni altera el historial de retroceso. Las órdenes «ir a» rechazadas —incluidos destino no explorado, inexistente o igual a la sala actual— y las que no tienen ruta conocida desde el inicio no consumen tiempo, no se registran ni alteran el historial. Para un viaje que ejecuta pasos, el comentario se escribe una sola vez por orden, inmediatamente antes de la línea del primer movimiento, y permanece aunque el viaje se detenga después.
 - P: Al apagar la antorcha, ¿se conserva lo que ya exploró mientras estuvo encendida? → R: Sí, se conserva. Según Parte II §3.3, la antorcha explora vecinas al entrar a una sala, por lo que encenderla dentro de una sala no explora en ese momento; el conocimiento generado por una entrada, incluidas sus observaciones de puertas, se revierte junto con esa entrada mediante el pergamino.
 
+- P: ¿Cómo se trata una salida sin puerta que pueda cerrarse? → R: Se considera abierta desde que su sala se revela como explorada, sin necesidad de observación. Se registra como decisión del grupo pendiente de confirmar con el profesor.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1: Consultar lo conocido del laberinto (Prioridad: P1)
@@ -76,6 +78,7 @@ Como jugador, quiero ordenar «ir a» una sala explorada y que el personaje avan
 15. **Dado** que la antorcha exploró salas vecinas y luego se apaga, **Cuando** el jugador consulta el mapa conocido, **Entonces** esas salas y observaciones se conservan.
 16. **Dado** que el jugador enciende la antorcha dentro de una sala, **Cuando** permanece en ella, **Entonces** no se exploran vecinas por ese encendido; la exploración ocurre al entrar a una sala mientras la antorcha está encendida.
 17. **Dado** que al entrar con la antorcha encendida se observan puertas y se exploran vecinas, **Cuando** el pergamino revierte esa entrada, **Entonces** esas observaciones y exploraciones vuelven al estado de conocimiento previo a la entrada.
+18. **Dado** que una salida de una sala explorada no tiene puerta que pueda cerrarse, **Cuando** se revela esa sala como explorada, **Entonces** la salida se considera abierta sin necesidad de observación.
 
 ### Casos Límite
 
@@ -99,7 +102,7 @@ Como jugador, quiero ordenar «ir a» una sala explorada y que el personaje avan
 ### Requisitos Funcionales
 
 - **FR-NIE-001**: El sistema debe asignar a cada sala del punto de vista del jugador uno de tres estados: explorada, avistada o desconocida. La sala inicial empieza explorada en el instante cero.
-- **FR-NIE-002**: Una sala explorada es aquella a la que el jugador entró al menos una vez. El jugador conoce su nombre, salidas, costos y estado de las puertas según la última observación.
+- **FR-NIE-002**: Una sala explorada es aquella a la que el jugador entró al menos una vez o que la antorcha reveló conforme a FR-NIE-005. El jugador conoce su nombre, salidas, costos y estado de las puertas según la última observación.
 - **FR-NIE-003**: Una sala no explorada que es destino de una salida de una sala explorada debe figurar como avistada, y el jugador solo debe saber que existe una sala tras esa salida. Las demás salas no exploradas permanecen desconocidas.
 - **FR-NIE-004**: El jugador observa una puerta cuando está en cualquiera de las dos salas que conecta. El mapa conocido debe recordar el estado de su última observación aunque el estado real cambie después.
 - **FR-NIE-005**: Mientras la antorcha esté encendida, al entrar a una sala deben quedar exploradas también todas sus vecinas por cualquier salida, abierta o cerrada. Se revela el nombre y las salidas de esas vecinas, pero no su contenido ni se activan sus enemigos o trampas. Se observa la puerta entre la sala del jugador y cada vecina; las demás puertas de esas vecinas quedan no observadas hasta que el jugador entre en una de las salas que conectan. Encender la antorcha dentro de una sala no explora vecinas hasta una entrada posterior. Apagarla no elimina el conocimiento ya adquirido.
@@ -122,10 +125,11 @@ Como jugador, quiero ordenar «ir a» una sala explorada y que el personaje avan
 - **FR-NIE-022**: Apagar la antorcha no debe eliminar las salas ni observaciones ya conocidas por su efecto.
 - **FR-NIE-023**: Encender la antorcha mientras el jugador permanece en una sala no debe explorar sus vecinas en ese momento; esa exploración ocurre al entrar a una sala mientras la antorcha está encendida.
 - **FR-NIE-024**: Al revertir con pergamino una entrada que produjo exploraciones u observaciones por antorcha, el conocimiento de esas salas y puertas debe volver al estado previo a la entrada.
+- **FR-NIE-025**: Una salida que no tiene puerta que pueda cerrarse se considera abierta desde que su sala se revela como explorada, sin necesidad de observación.
 
 ### Entidades Clave
 
-- **Sala conocida**: Sala del laberinto y estado de conocimiento que el jugador tiene sobre ella, con la información revelada que corresponda.
+- **Sala conocida**: Sala del laberinto y estado de conocimiento que el jugador tiene sobre ella; es explorada si el jugador entró al menos una vez o si la antorcha la reveló conforme a FR-NIE-005, con la información revelada que corresponda.
 - **Observación de puerta**: Último estado de una puerta observado por el jugador desde cualquiera de las salas que conecta.
 - **Viaje automático**: Orden del jugador para alcanzar una sala explorada mediante movimientos ordinarios, con recalculación de ruta y motivos de detención observables.
 - **Estado de partida**: Incluye el conocimiento del jugador para persistencia, retroceso y consulta histórica.
@@ -147,6 +151,7 @@ Como jugador, quiero ordenar «ir a» una sala explorada y que el personaje avan
 - El costo de salida usado por la vista y por el viaje corresponde al costo del terreno definido en Parte II §3.1.
 - Los eventos y activaciones que suceden al entrar a una sala conservan las reglas de Parte I; esta funcionalidad añade la parada del viaje cuando hay enemigos, sin redefinir el combate ni las trampas.
 - Decisiones del grupo tomadas en la aclaración, pendientes de confirmar con el profesor porque el enunciado no las fija expresamente:
+  - Una salida sin puerta que pueda cerrarse se considera abierta desde que su sala se revela como explorada, conforme a FR-NIE-025.
   - Una puerta no observada no se considera abierta y «ir a» no puede cruzarla.
   - Si coinciden varios motivos de detención se comunican todos, en el orden fijo: llegada al destino, enemigos vivos en la sala, daño recibido. Solo cuentan los enemigos vivos y el daño se evalúa al terminar el paso y sus eventos.
   - «Ir a» hacia la sala actual no tiene efecto, y iniciar un viaje en una sala con enemigos vivos está permitido.

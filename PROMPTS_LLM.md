@@ -696,3 +696,18 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 **Prompt (resumido):** Segunda ejecución del análisis de solo lectura de la capacidad de niebla de guerra e «ir a» después de las correcciones del primer análisis.
 
 **Para qué se usó:** Confirmó que los 24 requisitos, los escenarios y los seis casos del Apéndice B tienen tarea de prueba. Señaló la falta de claridad sobre cómo se usa el pergamino durante el viaje, que se resolvió con una aclaración del plan sin cambiar la especificación, y dos observaciones menores de etiquetas. La pendiente de guardado binario sigue bloqueada por la 004.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo archivos dentro de specs/002-niebla-ir-a/: FR-NIE-002 (explorada incluye la antorcha), una salida sin puerta cerrable se conoce abierta al revelarse, la 004 es dueña del formato binario y de su versión (tarea de guardado como «Depende de 004»), costos de salida en listas propias, cita del Apéndice B, coordinación con las vistas de la 001 y renumeración de tareas."
+
+**Prompt (resumido):** Aplicar la revisión del Pull Request de la capacidad 002 a la especificación, el plan y las tareas.
+
+**Para qué se usó:** Incorporar las correcciones de la revisión de saull04 antes de fusionar el PR de documentación.
+
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo tasks.md y plan.md de la capacidad 002: referencia de la tarea que depende de 004, citar el escenario 3.18 en lugar de B-NIE-007, criterio de hecho de la implementación de vistas, etiqueta de dependencia con 001 y ubicar la comparación de costos guardados en la prueba y la carga del harness."
+
+**Prompt (resumido):** Segunda corrección de tasks.md de la 002 tras la revisión del Pull Request: referencias, etiquetas y ubicación de la comparación de costos.
+
+**Para qué se usó:** Dejar las tareas consistentes con la spec y el plan antes de fusionar el PR de documentación.

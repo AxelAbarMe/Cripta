@@ -366,5 +366,5 @@ tests/
 | **FR-RES-021**: Costos contradictorios abortan con `CriptaDatosInvalidosError`| `CriptaMapa._validar_costos` | `test_costos_contradictorios_aborta_sin_reporte`| N/A |
 | **FR-RES-022**: Puertas cerradas sin llave y llaves ausentes en consulta | `VerificadorResolubilidad` | `test_puerta_sin_llave_y_llave_sin_ubicacion` | N/A |
 | **FR-RES-023**: Presupuesto agotado aborta con `CriptaLimiteError` | `ServicioResolubilidad` | `test_presupuesto_agotado_sin_reporte_parcial` (SC-008) | N/A |
-| **SC-001**: Verificación $< 200\text{ ms}$ en la mayor cripta publicada | `VerificadorResolubilidad` | `test_cota_rendimiento_cripta_mayor` | `bench_resolubilidad_cota` |
-| **SC-002**: Costo lineal en salas, salidas y llaves | `VerificadorResolubilidad` | `test_escalabilidad_lineal_sintetica` | `bench_resolubilidad` |
+| **SC-001**: Verificación $< 200\text{ ms}$ en la mayor cripta publicada | `VerificadorResolubilidad` | Solo `--bench` (depende del equipo; sin prueba unittest) | `bench_resolubilidad_cota` |
+| **SC-002**: Costo lineal en salas, salidas y llaves | `VerificadorResolubilidad` | Solo `--bench` (depende del equipo; sin prueba unittest) | `bench_resolubilidad` |

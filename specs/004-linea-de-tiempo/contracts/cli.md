@@ -8,6 +8,7 @@
 - Se presenta como mínimo: reloj, sala, vida y estadísticas, inventario, efectos activos, enemigos de la sala y su vida, y mapa conocido.
 - Una consulta válida o rechazada no consume tiempo, no se registra, no altera el estado ni cambia el historial de retroceso.
 - Si se rechaza, se informa el motivo.
+- `#k` se rechaza si es cero o mayor que la cantidad de acciones vigentes; el pergamino no recibe número.
 
 ## Configurar checkpoints
 
@@ -19,7 +20,7 @@
 
 - Forma: `py -m cripta --replay partida.log --hasta <t>`. `--hasta` solo se acepta junto con `--replay`.
 - Reproduce la bitácora completa para construir la misma línea vigente que la partida viva y consulta con el mismo componente que `historia <t>`.
-- Si `<t>` supera el reloj final, limita la consulta al reloj final e indica que la partida terminó antes de `<t>`.
+- Si `<t>` supera el reloj final (la partida terminó antes de `<t>`), consulta el reloj final, imprime el estado final e indica el final anticipado.
 - Si la partida termina antes de `<t>`, imprime el estado final e indica el final anticipado.
 - No inicia la vista interactiva.
 

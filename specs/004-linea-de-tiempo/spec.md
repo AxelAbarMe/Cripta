@@ -163,3 +163,5 @@ Como jugador, quiero indicar cada cuántas acciones se guardan puntos de control
   - El uso de pergamino no se numera: recorta la línea y la numeración continúa desde la última acción vigente.
   - Los archivos guardados de la Parte I se rechazan por versión y no se ofrece migración (el enunciado permite también migrarlos explícitamente).
   - `--checkpoint-cada K` exige un entero mayor o igual que 1; un valor inválido se rechaza al iniciar informando el motivo y la partida no inicia.
+  - Como los pergaminos quedan fuera de la reversión (Parte I §2.11), `historia` de instantes anteriores al uso de un pergamino reconstruye el inventario a partir de las acciones vigentes, y el efecto del pergamino se aplica desde su posición en adelante.
+  

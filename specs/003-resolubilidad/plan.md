@@ -10,7 +10,7 @@
 
 La capacidad de **Verificación de Resolubilidad** introduce un mecanismo formal de análisis estático previo al inicio de una partida para determinar deterministamente si una cripta puede completarse bajo las reglas del juego. Una cripta es resoluble si y solo si el jugador, partiendo de la `sala_inicial`, puede obtener la `llave_salida` y acceder a la `sala_salida` atravesando una puerta que requiera explícitamente dicha llave (FR-RES-001).
 
-Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta publicada más grande (SC-001) con un costo total aproximadamente lineal en salas, salidas y llaves ($O(V + E + K \log K)$, SC-002) y en pleno cumplimiento de las prohibiciones constitucionales (`heapq`, `bisect`, `collections`, `networkx`, `set`, `dict` como índice/tabla y `list.sort()`/`sorted()`), el diseño adopta:
+Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta publicada más grande (SC-001) con un costo total $O(E \log V + K \log K)$ en salas, salidas y llaves, aproximadamente lineal para las escalas previstas (SC-002), y en pleno cumplimiento de las prohibiciones constitucionales (`heapq`, `bisect`, `collections`, `networkx`, `set`, `dict` como índice/tabla y `list.sort()`/`sorted()`), el diseño adopta:
 1. **Recorrido Incremental Único**: Un algoritmo de avance integrado sobre el grafo mediante una `Cola` FIFO propia (`cripta/estructuras/cola.py`). La adquisición de una llave desbloquea y encola directamente las puertas que estaban esperando por ella sin retroceder ni reiniciar el recorrido desde la sala inicial (FR-RES-018).
 2. **Pre-Indexación y Tablas Contiguas Directas sin `dict` ni `set`**: Un catálogo compacto de identificadores de llaves ordenado con ordenamiento propio (`catalogo_llaves: list[str]`), resolución `id_llave -> indice_entero` mediante búsqueda binaria manual en $O(\log K)$ (sin `bisect`), y arreglos planos contiguos `list` indexados por entero en $O(1)$ para posesión de llaves, puertas pendientes, llaves por sala y salas visitadas.
 3. **Detección Determinista de Ciclos de Dependencia por DFS Tricolor**: Construcción en tiempo lineal de un grafo reducido de dependencias de llaves $G_{dep} = (K_{no}, E_{dep})$ mediante flood-fill desde la frontera bloqueada sobre las salas inalcanzables ($O(V_{unreach} + E_{unreach})$), seguido de una búsqueda en profundidad (DFS) con estados tricolores (blanco, gris, negro) y pila ancestral. Aísla de forma determinista exactamente un ciclo concreto representativo por cada grupo de llaves que se bloquean entre sí, normalizado al menor identificador léxico de llave (FR-RES-012).
@@ -37,7 +37,7 @@ Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta p
 
 **Objetivos de Rendimiento**:
 - Tiempo de verificación $< 200\text{ ms}$ en la cripta publicada más grande (hoy `cripta-06`, 300 salas) en el equipo local de referencia (SC-001).
-- Costo total de tiempo aproximadamente lineal en función de $V$ (salas), $E$ (salidas) y $K$ (llaves): $O(V + E + K \log K)$ (SC-002).
+- Costo total de tiempo $O(E \log V + K \log K)$ en función de $V$ (salas), $E$ (salidas) y $K$ (llaves), aproximadamente lineal para las escalas previstas (SC-002).
 - Sobrecosto marginal en memoria lineal $O(V + K)$ sobre listas contiguas indexadas por entero.
 
 **Restricciones Constitucionales**:
@@ -242,9 +242,9 @@ tests/
 | Registro y liberación de puertas pendientes | $O(E_p)$ puertas | `list[list[tuple]]` contiguo | $O(1)$ inserción / drenado | $O(E_p)$ |
 | Flood-fill sobre salas inalcanzables | 1 vez (solo si no es resoluble) | `Cola` / arreglo `visitada_unreach` | $O(V_{unreach} + E_{unreach})$ | $O(V)$ |
 | Detección de ciclos por DFS tricolor | 1 vez (solo si no es resoluble) | `list[int]` tricolor + pila contigua | $O(K_{no} + E_{dep})$ | $O(K)$ |
-| **Costo Total del Recorrido Incremental** | **1 vez por verificación** | **Estructuras integradas** | **$O(V + E + K \log K)$** | **$O(V + E + K \log K)$** |
+| **Costo Total del Recorrido Incremental** | **1 vez por verificación** | **Estructuras integradas** | **$O(E \log V + K \log K)$** | **$O(V + E + K)$** |
 
-> Como $K \le 100$ en criptas reales, $K \log_2 K \le 700$ operaciones elementales, por lo que el costo total es efectivamente lineal en $V$ y $E$, cumpliendo holgadamente el criterio SC-002 y la cota de 200 ms (SC-001).
+> `CriptaMapa.obtener(sala_id)` consulta el `VectorOrdenado` de salas en $O(\log V)$; al examinar hasta $E$ salidas, estas consultas cuestan $O(E \log V)$. El catálogo aporta $O(K \log K)$ y el diagnóstico de salas/ciclos $O(V + E + K)$. Por tanto, el total es $O(E \log V + K \log K)$, aproximadamente lineal en las escalas acotadas de esta feature; SC-001 se confirma midiendo `resolubilidad_cota`.
 
 ---
 
@@ -266,9 +266,10 @@ tests/
 | `cripta/servicios/servicio_partida.py` | **MODIFICADO** | En `_armar` o previo a instanciar `Partida`, integra la verificación de resolubilidad y expone el resultado para el controlador. |
 | `cripta/controlador/controlador_cripta.py` | **MODIFICADO** | Acepta parámetro `forzar: bool = False`. En `_iniciar_partida`, solicita y muestra el reporte mediante la vista; si no es resoluble y `forzar == False`, aborta el inicio sin entrar al bucle interactivo. |
 | `cripta/vista/vista_base.py` | **MODIFICADO** | Agrega método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False)`. |
-| `cripta/vista/vista_consola.py` | **MODIFICADO** | Implementa `mostrar_reporte_resolubilidad` imprimiendo el diagnóstico estructurado en formato de 113 columnas. |
+| `cripta/vista/vista_consola.py` | **MODIFICADO** | Implementa `mostrar_reporte_resolubilidad` imprimiendo el diagnóstico estructurado con ancho de 81 caracteres según el contrato §3. |
 | `cripta/__main__.py` | **MODIFICADO** | Agrega banderas `--verificar` (recibe ID de cripta) y `--forzar`. Si `--verificar` está presente, ejecuta `ServicioResolubilidad.verificar()`, imprime el reporte a `sys.stdout` y retorna 0 sin instanciar la vista ni el controlador. Pasa `forzar` a `ControladorCripta`. |
 | `cripta/bench/cargas_bench.py` | **MODIFICADO** | Agrega generador sintético determinista de criptas con llaves encadenadas y la función `bench_resolubilidad` registrada en `CARGAS` bajo `"resolubilidad"`. |
+| `tests/servicios/test_servicio_bench.py` | **NUEVO** | Prueba reproducibilidad del generador y las cargas sintéticas con semilla fija (FR-RES-020, SC-007). |
 | `cripta/servicios/servicio_bench.py` | **Sin cambios** | Despacha dinámicamente las cargas registradas en `CARGAS`, por lo que detecta `"resolubilidad"` automáticamente. |
 | `tests/cliente_falso.py` | **Sin cambios** | Ya incluye `obtener_llaves` y retorno de `LlaveUbicacionDTO` (consolidado en 001). |
 | `tests/cripta_artificial.py` | **Sin cambios** | Mantiene generador en cuadrícula de la Parte I. |
@@ -281,10 +282,10 @@ tests/
 ## 5. Mediciones `--bench` Previstas (Incluida la Alternativa Descartada)
 
 ### 5.1 Carga Sintética `resolubilidad`: Recorrido Incremental vs Recorrido Ingenuo Reiniciado
-- **Objetivo**: Demostrar empíricamente que el recorrido incremental único ($O(V + E + K \log K)$) supera ampliamente a la alternativa ingenua descartada de repetir el recorrido completo por cada llave descubierta ($O(K \cdot (V + E))$) sobre criptas sintéticas con muchas llaves encadenadas (FR-RES-020, SC-007).
+- **Objetivo**: Demostrar empíricamente que el recorrido incremental único ($O(E \log V + K \log K)$) supera ampliamente a la alternativa ingenua descartada de repetir el recorrido completo por cada llave descubierta ($O(K \cdot (V + E \log V))$) sobre criptas sintéticas con muchas llaves encadenadas (FR-RES-020, SC-007).
 - **Diseño de la Carga Sintética**:
   - Función generadora determinista regida por `SEMILLA_BENCH = 20260928`.
-  - Construye una cripta de $K = 40$ llaves encadenadas en serie a través de $V = 800$ salas ($20$ salas por segmento).
+  - Ejecuta tres escalas crecientes: $(K,V)=(10,200)$, $(20,400)$ y $(40,800)$ salas ($20$ salas por segmento), con máximo $K=40$ y $V=800$.
   - Cada segmento $i$ contiene una puerta cerrada que requiere la llave $k_i$, y la llave $k_i$ reside en una sala lateral accesible únicamente desde el segmento $i$.
   - La última sala contiene la puerta final que exige `llave_salida`.
 - **Medición**:
@@ -330,7 +331,7 @@ tests/
 
 1. **Uso de `VectorOrdenado` para Búsqueda de Salas (`CriptaMapa._salas`)**:
    - En la Parte I, `CriptaMapa` almacena las salas en un `VectorOrdenado` donde `obtener(sala_id)` realiza búsqueda binaria en $O(\log V)$.
-   - *Evaluación bajo la carga nueva*: Durante la verificación de resolubilidad, se examinan las salidas de las salas transitables $O(E)$ veces. Para $V = 1\,000$ salas y $E \le 4\,000$ salidas, realizar consultas a través de `CriptaMapa` implicaría $4\,000 \times \log_2(1\,000) \approx 40\,000$ comparaciones, un costo que se confirmará con la medición de la cota (`resolubilidad_cota`).
+   - *Evaluación bajo la carga nueva*: Durante la verificación de resolubilidad, se examinan las salidas de las salas transitables $O(E)$ veces. Para $V = 1\,000$ salas y $E \le 4\,000$ salidas, realizar consultas a través de `CriptaMapa` implicaría $4\,000 \times \log_2(1\,000) \approx 40\,000$ comparaciones, un costo que se confirmará con la medición de la cota (`resolubilidad_cota`). Cada consulta cuesta $O(\log V)$, así que el término de las salidas del costo total es $O(E \log V)$ y el costo global se estima como $O(E \log V + K \log K)$; la medición de T021 aporta evidencia para estas escalas.
    - *Decisión*: Se mantiene `CriptaMapa` intacto. No obstante, para el estado de exploración de resolubilidad (salas visitadas y llaves en sala), **NO se utiliza `VectorOrdenado`**, sino listas contiguas indexadas por entero en $O(1)$, evitando duplicar búsquedas binarias.
 2. **Presupuesto de Solicitudes y Endpoint `/llaves`**:
    - En la Parte I, cada cripta trae su propio `presupuesto_solicitudes` (en su `general.json`), que cuenta los datos generales, las páginas del esqueleto y el contenido de las salas.
@@ -362,9 +363,10 @@ tests/
 | **FR-RES-017**: Consulta de llaves bajo contrato 001 con presupuesto y caché | `ServicioResolubilidad.verificar` | `test_servicio_llaves_presupuesto_y_cache` (SC-006) | N/A |
 | **FR-RES-018**: Recorrido incremental único sin recorridos extra | `VerificadorResolubilidad.verificar` | `test_recorrido_incremental_un_solo_paso` | `bench_resolubilidad` |
 | **FR-RES-019**: Puertas cerradas en un lado resueltas bilateralmente | `CriptaMapa.sincronizar_puertas` | `test_puerta_unilateral_sincronizada` | N/A |
-| **FR-RES-020**: Comparación en `--bench` contra alternativa ingenua | `bench/cargas_bench.py` | `test_bench_resolubilidad_reproducible` (SC-007) | `bench_resolubilidad` |
+| **FR-RES-020**: Comparación en `--bench` contra alternativa ingenua | `bench/cargas_bench.py` | `tests/servicios/test_servicio_bench.py::test_bench_resolubilidad_reproducible` (SC-007) | `bench_resolubilidad` |
 | **FR-RES-021**: Costos contradictorios abortan con `CriptaDatosInvalidosError`| `CriptaMapa._validar_costos` | `test_costos_contradictorios_aborta_sin_reporte`| N/A |
 | **FR-RES-022**: Puertas cerradas sin llave y llaves ausentes en consulta | `VerificadorResolubilidad` | `test_puerta_sin_llave_y_llave_sin_ubicacion` | N/A |
 | **FR-RES-023**: Presupuesto agotado aborta con `CriptaLimiteError` | `ServicioResolubilidad` | `test_presupuesto_agotado_sin_reporte_parcial` (SC-008) | N/A |
+| **FR-RES-024**: Códigos de salida de `--verificar` | `cripta/__main__.py:main` | `test_cli_verificar_codigos_salida` | N/A |
 | **SC-001**: Verificación $< 200\text{ ms}$ en la mayor cripta publicada | `VerificadorResolubilidad` | Solo `--bench` (depende del equipo; sin prueba unittest) | `bench_resolubilidad_cota` |
 | **SC-002**: Costo lineal en salas, salidas y llaves | `VerificadorResolubilidad` | Solo `--bench` (depende del equipo; sin prueba unittest) | `bench_resolubilidad` |

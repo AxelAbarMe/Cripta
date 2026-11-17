@@ -143,28 +143,23 @@ Depende de Fase B completa.
 
 ### Implementación de CLI y vista
 
-- [ ] T013 [P] Agregar método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False) -> None` a `cripta/vista/vista_base.py` — **Modificado**: `cripta/vista/vista_base.py` y las vistas falsas que heredan de `VistaBase` en `tests/controlador/test_controlador_cripta.py` (se les agrega un `mostrar_reporte_resolubilidad` vacío para que sigan instanciándose). Hacer T014 inmediatamente después y no ejecutar la suite completa entre ambas, porque `VistaConsola` no podrá instanciarse hasta que implemente el método
-  - Requisitos: FR-RES-013
-  - Comando: `py -m unittest discover -s tests -t .`
-  - Hecho: `VistaBase` define el método abstracto; `py -c "from cripta.vista.vista_base import VistaBase"` sin error; `py -m unittest discover -s tests -t .` sigue en OK.
-
-- [ ] T014 Implementar `mostrar_reporte_resolubilidad` en `cripta/vista/vista_consola.py`: imprime por `sys.stdout` el reporte formateado según el esquema de `contracts/contrato_resolubilidad.md` §3 (ancho 81 caracteres con `=`, sección de llaves obtenidas o diagnóstico de no resolubilidad, puertas de frontera, ciclos); acepta `forzada: bool` para agregar la advertencia de inicio forzado — **Modificado**: `cripta/vista/vista_consola.py`
+- [ ] T013 Agregar el método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False) -> None` a `cripta/vista/vista_base.py`, agregar implementación vacía a las vistas falsas que heredan de `VistaBase` en `tests/controlador/test_controlador_cripta.py`, e implementar el método en `cripta/vista/vista_consola.py`. La implementación imprime por `sys.stdout` el reporte según `contracts/contrato_resolubilidad.md` §3, con ancho de 81 caracteres, secciones de llaves obtenidas o diagnóstico de no resolubilidad, puertas de frontera y ciclos, y advertencia cuando `forzada` sea verdadero — **Modificado**: `cripta/vista/vista_base.py`, `tests/controlador/test_controlador_cripta.py` y `cripta/vista/vista_consola.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
-  - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
-  - Hecho: `py -m unittest tests.controlador.test_controlador_resolubilidad -k reporte` pasa y la salida coincide con el formato del §3 del contrato.
+  - Comando: `py -m unittest discover -s tests -t .`
+  - Hecho: todas las vistas siguen instanciándose; la suite completa pasa y el reporte coincide con el formato de §3 (81 caracteres).
 
-- [ ] T015 Integrar verificación en `cripta/servicios/servicio_partida.py`: antes de instanciar `Partida`, invocar `ServicioResolubilidad.verificar(id_cripta)` y adjuntar el `ResultadoResolubilidad` al objeto devuelto al controlador — **Modificado**: `cripta/servicios/servicio_partida.py`
+- [ ] T014 Integrar verificación en `cripta/servicios/servicio_partida.py`: antes de instanciar `Partida`, invocar `ServicioResolubilidad.verificar(id_cripta)` y adjuntar el `ResultadoResolubilidad` al objeto devuelto al controlador — **Modificado**: `cripta/servicios/servicio_partida.py`
   - Requisitos: FR-RES-013
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: el controlador recibe el resultado sin abrir vista; T012 pasa.
 
-- [ ] T016 Modificar `cripta/controlador/controlador_cripta.py`: aceptar `forzar: bool = False`; en `_iniciar_partida` (o equivalente), obtener `ResultadoResolubilidad` del servicio, llamar `vista.mostrar_reporte_resolubilidad(resultado, forzada=forzar)`; si `not resultado.es_resoluble and not forzar` retornar sin entrar al bucle interactivo — **Modificado**: `cripta/controlador/controlador_cripta.py`
+- [ ] T015 Modificar `cripta/controlador/controlador_cripta.py`: aceptar `forzar: bool = False`; en `_iniciar_partida` (o equivalente), obtener `ResultadoResolubilidad` del servicio, llamar `vista.mostrar_reporte_resolubilidad(resultado, forzada=forzar)`; si `not resultado.es_resoluble and not forzar` retornar sin entrar al bucle interactivo — **Modificado**: `cripta/controlador/controlador_cripta.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: T012 pasa; las pruebas previas siguen en OK.
 
-- [ ] T017 Agregar banderas `--verificar <id_cripta>` y `--forzar` en `cripta/__main__.py`: si `--verificar` está presente, instanciar `ServicioResolubilidad` con `ClienteOffline` o `ClienteHttp` y `CacheDisco`, llamar `servicio.verificar(id_cripta)`, imprimir `resultado.reporte_texto()` a `sys.stdout`, salir con código `0`/`1`/`2` según contrato §1.1 sin instanciar `VistaConsola`; si no está `--verificar`, pasar `forzar` al controlador — **Modificado**: `cripta/__main__.py`
-  - Requisitos: FR-RES-014, FR-RES-015, FR-RES-016, SC-005
+- [ ] T016 Agregar banderas `--verificar <id_cripta>` y `--forzar` en `cripta/__main__.py`: si `--verificar` está presente, instanciar `ServicioResolubilidad` con `ClienteOffline` o `ClienteHttp` y `CacheDisco`, llamar `servicio.verificar(id_cripta)`, imprimir `resultado.reporte_texto()` a `sys.stdout`, salir con código `0`/`1`/`2` según contrato §1.1 sin instanciar `VistaConsola`; si no está `--verificar`, pasar `forzar` al controlador — **Modificado**: `cripta/__main__.py`
+  - Requisitos: FR-RES-014, FR-RES-015, FR-RES-016, FR-RES-024, SC-005
   - Comando: `py -m cripta --offline --verificar cripta-02` (sin vista interactiva; requiere que los datos de esa cripta ya estén guardados para --offline, por ejemplo tras descargarla en línea una vez); `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: T012 pasa; `--verificar` imprime reporte y sale sin instanciar la vista; `--forzar` pasa la bandera al controlador.
 
@@ -179,12 +174,16 @@ Depende de Fase A completa (el verificador ya funciona); puede solaparse con Fas
 
 ---
 
+- [ ] T017 Escribir `tests/servicios/test_servicio_bench.py` para comprobar que el generador sintético y las cargas producen la misma salida con la misma semilla, usando `test_bench_resolubilidad_reproducible` definido en el plan — **Nuevo**: `tests/servicios/test_servicio_bench.py`
+  - Requisitos: FR-RES-020, SC-007
+  - Comando: `py -m unittest tests.servicios.test_servicio_bench`
+  - Hecho: el test verifica igualdad reproducible para el generador y las cargas con semilla fija.
 - [ ] T018 Implementar generador sintético determinista en `cripta/bench/cargas_bench.py`: función `_generar_cripta_encadenada(k: int, salas_por_segmento: int, semilla: int) -> tuple[CriptaMapa, int, int, str, tuple[LlaveUbicacionDTO,...]]` que construye una cripta de `k` llaves en cadena a través de `k * salas_por_segmento` salas usando `random.Random(semilla)` para ruido aleatorio deterministico (sin `random` global), cada segmento `i` tiene puerta cerrada que requiere llave `k_i` y llave `k_i` en sala lateral; última sala tiene puerta que exige `llave_salida`; sin ningún `dict` ni `set` en la función — **Modificado**: `cripta/bench/cargas_bench.py`
   - Requisitos: FR-RES-020, SC-007
   - Comando: `py -m cripta --bench --solo resolubilidad`
   - Hecho: función importable; generador produce siempre la misma cripta para `SEMILLA_BENCH = 20260928`.
 
-- [ ] T019 Registrar carga `"resolubilidad"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad(escala: float = 1.0)` que llama `_generar_cripta_encadenada(k, 20, SEMILLA_BENCH)` para al menos tres valores crecientes de `k` (proporcionales a `escala`), ejecuta `VerificadorResolubilidad.verificar()` y `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` cada una 3 veces con `_medir` (así se evidencia el costo aproximadamente lineal, SC-002), reporta con `_comparar` la aceleración sin escribir cifras de rendimiento fijas en el código fuente — **Modificado**: `cripta/bench/cargas_bench.py`
+- [ ] T019 Registrar carga `"resolubilidad"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad(escala: float = 1.0)` que llama `_generar_cripta_encadenada(k, 20, SEMILLA_BENCH)` para tres escalas crecientes: `k` de 10, 20 y 40 (ajustados por `escala`), con 200, 400 y 800 salas respectivamente; ejecuta `VerificadorResolubilidad.verificar()` y `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` cada una 3 veces con `_medir`, reporta con `_comparar` la aceleración sin fijar cifras de rendimiento en el código fuente — **Modificado**: `cripta/bench/cargas_bench.py`
   - Requisitos: FR-RES-018, FR-RES-020, SC-002, SC-007
   - Comando: `py -m cripta --bench --solo resolubilidad`
   - Hecho: salida con formato `=== RESOLUBILIDAD ... ===` y línea `recorrido_ingenuo_reiniciado es N.Nx más lento que recorrido_incremental`.
@@ -196,6 +195,13 @@ Depende de Fase A completa (el verificador ya funciona); puede solaparse con Fas
 
 ---
 
+
+
+- [ ] T021 Ejecutar `py -m cripta --bench --solo resolubilidad` y `py -m cripta --bench --solo resolubilidad_cota`, y guardar sus resultados medidos en `docs/bench/` — **Nuevo**: archivos de resultados en `docs/bench/`
+  - Requisitos: FR-RES-020, SC-001, SC-002, SC-007
+  - Comando: ambos comandos indicados
+  - Hecho: ambas cargas terminan y sus resultados quedan guardados en `docs/bench/`.
+
 ## Fase E — Cierre y auditoría
 
 **Propósito**: Garantizar compatibilidad retroactiva, auditar importaciones prohibidas y documentar decisiones.
@@ -205,12 +211,13 @@ Depende de Fases A–D completas.
 
 ---
 
-- [ ] T021 [P] Ejecutar la suite completa (pruebas de la Parte I y nuevas) y verificarr que todas terminan en `OK` — Sin archivos nuevos
+
+- [ ] T022 [P] Ejecutar la suite completa (pruebas de la Parte I y nuevas) y verificar que todas terminan en `OK` — Sin archivos nuevos
   - Requisitos: Principio VIII de la Constitución
   - Comando: `py -m unittest discover -s tests -t .`
   - Hecho: salida `Ran N tests ... OK`, con N igual o mayor al total que tenía main antes de esta rama (sin errores ni fallos en ninguna prueba preexistente).
 
-- [ ] T022 [P] Auditar importaciones prohibidas con `Select-String` en todos los archivos `.py` de `cripta/` y `tests/`: verificar ausencia de `import heapq`, `import bisect`, `from collections`, `import networkx`, y ausencia de `.sort(` / `sorted(` en módulos evaluados — Sin archivos nuevos
+- [ ] T023 [P] Auditar importaciones prohibidas con `Select-String` en todos los archivos `.py` de `cripta/` y `tests/`: verificar ausencia de `import heapq`, `import bisect`, `from collections`, `import networkx`, y ausencia de `.sort(` / `sorted(` en módulos evaluados — Sin archivos nuevos
   - Requisitos: Principio I de la Constitución
   - Comando:
     ```powershell
@@ -218,10 +225,11 @@ Depende de Fases A–D completas.
     ```
   - Hecho: no aparece ninguna importación prohibida; cada `sorted(` o `.sort(` que aparezca se revisa a mano y solo se permite fuera de los ordenamientos evaluados; el uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request.
 
-- [ ] T023 Redactar sección `## 003 Verificación de Resolubilidad` en `DECISIONES.md` (en la raíz del repositorio): registrar (a) razón de adoptar recorrido incremental frente a reinicio BFS, (b) razón de búsqueda binaria manual frente a `bisect`, (c) razón de DFS tricolor frente a Tarjan, (d) razón de desempate con `HeapMinimo` propio frente a `sorted()`, (e) límites conocidos (identificadores dispersos, escala de catálogo) según plan §6 — **Modificado**: `DECISIONES.md`
-  - Requisitos: Principio VII de la Constitución; plan §6
+- [ ] T024 Redactar la sección `5.4 Resolubilidad` en `DECISIONES.md` (en la raíz del repositorio): documentar alternativas consideradas, complejidad, evidencia medida en T021 y límites conocidos según plan §6 — **Modificado**: `DECISIONES.md`
+  - Depende de: T021
+  - Requisitos: Principio VII de la Constitución; plan §6; evidencia de T021
   - Comando: (ninguno automatizable; revisión manual)
-  - Hecho: sección presente, cita las cinco decisiones (a) a (e) y no incluye cifras de rendimiento sin medir.
+  - Hecho: sección `5.4 Resolubilidad` presente; documenta alternativas, complejidad, resultados medidos en T021 y límites conocidos.
 
 ---
 
@@ -230,11 +238,11 @@ Depende de Fases A–D completas.
 ### Dependencias entre fases
 
 ```
-Fase A (T001–T009)  ──►  Fase B (T010–T011)  ──►  Fase C (T012–T017)
+Fase A (T001–T009)  ──►  Fase B (T010–T011)  ──►  Fase C (T012–T015)
                     │                                        │
-                    └──────────────────────────────────────► Fase D (T018–T020)
+                    └──────────────────────────────────────► Fase D (T017–T021)
                                                              │
-                                               Fase E (T021–T023)  ◄── requiere A+B+C+D
+                                               Fase E (T022–T024)  ◄── requiere A+B+C+D
 ```
 
 - **Fase A**: Sin dependencias externas — puede iniciar de inmediato.
@@ -259,9 +267,9 @@ T001 ──► T002 ──► T005 ──► T006 ──► T007 ──► T008 
 
 - **[P] dentro de Fase A**: T002, T003 y T004 pueden escribirse simultáneamente (mismo archivo de pruebas, distintos métodos).
 - **[P] dentro de Fase B**: ninguna; T010 empieza cuando la Fase A está completa.
-- **[P] dentro de Fase C**: T012, T013 pueden iniciarse simultáneamente (distintos archivos); T014 espera T013.
+- **[P] dentro de Fase C**: T012 puede iniciarse en paralelo con tareas de otros archivos; T013 integra base, vistas falsas y consola en una tarea atómica.
 - **[P] Fases C y D**: pueden avanzar en paralelo una vez Fase B esté completa.
-- **[P] dentro de Fase E**: T021 y T022 pueden ejecutarse simultáneamente.
+- **[P] dentro de Fase E**: T022 y T023 pueden ejecutarse simultáneamente.
 
 ---
 
@@ -303,4 +311,4 @@ py -m unittest tests.modelo.test_resolubilidad
 - Las etiquetas `[US1]`–`[US5]` mapean las historias de usuario de `spec.md` en orden de prioridad.
 - Ninguna tarea contiene commits ni push; los hace el humano.
 - El registro de este comando en `PROMPTS_LLM.md` se hace fuera de las tareas, según instrucción explícita del usuario.
-- Las cifras de rendimiento (`resolubilidad_cota`) se miden y registran en T020 al momento de ejecutar `--bench`; no se fijan en el código fuente.
+- Las cifras de rendimiento (`resolubilidad_cota`) se miden y registran en T021 al momento de ejecutar `--bench`; no se fijan en el código fuente.

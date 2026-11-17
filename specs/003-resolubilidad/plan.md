@@ -48,7 +48,7 @@ Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta p
 - Respeto del presupuesto de solicitudes de red: la consulta `/llaves` descuenta una solicitud y maneja reintentos 429; el agotamiento de presupuesto aborta la ejecución sin emitir reportes parciales (Principio V, FR-RES-023, SC-008).
 - Afirmaciones de rendimiento respaldadas con `--bench` (Principio VI).
 - Especificación antes que código (Principio VII).
-- Compatibilidad retroactiva: las 222 pruebas previas deben continuar ejecutándose en `OK` (Principio VIII).
+- Compatibilidad retroactiva: las pruebas previas de la Parte I deben continuar ejecutándose en `OK` (Principio VIII).
 
 ---
 
@@ -65,7 +65,7 @@ Para garantizar una ejecución estrictamente inferior a 200 ms sobre la cripta p
 | **V. Presupuesto de red** | **PASÓ** | La consulta `GET /v1/criptas/{dungeon_id}/llaves` descuenta una solicitud de `ContadorSolicitudes`, soporta reintentos por 429 y se persiste en `CacheDisco`. Si el presupuesto se agota, aborta informando el error sin reporte parcial (FR-RES-023, SC-008). |
 | **VI. Rendimiento con --bench** | **PASÓ** | Se planifica e implementa la carga sintética `resolubilidad` en `cripta/bench/cargas_bench.py`, contrastando el recorrido incremental frente a la alternativa ingenua reiniciada sobre criptas sintéticas con cadenas de llaves dependientes de `SEMILLA_BENCH` (FR-RES-020, SC-007). Cota $< 200\text{ ms}$ a medir sobre la cripta publicada más grande (SC-001). |
 | **VII. Especificación antes que código** | **PASÓ** | La especificación formal `spec.md` fue aprobada previamente sin mención de clases ni estructuras. Todas las tareas de diseño y código trazan a requisitos `FR-RES-NNN`. |
-| **VIII. Compatibilidad con Parte I** | **PASÓ** | Las 222 pruebas preexistentes permanecen intactas. `CriptaMapa` reutiliza la validación de costos contradictorios y la unificación bilateral de puertas cerradas. |
+| **VIII. Compatibilidad con Parte I** | **PASÓ** | Las pruebas preexistentes permanecen intactas. `CriptaMapa` reutiliza la validación de costos contradictorios y la unificación bilateral de puertas cerradas. |
 
 ---
 

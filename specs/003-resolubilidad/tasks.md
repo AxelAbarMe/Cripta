@@ -161,7 +161,7 @@ Depende de Fase B completa.
 - [ ] T016 Modificar `cripta/controlador/controlador_cripta.py`: aceptar `forzar: bool = False`; en `_iniciar_partida` (o equivalente), obtener `ResultadoResolubilidad` del servicio, llamar `vista.mostrar_reporte_resolubilidad(resultado, forzada=forzar)`; si `not resultado.es_resoluble and not forzar` retornar sin entrar al bucle interactivo — **Modificado**: `cripta/controlador/controlador_cripta.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
-  - Hecho: T012 pasa; las 222 pruebas previas siguen en OK.
+  - Hecho: T012 pasa; las pruebas previas siguen en OK.
 
 - [ ] T017 Agregar banderas `--verificar <id_cripta>` y `--forzar` en `cripta/__main__.py`: si `--verificar` está presente, instanciar `ServicioResolubilidad` con `ClienteOffline` o `ClienteHttp` y `CacheDisco`, llamar `servicio.verificar(id_cripta)`, imprimir `resultado.reporte_texto()` a `sys.stdout`, salir con código `0`/`1`/`2` según contrato §1.1 sin instanciar `VistaConsola`; si no está `--verificar`, pasar `forzar` al controlador — **Modificado**: `cripta/__main__.py`
   - Requisitos: FR-RES-014, FR-RES-015, FR-RES-016, SC-005
@@ -205,10 +205,10 @@ Depende de Fases A–D completas.
 
 ---
 
-- [ ] T021 [P] Ejecutar la suite completa de 222 pruebas de la Parte I y verificar que todas terminan en `OK` — Sin archivos nuevos
+- [ ] T021 [P] Ejecutar la suite completa (pruebas de la Parte I y nuevas) y verificarr que todas terminan en `OK` — Sin archivos nuevos
   - Requisitos: Principio VIII de la Constitución
   - Comando: `py -m unittest discover -s tests -t .`
-  - Hecho: salida `Ran 222+ tests ... OK` (sin errores ni fallos en ninguna prueba preexistente).
+  - Hecho: salida `Ran N tests ... OK`, con N igual o mayor al total que tenía main antes de esta rama (sin errores ni fallos en ninguna prueba preexistente).
 
 - [ ] T022 [P] Auditar importaciones prohibidas con `Select-String` en todos los archivos `.py` de `cripta/` y `tests/`: verificar ausencia de `import heapq`, `import bisect`, `from collections`, `import networkx`, y ausencia de `.sort(` / `sorted(` en módulos evaluados — Sin archivos nuevos
   - Requisitos: Principio I de la Constitución

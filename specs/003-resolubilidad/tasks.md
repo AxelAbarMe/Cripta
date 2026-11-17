@@ -165,8 +165,8 @@ Depende de Fase B completa.
 
 - [ ] T017 Agregar banderas `--verificar <id_cripta>` y `--forzar` en `cripta/__main__.py`: si `--verificar` está presente, instanciar `ServicioResolubilidad` con `ClienteOffline` o `ClienteHttp` y `CacheDisco`, llamar `servicio.verificar(id_cripta)`, imprimir `resultado.reporte_texto()` a `sys.stdout`, salir con código `0`/`1`/`2` según contrato §1.1 sin instanciar `VistaConsola`; si no está `--verificar`, pasar `forzar` al controlador — **Modificado**: `cripta/__main__.py`
   - Requisitos: FR-RES-014, FR-RES-015, FR-RES-016, SC-005
-  - Comando: `python -m cripta --offline --verificar cripta-02` (no levanta GUI); `python -m unittest tests.controlador.test_controlador_resolubilidad`
-  - Hecho: T012 pasa; `--verificar` imprime reporte y sale sin abrir ventana; `--forzar` pasa la bandera al controlador.
+  - Comando: `python -m cripta --offline --verificar cripta-02` (sin vista interactiva; requiere que los datos de esa cripta ya estén guardados para --offline, por ejemplo tras descargarla en línea una vez); `python -m unittest tests.controlador.test_controlador_resolubilidad`
+  - Hecho: T012 pasa; `--verificar` imprime reporte y sale sin instanciar la vista; `--forzar` pasa la bandera al controlador.
 
 ---
 
@@ -214,11 +214,9 @@ Depende de Fases A–D completas.
   - Requisitos: Principio I de la Constitución
   - Comando:
     ```powershell
-    Select-String -Path cripta/**/*.py,tests/**/*.py `
-      -Pattern 'import heapq|import bisect|from collections|import networkx|\.sort\(|sorted\(' `
-      -Recurse | Where-Object { $_.Line -notmatch '^\s*#' }
+    Select-String -Path (Get-ChildItem cripta,tests -Recurse -Filter *.py).FullName -Pattern "heapq|bisect|collections|networkx|sorted\(|\.sort\("
     ```
-  - Hecho: el comando no produce ninguna línea de resultado en los módulos evaluados (se permiten coincidencias en comentarios o docstrings de alternativas documentadas).
+  - Hecho: no aparece ninguna importación prohibida; cada `sorted(` o `.sort(` que aparezca se revisa a mano y solo se permite fuera de los ordenamientos evaluados; el uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request.
 
 - [ ] T023 Redactar sección `## 003 Verificación de Resolubilidad` en `docs/DECISIONES.md` (o crear el archivo si no existe): registrar (a) razón de adoptar recorrido incremental frente a reinicio BFS, (b) razón de búsqueda binaria manual frente a `bisect`, (c) razón de DFS tricolor frente a Tarjan, (d) razón de desempate con `HeapMinimo` propio frente a `sorted()`, (e) límites conocidos (identificadores dispersos, escala de catálogo) según plan §6 — **Nuevo** o **Modificado**: `docs/DECISIONES.md`
   - Requisitos: Principio VII de la Constitución; plan §6

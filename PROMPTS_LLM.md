@@ -1098,3 +1098,17 @@ Al terminar, dime qué cambiaste por punto y verifica con git diff que solo camb
 
 **Para qué se usó:** Cerrar inconsistencias detectadas al revisar los cambios aplicados al PR de la 003 antes de aprobarlo.
 
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo plan.md y tasks.md dentro de specs/003-resolubilidad/. No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego; si algo cambia el resultado observable y no está decidido, detente y pregunta.
+1. tasks.md: corrige el diagrama de dependencias entre fases, porque la Fase C va de T012 a T016, y cualquier otro rango desplazado por la numeración actual.
+2. tasks.md T012: agrega FR-RES-024 a Requisitos, porque prueba los códigos de salida de --verificar.
+3. tasks.md T020 y plan.md §5.2: la carga resolubilidad_cota no usa red. Lee el listado de criptas desde fixtures/ con ClienteOffline, como hace ciclo_referencia de la capacidad 001 (verifícalo en cripta/bench/cargas_bench.py), y elige la de mayor total de salas sin fijar su id en el código. Agrega que T019 y T020 deben ejecutarse a escala mínima y sin red, porque tests/bench/test_cargas_bench.py recorre todas las cargas de CARGAS.
+4. plan.md: elimina el texto suelto «[2 coincidencias]» de §5.1 y §5.2.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/003-resolubilidad/.
+```
+
+**Prompt (resumido):** Ajustes finales de la 003 tras la revisión: rangos de fases, requisito de T012, origen de datos offline de la carga de cota y limpieza del plan.
+
+**Para qué se usó:** Cerrar inconsistencias detectadas al revisar los cambios aplicados al PR de la 003 antes de aprobarlo.

@@ -463,6 +463,255 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 
 **Para qué se usó:** Agregar llaves.json al script y documentar los campos nuevos. El script se ejecutó a mano para cripta-02 a cripta-06.
 
+### 2026-11-14 — Codex CLI 0.167.2 (GPT-6-Luna)
+**Prompt:**
+```text
+$speckit-specify
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Contexto: ya estoy en la rama 002-niebla-ir-a. No crees ni cambies de rama y no hagas commit ni push. Redacta todo en español, incluidas las etiquetas de la plantilla (Dado, Cuando, Entonces). Solo crea o modifica archivos dentro de specs/002-niebla-ir-a/ y .specify/feature.json. No ejecutes clarify ni plan. Puedes LEER (sin modificar) .specify/memory/constitution.md, docs/MAPA_CODIGO.md, specs/001-terreno-cazador/spec.md y docs/enunciados/Parte2.md (§3.3, §3.4, §5.3 y Apéndice B) para mantener coherencia con los costos de salida y con la bitácora de partida. Ante cualquier duda gana el enunciado. No inventes reglas, cifras ni límites que no estén en el enunciado: si falta una regla, anótala en Supuestos como decisión del grupo o detente y pregunta.
+
+Capacidad: niebla de guerra y viaje automático "ir a".
+
+Para el jugador cada sala está en uno de tres estados: EXPLORADA (entró al menos una vez; la inicial lo está desde t=0; conoce nombre, salidas, costo de cada salida y estado de sus puertas según la última observación), AVISTADA (no explorada pero destino de una salida de una sala explorada; solo sabe que existe una sala detrás), DESCONOCIDA (nada).
+Memoria de puertas: el jugador observa una puerta cuando está en cualquiera de las dos salas que conecta; el mapa recuerda el estado de su última observación aunque haya cambiado después.
+Antorcha: mientras esté encendida, al entrar a una sala quedan exploradas también todas sus vecinas por cualquier salida, abierta o cerrada; se revela nombre y salidas, no contenido; no se activan sus enemigos ni trampas.
+Todo lo que la vista muestra y lo que usa "ir a" se deriva solo del conocimiento del jugador. El conocimiento es estado del juego: se guarda, se revierte con el pergamino y entra en la línea de tiempo. La interfaz ofrece un comando para ver el mapa conocido (explorada, salidas, avistadas).
+
+"ir a <sala>": lleva al jugador a una sala EXPLORADA mediante movimientos ordinarios. Ruta con el conocimiento del jugador (solo salas exploradas, solo salidas recordadas abiertas), mínimo costo, desempate por primer paso hacia la vecina de menor id. Cada paso es una acción completa del jugador que consume tiempo (costos P2 §3.1) y deja correr los eventos. La ruta se recalcula antes de cada paso. Se detiene si: llega; entra a sala con enemigos (activos o dormidos); recibe daño; o deja de haber ruta conocida. No abre puertas aunque tenga la llave. En partida.log cada paso se registra como movimiento individual y la orden se registra además como comentario. El pergamino revierte solo el último paso.
+El usuario debe poder ver por qué se detuvo el viaje.
+Rendimiento: un paso de "ir a" < 5 ms con el mapa conocido completo de la cripta de referencia.
+
+Escenarios del Apéndice B (cada uno debe ser un escenario de aceptación):
+- ir a sala no explorada: se rechaza, no consume tiempo
+- el mapa recuerda abierta una puerta realmente cerrada: al observarla se actualiza y se recalcula; si no hay ruta, el viaje se detiene sin consumir tiempo adicional
+- ir a entra a sala con enemigos dormidos: se activan (P1 §2.4) y el viaje se detiene
+- con antorcha encendida, entrar explora vecinas sin activar enemigos ni trampas
+- un pergamino revierte una entrada con antorcha: las salas exploradas por la antorcha vuelven al estado anterior
+- un pergamino durante un viaje: revierte solo el último paso y el viaje no continúa
+
+Prefijo de requisitos: FR-NIE-NNN. spec.md dice qué y por qué: sin estructuras de datos, clases, módulos ni archivos de código.
+```
+
+**Prompt (resumido):** Se pidió generar la especificación de la capacidad de niebla de guerra e «ir a»: tres estados de sala (explorada, avistada, desconocida), memoria de puertas, efecto de la antorcha, conocimiento como estado del juego (se guarda, se revierte con el pergamino y entra en la línea de tiempo), comando para ver el mapa conocido, viaje automático con sus condiciones de parada y registro en partida.log, y los seis escenarios del Apéndice B como escenarios de aceptación, con prefijo FR-NIE-NNN y sin estructuras, clases ni módulos.
+
+**Para qué se usó:** Generar spec.md y sus artefactos asociados de la capacidad 002 en la rama 002-niebla-ir-a, para revisarlos contra el enunciado antes de ejecutar clarify.
+
+
+### 2026-11-14 — Claude (Sonnet 5.5, claude.ai)
+**Prompt:**
+```text
+Revisa la especificación generada con spec-kit para la capacidad 002 (niebla de guerra e «ir a») y su lista de calidad (se adjuntaron spec.md y checklists/requirements.md). Contrástalas con el enunciado de la Parte II (§3.3, §3.4, §5.3, §6.1 y Apéndice B) y con la constitución, indica si necesitan cambios antes de ejecutar clarify y redacta el prompt de clarify.
+```
+
+**Prompt (resumido):** Se pidió revisar la especificación de niebla de guerra e «ir a» contra el enunciado y la constitución, decidir si requería correcciones antes de la aclaración y preparar el prompt de clarify.
+
+**Para qué se usó:** Comprobar que la especificación cubriera los seis casos del Apéndice B sin reglas inventadas. Se concluyó que no requiere correcciones y se identificaron seis ambigüedades para resolver en clarify.
+
+### 2026-11-14 — Codex CLI 0.169.0 (GPT-6-Luna)
+**Prompt:**
+```text
+$speckit-clarify
+(pegar aquí el texto completo del prompt anterior)
+```
+
+**Prompt (resumido):** Se pidió resolver, con un máximo de cinco preguntas de una en una y cada una con recomendación, las ambigüedades de la especificación de niebla de guerra e «ir a»: puertas de salas exploradas solo con antorcha, motivos de detención simultáneos, órdenes degeneradas, registro y consumo de tiempo del mapa y de la orden, y comportamiento de la antorcha y del pergamino.
+
+**Para qué se usó:** Dejar la especificación sin ambigüedades en las reglas observables antes de pasar al plan.### 2026-11-14 — Codex CLI (versión y modelo: completar con /status)
+**Prompt:**
+```text
+$speckit-clarify
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Contexto: ya estoy en la rama 002-niebla-ir-a. No crees ni cambies de rama y no hagas commit ni push. Redacta todo en español. Solo modifica specs/002-niebla-ir-a/spec.md. No modifiques checklists/requirements.md y no ejecutes plan. Puedes LEER (sin modificar) docs/enunciados/Parte2.md (§3.3, §3.4, §5.3, §6.1 y Apéndice B), .specify/memory/constitution.md y specs/001-terreno-cazador/spec.md (solo FR-TER-021 y FR-TER-023, por coherencia con el registro de partida.log). Si la respuesta a una duda ya está en el enunciado, no la preguntes: cítala y aplícala. No inventes reglas: lo que no esté en el enunciado queda como decisión del grupo, escrita en Supuestos.
+
+PASO 1. No hay correcciones directas a spec.md.
+
+PASO 2. Formula como máximo estas 5 preguntas, de una en una, cada una con tu recomendación, y actualiza spec.md con cada respuesta en la sección "Aclaraciones", subsección "Sesión 2026-11-14", con el formato "- P: ... → R: ...". Propaga cada respuesta a los requisitos, escenarios y casos límite afectados. Conserva los identificadores existentes; los requisitos y criterios nuevos van al final de su lista con la numeración siguiente, sin renumerar. No nombres estructuras, clases ni módulos.
+a) Salas exploradas solo por la antorcha: se revelan nombre y salidas, pero las puertas que no conectan con la sala donde entró el jugador nunca se han observado. ¿Qué recuerda el mapa de esas puertas y puede «ir a» cruzarlas? (FR-NIE-005, FR-NIE-010)
+b) Motivos de detención: si coinciden varios en un mismo paso (por ejemplo, llegar al destino con enemigos o recibir daño al entrar), ¿se informa uno con orden de prioridad o todos? ¿Un enemigo muerto cuenta como enemigo en la sala? ¿Cuándo se evalúa el daño? El escenario 6 de la historia 3 dice "cuando termina de resolverse ese paso y sus eventos", pero el enunciado solo dice "recibe daño".
+c) Órdenes degeneradas: destino igual a la sala actual, destino que no existe en la cripta y viaje que se inicia estando ya en una sala con enemigos. ¿Se rechazan o se ejecutan, y consumen tiempo?
+d) Tiempo y registro: ¿el comando de ver el mapa conocido consume tiempo, se registra en partida.log o altera el historial de retroceso? Una orden «ir a» rechazada o que no llega a dar ningún paso, ¿deja su comentario en partida.log? Debe ser coherente con la regla de la 001 de que las acciones rechazadas no se registran.
+e) Antorcha: si el jugador la enciende estando ya dentro de una sala, ¿explora las vecinas en ese momento o solo en la siguiente entrada? Si se apaga, ¿lo ya explorado se conserva? Al revertir con pergamino una entrada con antorcha, ¿se revierten también las observaciones de puertas hechas en esa entrada?
+
+Al terminar, muestra un resumen breve de lo cambiado.
+```
+
+**Prompt (resumido):** Se pidió resolver, con un máximo de cinco preguntas de una en una y cada una con recomendación, las ambigüedades de la especificación de niebla de guerra e «ir a»: puertas de salas exploradas solo con antorcha, motivos de detención simultáneos, órdenes degeneradas, registro y consumo de tiempo del mapa y de la orden, y comportamiento de la antorcha y del pergamino.
+
+**Para qué se usó:** Dejar la especificación sin ambigüedades en las reglas observables antes de pasar al plan.
+
+### 2026-11-14 — Claude (Sonnet 5.5, claude.ai)
+**Prompt:**
+```text
+Revisa la especificación de la capacidad 002 tras la sesión de aclaración (se adjuntaron la transcripción de la sesión y el spec.md actualizado) y dime si necesita correcciones antes del commit. Después redacta el prompt de plan.
+```
+
+**Prompt (resumido):** Se pidió revisar la especificación aclarada de niebla de guerra e «ir a» contra el enunciado, decidir si requería correcciones y preparar el prompt del plan.
+
+**Para qué se usó:** Detectar dos viñetas de casos límite con negaciones incompletas que invertían el sentido, registrar en Supuestos las decisiones del grupo derivadas de la aclaración y añadir el aviso de motivo en los rechazos.
+
+### 2026-11-14 — Codex CLI 0.169.0 (GPT-6-Luna)
+**Prompt:**
+```text
+$speckit-plan
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Contexto: ya estoy en la rama 002-niebla-ir-a. No crees ni cambies de rama y no hagas commit ni push. Redacta todo en español. Solo crea o modifica archivos dentro de specs/002-niebla-ir-a/. No modifiques spec.md ni checklists/requirements.md y no ejecutes tasks. Puedes LEER (sin modificar) docs/MAPA_CODIGO.md, specs/001-terreno-cazador/ (plan.md, spec.md y contracts/), docs/enunciados/Parte2.md (§3.3, §3.4, §5.3, §5.5 y §6.1) y el código de cripta/ para citar rutas reales. Cita solo archivos que existan en esta rama y verifícalo. Lo que la capacidad 001 prevé pero aún no está en esta rama (por ejemplo su búsqueda de rutas del cazador) se cita desde specs/001-terreno-cazador/plan.md como "previsto por la 001", nunca como código existente. Si falta una regla, detente y pregunta.
+
+Restricciones obligatorias (constitución): implementar a mano las estructuras; PROHIBIDO heapq, bisect, collections, networkx, set y dict como índice, caché o tabla de búsqueda, y list.sort()/sorted() donde aplique. Permitido list como almacenamiento contiguo indexado por posición entera. Reutiliza estructuras de la Parte I cuando sean adecuadas y cita el archivo. Clases, métodos y atributos nuevos en español. Errores de programación heredan de IndexError o ValueError; CriptaError solo para fallos externos. El modelo no importa red ni archivos; --replay y --bench no instancian la vista. Ningún dato de una cripta concreta en el código.
+
+El plan debe incluir:
+1. Problema y operaciones reales con su frecuencia esperada.
+2. Al menos DOS alternativas por problema y la razón concreta de descarte de cada una.
+3. Decisión (estructura y estrategia) y complejidad de las operaciones más frecuentes.
+4. Impacto en código existente: archivo por archivo (ruta real) marcado como Nuevo, Modificado o Sin cambios.
+5. Mediciones --bench previstas, incluida la de la alternativa descartada, con el comando exacto para reproducirlas. Toda cifra es hipótesis hasta medirla.
+6. Límites conocidos de la decisión.
+7. Revisión de decisiones de la Parte I que esta carga pueda invalidar.
+8. Trazabilidad: tabla FR-NIE -> componente -> medición/prueba. Incluye FR-NIE-001 a FR-NIE-024, SC-NIE-001 a SC-NIE-005 y los casos del Apéndice B.
+No agregues reglas del juego que no estén en spec.md.
+
+Aspectos que el plan debe resolver:
+- Representación del conocimiento del jugador: estado por sala (explorada, avistada, desconocida) y estado recordado por puerta (abierta, cerrada, no observada), con consultas baratas por sala y por puerta, sin dict, set ni bisect.
+- Costo de explorar proporcional a las salas reveladas y no al tamaño del mapa conocido (P2 §5.3), incluida la exploración por antorcha.
+- Cómo registrar e invertir los cambios del conocimiento con el pergamino sin copiar el mapa completo por acción, reutilizando el historial reversible de la Parte I (cita los archivos reales).
+- Declarar explícitamente qué estado nuevo debe guardarse en la partida. La capacidad 004 es dueña del formato binario: este plan no define el formato.
+- Ruta de «ir a» sobre el subgrafo conocido: justificar con mediciones si comparte implementación con la búsqueda del cazador prevista por la 001 o si conviene separarla (P2 §5.3). Recálculo antes de cada paso y desempate por menor identificador.
+- Dónde vive el bucle del viaje respetando MVC: el modelo no conoce la interfaz, y la vista solo muestra el motivo de detención. Registro en partida.log: comentario una sola vez antes del primer movimiento, y coherencia con la regla de la 001 de que los turnos de enemigos no se registran.
+- Cuándo se actualiza la observación de puertas, incluidos los cierres automáticos mientras el jugador está en una sala vecina.
+- Medición de la cota de 5 ms por paso con el mapa conocido completo de la cripta de referencia, y alternativa descartada implementada y medida con una carga sintética determinista por semilla.
+- Compatibilidad con las pruebas de la Parte I.
+
+Al terminar, muestra un resumen breve de los archivos creados.
+```
+
+**Prompt (resumido):** Se pidió generar el plan técnico de la capacidad de niebla de guerra e «ir a», con problema, al menos dos alternativas por decisión, complejidad, impacto archivo por archivo, mediciones con --bench y trazabilidad, citando solo código existente en la rama y declarando el estado nuevo a guardar.
+
+**Para qué se usó:** Generar plan.md y sus artefactos asociados de la capacidad 002, para revisarlos antes de pasar a las tareas.
+
+### 2026-11-15 — Claude (Sonnet 5.5, claude.ai)
+**Prompt:**
+```text
+Revisa el plan generado con spec-kit para la capacidad 002 (se adjuntaron la transcripción de la sesión, plan.md, research.md, data-model.md, quickstart.md y el contrato) y dime si necesita cambios antes de las tareas. Después redacta el prompt de tasks.
+```
+
+**Prompt (resumido):** Se pidió revisar el plan de niebla de guerra e «ir a» contra el código existente y la constitución, indicar las correcciones necesarias y preparar el prompt de tareas.
+
+**Para qué se usó:** Verificar rutas y símbolos citados en el plan, detectar que la búsqueda de rutas de la 001 no es reutilizable sin modificarla, que el formato del comentario del registro y el mecanismo del pergamino durante el viaje no estaban definidos, y que la verificación de guardado depende de una capacidad sin especificar.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6-Luna)
+**Prompt:**
+```text
+$speckit-tasks
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Contexto: ya estoy en la rama 002-niebla-ir-a. No crees ni cambies de rama y no hagas commit ni push. Redacta todo en español, incluidos los títulos de las fases y secciones de la plantilla. Solo crea o modifica specs/002-niebla-ir-a/tasks.md. Usa solo spec.md, plan.md, research.md, data-model.md, quickstart.md y contracts/ de esa carpeta, y puedes LEER (sin modificar) el código de cripta/ y tests/ para citar rutas reales. No agregues reglas del juego ni decisiones de diseño que no estén en esos documentos. Si falta algo, detente y pregunta.
+
+Reglas de la constitución que las tareas deben cumplir:
+- Cada tarea cita los identificadores FR-NIE-NNN que atiende, la ruta real del archivo que toca (marca "Nuevo" o "Modificado" según exista en esta rama, comprobándolo), el comando de prueba que la valida y su criterio de "hecho". Máximo unos 90 minutos por tarea y ninguna tarea sin requisito.
+- Cada escenario de aceptación de spec.md, incluidos los seis casos del Apéndice B, y cada SC-NIE-001 a SC-NIE-005 tiene al menos una tarea de prueba automatizada con unittest que cita el requisito. Las pruebas van antes que el código que las hace pasar. Las carpetas de pruebas nuevas, como tests/aceptacion, llevan su __init__.py en una tarea explícita.
+- Ninguna tarea usa heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Se reutilizan las estructuras propias citadas en plan.md y list solo como almacenamiento contiguo indexado por entero.
+- Los errores de programación heredan de IndexError o ValueError; CriptaError solo para fallos externos.
+- El modelo no importa red, archivos ni vista. --replay y --bench no instancian la vista.
+- Ninguna tarea contiene commits ni push, ni códigos de tarea ni nombres de personas en mensajes de commit.
+- Ninguna tarea escribe cifras de rendimiento antes de medirlas. La cripta de referencia se elige por el mayor total de salas del listado de fixtures, sin fijar su id en el código.
+- Las tareas que necesitan código que aún no está en esta rama llevan la etiqueta "Depende de 001" (costo de salida en el movimiento de partida.py y los métodos esta_vacio y __len__ de HeapMinimo) o "Depende de 004" (codificación binaria del guardado) y no se redactan como si ese código ya existiera.
+
+Organización obligatoria:
+1. Fase A, dominio puro del conocimiento: pruebas primero y luego cripta/modelo/conocimiento_jugador.py (estados de sala, observaciones de puerta, revelación, antorcha, inversas por celda).
+2. Fase B, integración con la partida: entradas a salas, antorcha, observación de cierres automáticos desde una sala vecina, retroceso con pergamino y proyección lógica del conocimiento en EstadoPartida, sin codificación binaria.
+3. Fase C, ruta y viaje: cripta/modelo/ruta_conocida.py (búsqueda propia con HeapMinimo, desempate por menor id), bucle del viaje en el controlador, motivos de detención en orden fijo y cancelación del viaje por cualquier otra acción entre pasos.
+4. Fase D, registro y vista: comentario con # en partida.log (registro, lector y replay), comando de mapa conocido y motivo de detención en la vista.
+5. Fase E, mediciones --bench: carga niebla_rutas con la alternativa de selección lineal y las mediciones de revelación y reversión, cada tarea con el comando exacto.
+6. Fase F, cierre: pruebas de la Parte I en OK, auditoría de importaciones prohibidas, verificación del guardado marcada como bloqueada por la decisión sobre la 004, y una tarea final "Sección de DECISIONES.md".
+
+Marca [P] solo las tareas que tocan archivos distintos y no dependen entre sí. Indica el orden de dependencias entre fases y el punto de corte del Pull Request, que no puede fusionarse antes del de la 001. El registro de este comando en PROMPTS_LLM.md se hace fuera de las tareas.
+```
+
+**Prompt (resumido):** Se pidió generar la lista de tareas de la capacidad de niebla de guerra e «ir a», con pruebas antes que el código, cada tarea ligada a sus requisitos, las dependencias externas de las capacidades 001 y 004 marcadas, y el punto de corte del Pull Request.
+
+**Para qué se usó:** Generar tasks.md para revisarlo antes de ejecutar analyze.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6-Luna)
+**Prompt:** Corrige solo specs/002-niebla-ir-a/tasks.md. No toques ningún otro archivo, no crees ni cambies de rama y no hagas commit ni push. Respeta los finales de línea del archivo y no uses sed -i. Conserva el formato de las tareas; renumera solo lo necesario y actualiza las dependencias y la sección "Cobertura independiente". Comprueba con Test-Path (solo lectura) cada ruta que cites.
+
+1. T028: la ruta es DECISIONES.md en la raíz (Modificado), no docs/DECISIONES.md. Agrega la sección de esta capacidad.
+2. Agrega tareas de prueba (antes del código) y de código para:
+   a. cripta/modelo/efectos.py (Modificado): avisar al conocimiento los cierres automáticos observables desde una sala vecina (FR-NIE-004, FR-NIE-015; B-NIE-002).
+   b. cripta/modelo/resultado_partida.py (Modificado): proyección inmutable del mapa y resultado y motivos del viaje (FR-NIE-007, FR-NIE-008, FR-NIE-013).
+   c. cripta/vista/vista_base.py (Modificado): contrato de presentación del mapa conocido y de la detención, antes de T020.
+   d. cripta/infraestructura/estado_guardado.py (Modificado, coordinar con 004) para el campo lógico del conocimiento y cripta/modelo/persistencia_modelo.py (Modificado) para proyectarlo y restaurarlo, sin codificación binaria. Corrige T008: EstadoPartida está en estado_guardado.py.
+3. Pon T011 antes de T008 y valida T008 con tests.servicios.test_servicio_partida_guardado.
+4. Pon T016 antes de T015.
+5. Valida T022 con tests.servicios.test_servicio_bench; el comando de --bench queda en T023. Divide T022 en tres tareas: selección lineal, revelación y reversión, cada una con su criterio de hecho.
+6. T024: quita tasks.md como ruta de evidencia; no modifica archivos y sus resultados se llevan a la sección de DECISIONES.md.
+7. En T002, T003, T004 y T006 la ruta tests/modelo/test_conocimiento_jugador.py pasa a "Modificado"; solo T001 es "Nuevo".
+8. Divide T010: B-NIE-004 y B-NIE-005 quedan en la Fase B; B-NIE-001, B-NIE-002, B-NIE-003 y B-NIE-006 pasan a la Fase C, antes del bucle del controlador. tests/aceptacion/test_niebla_ir_a.py es Nuevo en la primera y Modificado en la segunda.
+9. T001 cita también los escenarios 1.3 y 1.4. T014 agrega el caso en que el daño mata al jugador (FR-NIE-013: se aplican las reglas de fin de partida y no se informa viaje) y las aserciones de cero tiempo, sin línea en partida.log y sin cambio en el historial para destino no explorado, destino igual a la sala actual y falta de ruta inicial (escenarios 3.1, 3.12, 3.14; FR-NIE-009, 019, 021). T019 agrega o remite a una prueba de que consultar el mapa no consume tiempo ni se registra (FR-NIE-007).
+10. Agrega la etiqueta "Depende de 001" (costo de salida en el movimiento de partida.py) a T014 y T015.
+11. Corrige la nota de paralelismo para que coincida con las tareas marcadas [P].
+12. T026: agrega un comando de solo lectura que verifique que cripta/modelo no importa red, archivos ni vista, y otro que verifique que servicio_replay.py y servicio_bench.py no instancian la vista. Aclara que la búsqueda de set/dict puede traer falsos positivos en comentarios y que se revisan a mano.
+13. En los criterios de T005 y T013 agrega que los errores de programación heredan de IndexError o ValueError.
+Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
+
+**Prompt (resumido):** Se pidió corregir tasks.md de la capacidad 002: rutas, archivos del plan sin tarea, orden de pruebas y código, tareas demasiado grandes y cobertura de escenarios.
+
+**Para qué se usó:** Ajustar la lista de tareas al plan, a la especificación y al estado real del repositorio antes de /speckit-analyze.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/002-niebla-ir-a/tasks.md: coloca la proyección de resultado_partida.py antes del bucle del controlador; agrega la tarea de código de vista_base.py, las pruebas de revelación y reversión del benchmark y el comando de consulta del mapa en el controlador; explicita el punto de corte del Pull Request; reubica T015 y T023 bajo su objetivo; quita las marcas [P] que comparten archivo; fusiona las pruebas duplicadas; corrige T021 a Modificado; deja la medición sin escribir archivos y la sección de DECISIONES.md solo en la tarea final; divide la prueba del ciclo de viaje y ordena el formato."
+
+**Prompt (resumido):** Se pidió una segunda corrección de tasks.md de la capacidad 002: orden de pruebas y código, tarea faltante de vista_base.py, pruebas del benchmark, comando de mapa, punto de corte del Pull Request y formato.
+
+**Para qué se usó:** Dejar tasks.md consistente con el plan y con la regla de pruebas antes del código antes de /speckit-analyze.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/002-niebla-ir-a/tasks.md: renumera las tareas de forma consecutiva, corrige qué prueba del harness es Nueva y cuál Modificada en tests/servicios/test_servicio_bench.py y agrega las líneas en blanco entre encabezados y objetivos."
+
+**Prompt (resumido):** Se pidió una tercera corrección mecánica de tasks.md de la capacidad 002: numeración, estado de una ruta de pruebas y formato.
+
+**Para qué se usó:** Dejar tasks.md consecutivo y consistente con el estado real del repositorio antes de /speckit-analyze.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "/speckit-analyze Sigue las instrucciones de prompts/p2/06-analyze-002.md. Analiza la consistencia entre spec.md, plan.md, research.md, data-model.md, quickstart.md, contracts/, tasks.md y la constitución, en solo lectura: cobertura de FR-NIE-001 a 024, de los escenarios, de los seis casos del Apéndice B y de SC-NIE-001 a 005; estructuras prohibidas; afirmaciones de rendimiento; rutas Nuevo y Modificado; orden de pruebas y código; etiquetas de dependencia con 001 y 004; contradicciones entre plan, quickstart, contrato y modelo de datos. Clasifica los hallazgos por gravedad con archivo y línea."
+
+**Prompt (resumido):** Análisis de solo lectura de la consistencia de la capacidad de niebla de guerra e «ir a» entre especificación, plan, tareas y constitución.
+
+**Para qué se usó:** completar con los hallazgos y lo que se corrigió.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-analyze Sigue las instrucciones de prompts/p2/06-analyze-002.md. Solo lectura: no modifiques ningún archivo. Responde en español, con una tabla de hallazgos por gravedad con archivo y línea, y una lista de requisitos y escenarios sin cobertura."
+
+**Prompt (resumido):** Análisis de solo lectura de la consistencia de la capacidad de niebla de guerra e «ir a» entre especificación, plan, tareas y constitución.
+
+**Para qué se usó:** Detectó que SC-NIE-001, SC-NIE-003 y SC-NIE-005 no estaban citados por tareas de prueba, el nombre ambiguo de la prueba de equivalencia y la falta de salvedad de estimaciones en el plan. Su hallazgo sobre una prueba automatizada del umbral de 5 ms no se adoptó, porque el rendimiento se respalda con --bench.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo plan.md y tasks.md de la capacidad 002: agrega tests/vista/test_vista_consola.py y tests/servicios/test_servicio_bench.py a la tabla de impacto, el árbol y la trazabilidad del plan; marca las complejidades y el objetivo de 5 ms como estimaciones; redacta la cancelación del viaje como cancelación por pergamino; en las tareas, cita SC-NIE-001, 002, 003 y 005 en las pruebas, aclara que T034 valida FR-NIE-018 con --bench y renombra la prueba de equivalencia."
+
+**Prompt (resumido):** Se pidió corregir los hallazgos de /speckit-analyze y dos incoherencias detectadas en la revisión: archivos de pruebas ausentes del plan y una regla de cancelación que la especificación no fija.
+
+**Para qué se usó:** Alinear plan.md y tasks.md con la especificación antes del Pull Request de documentación.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "/speckit-analyze Sigue las instrucciones de prompts/p2/06-analyze-002.md. Solo lectura: no modifiques ningún archivo. Responde en español, con una tabla de hallazgos por gravedad con archivo y línea, y una lista de requisitos y escenarios sin cobertura."
+
+**Prompt (resumido):** Segunda ejecución del análisis de solo lectura de la capacidad de niebla de guerra e «ir a» después de las correcciones del primer análisis.
+
+**Para qué se usó:** Confirmó que los 24 requisitos, los escenarios y los seis casos del Apéndice B tienen tarea de prueba. Señaló la falta de claridad sobre cómo se usa el pergamino durante el viaje, que se resolvió con una aclaración del plan sin cambiar la especificación, y dos observaciones menores de etiquetas. La pendiente de guardado binario sigue bloqueada por la 004.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo archivos dentro de specs/002-niebla-ir-a/: FR-NIE-002 (explorada incluye la antorcha), una salida sin puerta cerrable se conoce abierta al revelarse, la 004 es dueña del formato binario y de su versión (tarea de guardado como «Depende de 004»), costos de salida en listas propias, cita del Apéndice B, coordinación con las vistas de la 001 y renumeración de tareas."
+
+**Prompt (resumido):** Aplicar la revisión del Pull Request de la capacidad 002 a la especificación, el plan y las tareas.
+
+**Para qué se usó:** Incorporar las correcciones de la revisión de saull04 antes de fusionar el PR de documentación.
+
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo tasks.md y plan.md de la capacidad 002: referencia de la tarea que depende de 004, citar el escenario 3.18 en lugar de B-NIE-007, criterio de hecho de la implementación de vistas, etiqueta de dependencia con 001 y ubicar la comparación de costos guardados en la prueba y la carga del harness."
+
+**Prompt (resumido):** Segunda corrección de tasks.md de la 002 tras la revisión del Pull Request: referencias, etiquetas y ubicación de la comparación de costos.
+
+**Para qué se usó:** Dejar las tareas consistentes con la spec y el plan antes de fusionar el PR de documentación.
+
 
 ### 2026-11-10 — Antigravity CLI 1.5.4 (Gemini 3.8 Flash)
 **Prompt:**

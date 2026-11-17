@@ -19,6 +19,7 @@ class SalidaVista:
     direccion: str          # "N", "S", "E" u "O"
     destino: int
     cerrada: bool
+    costo: int              # costo de atravesarla (100 si la conexión no declara)
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,6 +28,7 @@ class EnemigoVista:
     instancia: str
     vida: int
     vida_max: int
+    es_cazador: bool        # True si su comportamiento es el de cazador
 
 
 @dataclass(frozen=True, slots=True)

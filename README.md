@@ -94,15 +94,15 @@ Al guardar, el juego también copia la bitácora en `datos/partida.sav.log`, de 
 
 ```
 py -m cripta --offline --replay docs/ejemplos/partida_cripta-02.log
-py -m cripta --offline --replay docs/ejemplos/partida_cripta-03.log
 py -m cripta --offline --replay docs/ejemplos/partida_cripta-04.log
+py -m cripta --offline --replay docs/ejemplos/partida_cripta-06.log
 ```
 
 | Archivo | Qué muestra |
 |---|---|
-| `partida_cripta-02.log` | Combate con una rata: el daño tiene una parte al azar, y el replay lo repite igual porque usa la misma semilla. |
-| `partida_cripta-03.log` | Uso del pergamino de retroceso: deshace el último movimiento y el tiempo vuelve atrás. |
+| `partida_cripta-02.log` | Salidas con costos distintos (60, 100, 150, 80, 250): cada movimiento hace avanzar el tiempo según el costo de la salida. Una rata ataca al pasar, y al final el pergamino de retroceso deshace un movimiento de costo 120 y el tiempo vuelve atrás. |
 | `partida_cripta-04.log` | Puerta abierta con llave, recorrido por las cámaras ocultas y cierre automático de la puerta. |
+| `partida_cripta-06.log` | Cazador: el jugador despierta a un espectro acechador, se aleja una sala y el espectro lo sigue por la ruta de costo mínimo. También muestra una salida de costo 200 que cuesta el doble de tiempo que una de 100. |
 
 Las tres terminan con código de salida `0` (reproducción fiel).
 
@@ -119,13 +119,13 @@ py -m cripta --bench --escala 5 --markdown resultados.md
 
 Corre **cargas sintéticas** (datos generados con una semilla fija, sin red ni interfaz) que miden cada subsistema y, cuando corresponde, también la alternativa descartada, para comparar. Son la evidencia citada en el Documento de Decisiones.
 
-- `--solo` corre solo las cargas nombradas: `agenda`, `cache`, `disco`, `inventario`, `historial`, `ordenamiento`, `guardado`, `ciclo`, `partida`, `solicitudes`.
+- `--solo` corre solo las cargas nombradas: `agenda`, `cache`, `disco`, `inventario`, `historial`, `ordenamiento`, `guardado`, `ciclo`, `partida`, `solicitudes`, `ruta_cazador`, `invalidacion`, `ciclo_referencia`.
 - `--escala X` multiplica el tamaño de las cargas (por defecto 1; con 5 las mediciones son más finas pero tardan más).
 - `--markdown ARCHIVO` además escribe la tabla de resultados en ese archivo.
 
-**Código de salida:** `0` todo cumple el límite de 20 ms por ciclo de eventos · `1` alguna medición de `ciclo` o `partida` dice NO CUMPLE · `2` se pidió una carga que no existe.
+**Código de salida:** `0` todo cumple el límite de 20 ms por ciclo de eventos · `1` alguna medición de `ciclo`, `partida` o `ciclo_referencia` dice NO CUMPLE · `2` se pidió una carga que no existe.
 
-> Con la escala por defecto, la carga `partida` incluye una cripta artificial de 400 salas, que supera los 20 ms y por eso `--bench` completo termina con código 1. Es un límite conocido y documentado (§4.1 del Documento de Decisiones): las criptas reales son mucho más pequeñas y cumplen.
+> La carga `partida` incluye una cripta artificial de 400 salas. En la Parte I superaba los 20 ms por las pasadas completas del recolector de memoria de Python, y `--bench` completo terminaba con código 1. Desde la Parte II el juego congela la memoria viva después de cada acción (`gc.freeze()`) y esa carga cumple, así que `--bench` completo termina con código 0. Las mediciones de antes y después están en `docs/bench/` y se explican en la sección de la capacidad 001 de `DECISIONES.md`.
 
 ## 7. Archivos que genera el juego
 

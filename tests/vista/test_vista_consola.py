@@ -5,6 +5,7 @@ Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.vista.test
 import unittest
 
 from cripta.controlador.controlador_cripta import Orden
+from cripta.modelo.resultado_partida import EnemigoVista, SalidaVista, VistaPartida
 from cripta.vista.vista_consola import ANCHO, VistaConsola, _caja_mensajes
 
 
@@ -109,6 +110,40 @@ class TestCajaDeMensajes(unittest.TestCase):
 
     def test_sin_mensajes(self):
         self.assertIn("(sin mensajes)", "\n".join(_caja_mensajes(())))
+
+
+def vista_armada(salidas, enemigos):
+    """VistaPartida mínima armada a mano, con la sala 1 como sala actual."""
+    return VistaPartida(
+        sala_id=1, sala_nombre="Sala 1", salidas=tuple(salidas), enemigos=tuple(enemigos), objetos_suelo=(),
+        trampas=(), vida=50, vida_max=100, ataque=6, defensa=2, velocidad=100, efectos_activos=(),
+        objeto_actual=None, objeto_actual_indice=None, inventario_cantidad=0, inventario_capacidad=10,
+        pergaminos=0, retrocesos_posibles=0, arma_equipada=None, armadura_equipada=None, tiempo=0,
+        desenlace="en_curso")
+
+
+def pantalla(vista_partida):
+    vista, salida = crear()
+    vista.mostrar_estado(vista_partida, ())
+    return [linea for bloque in salida for linea in bloque.splitlines()]
+
+
+class TestTerrenoEnLaVista(unittest.TestCase):
+    def test_cada_salida_muestra_su_costo(self):  # FR-TER-024
+        for costo in (250, 100):
+            lineas = pantalla(vista_armada([SalidaVista("E", 2, False, costo)], []))
+            linea = next(l for l in lineas if "Salidas" in l)
+            self.assertIn(str(costo), linea)
+
+    def test_el_cazador_se_distingue_de_los_demas_enemigos(self):  # FR-TER-024
+        cazador = EnemigoVista("Sabueso [e-1]", "e-1", 40, 40, True)
+        otro = EnemigoVista("Rata [e-2]", "e-2", 40, 40, False)
+        lineas = pantalla(vista_armada([], [cazador, otro]))
+        resto = []
+        for numero, enemigo in ((1, cazador), (2, otro)):
+            linea = next(l for l in lineas if enemigo.etiqueta in l)
+            resto.append(" ".join(linea.replace(enemigo.etiqueta, "").replace(f"{numero}.", "").split()))
+        self.assertNotEqual(resto[0], resto[1])
 
 
 if __name__ == "__main__":

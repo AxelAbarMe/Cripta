@@ -1,14 +1,17 @@
 """Decisión de un enemigo en su turno (§2.8).
 
-Este módulo solo DECIDE qué hace el enemigo; ejecutar la acción (atacar, moverse o
-esperar, las tres de costo 100) y reprogramar su siguiente turno lo hace el motor.
-La decisión es una pareja (tipo, direccion): ("atacar", None), ("mover", "N") o ("esperar", None).
+Este módulo solo DECIDE qué hace el enemigo. Ejecutar la acción y reprogramar su siguiente turno
+lo hace el motor (atacar y esperar cuestan 100, moverse cuesta lo que la salida atravesada).
+La decisión es una pareja (tipo, direccion), por ejemplo ("mover", "N"). El cazador agrega el costo.
 """
-from cripta.constantes import RASTRO_ANTIGUEDAD_MAX
+from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, RASTRO_ANTIGUEDAD_MAX
 
 
-def decidir_accion_enemigo(enemigo, sala_jugador_id: int, mapa, azar, tiempo_actual: int):
-    """Si comparte sala con el jugador ataca; si no, aplica su comportamiento."""
+def decidir_accion_enemigo(enemigo, sala_jugador_id: int, mapa, azar, tiempo_actual: int, buscador=None):
+    """Si comparte sala con el jugador ataca. Si no, aplica su comportamiento.
+    El cazador devuelve una tripleta (tipo, direccion, costo), los demás una pareja."""
+    if enemigo.comportamiento == "cazador":
+        return _decidir_cazador(enemigo, sala_jugador_id, mapa, buscador)
     if enemigo.sala_actual == sala_jugador_id:
         return ("atacar", None)
     if enemigo.comportamiento == "errante":
@@ -16,6 +19,15 @@ def decidir_accion_enemigo(enemigo, sala_jugador_id: int, mapa, azar, tiempo_act
     if enemigo.comportamiento == "rastreador":
         return _decidir_rastreador(enemigo, mapa, tiempo_actual)
     return ("esperar", None)   # guardián: nunca abandona su sala
+
+
+def _decidir_cazador(enemigo, sala_jugador_id: int, mapa, buscador):
+    """Ataca si comparte sala. Sin rango o sin buscador espera. Si no, sigue la ruta de costo mínimo."""
+    if enemigo.sala_actual == sala_jugador_id:
+        return ("atacar", None, COSTO_ATACAR)
+    if enemigo.rango is None or buscador is None:
+        return ("esperar", None, COSTO_ESPERAR)
+    return buscador.decidir_paso(enemigo, sala_jugador_id, mapa)
 
 
 def _decidir_errante(enemigo, mapa, azar):

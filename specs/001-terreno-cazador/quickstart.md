@@ -90,10 +90,11 @@ Select-String -Path (Get-ChildItem cripta -Recurse -Filter *.py).FullName -Patte
 ---
 
 ### Escenario 5: Rendimiento con `--bench` (Cálculo Compartido e Invalidación)
-**Objetivo**: Medir empíricamente el tiempo del ciclo de eventos con decenas de cazadores activos (< 20 ms) y contrastar el cálculo compartido vs individual y la reutilización con invalidación vs recalcular siempre (FR-TER-020).
+**Objetivo**: Medir empíricamente el tiempo del ciclo de eventos con decenas de cazadores activos en la cripta de referencia (< 20 ms, P2 §6.1) y contrastar el cálculo compartido vs individual y la reutilización con invalidación vs recalcular siempre (FR-TER-020).
 
 **Comandos**:
 ```powershell
+py -m cripta --bench --solo ciclo_referencia
 py -m cripta --bench --solo ruta_cazador
 py -m cripta --bench --solo invalidacion
 py -m cripta --bench --solo ciclo
@@ -101,9 +102,10 @@ py -m cripta --bench --solo agenda
 py -m cripta --bench --solo historial
 ```
 **Resultado Esperado**:
-- `ruta_cazador`: hipótesis a confirmar: el cálculo compartido mantiene el ciclo por debajo de 20 ms con 30 cazadores, y el individual crece con el número de cazadores. Incluir un caso de rangos heterogéneos.
+- `ciclo_referencia`: verifica FR-TER-020 con cripta-06 (P2 §6.1). Reporta los cazadores activos y el promedio en persecución por ciclo. Se reportan los resultados tal como salgan.
+- `ruta_cazador`: compara el cálculo compartido contra el individual con `H=30` cazadores que persiguen a la vez al mismo jugador (P2 §5.1). Hipótesis a confirmar: el cálculo compartido mantiene el ciclo por debajo de 20 ms con 30 cazadores, y el individual crece con el número de cazadores. Incluir un caso de rangos heterogéneos.
 - `invalidacion`: hipótesis: con puertas estables, reutilizar la tabla reduce las búsquedas frente a recalcular siempre; con puertas inestables se mide a partir de qué frecuencia de cambios deja de convenir. Se reportan los resultados tal como salgan.
-- `ciclo`, `agenda` e `historial`: regresión de la Parte I (sin cazadores). Hipótesis a confirmar: el ciclo sigue por debajo de 20 ms con los costos variables. FR-TER-020 se verifica con cripta-06 (300 salas) cargada desde `fixtures/`, con decenas de cazadores activos. `ruta_cazador` (`H=30`) y la carga sintética de 400 salas quedan para comparar alternativas.
+- `ciclo`, `agenda` e `historial`: regresión de la Parte I (sin cazadores). Hipótesis a confirmar: el ciclo sigue por debajo de 20 ms con los costos variables. FR-TER-020 se verifica con `ciclo_referencia` sobre cripta-06 (300 salas) cargada desde `fixtures/`, con decenas de cazadores activos. `ruta_cazador` (`H=30`) y la carga sintética de 400 salas quedan para comparar el cálculo compartido contra el individual (P2 §5.1).
 
 ---
 

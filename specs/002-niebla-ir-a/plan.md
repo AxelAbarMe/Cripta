@@ -45,6 +45,8 @@ La asignación contigua requiere espacio hasta el mayor id de sala. La carga y e
 
 La capacidad se dimensiona una sola vez desde el mayor id que ya entrega el esqueleto al crear la partida. Así, la asignación inicial puede costar O(max_id), pero explorar después una sala no amplía ni recorre las listas: el costo de cada actualización sigue dependiendo de las celdas reveladas.
 
+Los costos revelados se guardan en listas propias indexadas por id de sala y dirección, con consulta O(1). `ruta_conocida.py` consulta esos costos y no llama a `CriptaMapa.costo_de_conexion`. Se descarta consultar el costo al mapa real en cada relajación porque mezclaría la proyección del jugador con el esqueleto y añadiría una búsqueda por salida. Las pruebas de equivalencia y `--bench` compararán la alternativa de costo almacenado con la consulta al esqueleto sin fijar cifras anticipadas. Los costos forman parte de la proyección persistida y se restauran desde ella.
+
 **Complejidad esperada.** Consultar sala/puerta O(1); revelar R salas y sus puertas incidentes O(R), dado que el grado está acotado por cuatro; memoria O(max_id + 4·max_id). Son estimaciones asintóticas, no mediciones.
 
 ### Observación, cierres y reversión
@@ -53,9 +55,9 @@ La observación se actualiza cuando el jugador entra a una sala y cuando permane
 
 Para cada escritura que cambie una celda se conserva el valor anterior y se registra su inversa mediante `Reversible._registrar_inversa`, conectado a `HistorialRetroceso.registrar_cambio`. No se copia el mapa ni la lista completa por acción; si una entrada revela varias salas, se registran inversas solo para las celdas modificadas. Si una celda ya tenía el mismo valor, no se agrega una inversa redundante. El mecanismo LIFO revierte primero los cambios tardíos de la misma acción. La carga inicial restaura datos sin registrar inversas.
 
-**Estado nuevo que se guarda.** El estado de partida debe contener, por sala, el nivel de conocimiento y las cuatro últimas observaciones de puerta. Se serializa como datos planos, no como closures. La antorcha/efecto activo y su duración solo se incluyen si ya forman parte del estado general de efectos; esta capacidad no redefine ese estado. Capacidad 004 decide campos físicos, versión y formato binario; no se especifica aquí el formato. La restauración reconstruye `ConocimientoJugador` antes de permitir consultas o acciones.
+**Estado nuevo que se guarda.** El estado de partida debe contener, por sala, el nivel de conocimiento, los costos conocidos por salida y las cuatro últimas observaciones de puerta. Se serializa como datos planos, no como closures. La antorcha/efecto activo y su duración solo se incluyen si ya forman parte del estado general de efectos; esta capacidad no redefine ese estado. Esta capacidad define los campos lógicos y su proyección. La 004 define codificación binaria y versión y hará un solo cambio de versión. La restauración reconstruye `ConocimientoJugador` antes de permitir consultas o acciones; los costos se toman de la proyección persistida.
 
-**Dependencia abierta.** La capacidad 004 aún no tiene especificación. La verificación de guardar y cargar (SC-NIE-005) queda bloqueada hasta que el grupo decida quién añade el campo del conocimiento a la codificación binaria y con qué versión. Las tareas de guardado se marcan como bloqueadas por esa decisión.
+**Dependencia.** La 004 es dueña de la codificación binaria y su versión y realizará un solo cambio de versión. Esta capacidad define los campos lógicos del conocimiento y su proyección. Guardar y cargar (SC-NIE-005) depende de 004; no queda pendiente una decisión sobre propiedad del formato.
 
 ### Búsqueda y viaje «ir a»
 
@@ -84,7 +86,7 @@ py -m cripta --bench --solo niebla_rutas --escala 1
 La carga mide sin red ni vista:
 
 1. **Referencia**: mapa conocido completo de la cripta de referencia, elegida como la de mayor total de salas del listado de fixtures sin fijar su id en el código, orígenes/destinos válidos y costo de cada cálculo del primer paso. Informa número de salas/salidas leído del fixture, mediana y máximo, y cumplimiento de 5 ms. El reloj de pared se usa solo para medir, no afecta estado del juego.
-2. **Alternativas de ruta**: búsqueda con `HeapMinimo` (elegida) frente a selección lineal manual (descartada), sobre el mismo grafo y las mismas consultas, con semilla fija y `random.Random(semilla)` propio. Comprueba que ambas dan el mismo primer paso. La selección lineal se reporta aunque resulte más rápida en esta escala.
+2. **Alternativas de ruta**: búsqueda con `HeapMinimo` (elegida) frente a selección lineal manual (descartada), sobre el mismo grafo y las mismas consultas, con semilla fija y `random.Random(semilla)` propio. Comprueba que ambas dan el mismo primer paso. También compara, sobre consultas idénticas, la ruta con costos guardados frente a consultar `CriptaMapa.costo_de_conexion`. La selección lineal se reporta aunque resulte más rápida en esta escala.
 3. **Revelación**: varios R de salas nuevas sobre mapas de tamaños distintos, midiendo solo actualización; compara la ruta incremental con una pasada ingenua por todo el mapa, solo en el harness.
 4. **Reversión**: registra y revierte cambios de antorcha y compara tiempo/número de inversas con copia completa del conocimiento como alternativa de medición, nunca de implementación.
 
@@ -95,9 +97,9 @@ La carga comprobará existencia, integridad y versión del fixture antes de medi
 - El índice directo ocupa memoria hasta el mayor id, no solo hasta el número de salas, si los identificadores son dispersos.
 - Dijkstra se recalcula en cada paso por requisito; un viaje largo repite búsquedas.
 - La relajación de aristas se duplica respecto de la búsqueda del cazador; se acepta por las diferencias de interfaz descritas en la decisión.
-- Esta capacidad y la 001 modifican `partida.py`, `efectos.py`, `cargas_bench.py`, `servicio_bench.py`, `heap_min.py` y `tests/infraestructura/test_partida_log.py`. La 001 debe fusionarse primero y esta rama traer `main` con merge antes de implementar.
+- Esta capacidad y la 001 modifican `partida.py`, `efectos.py`, `cargas_bench.py`, `servicio_bench.py`, `heap_min.py` y `tests/infraestructura/test_partida_log.py`. La 001 debe fusionarse primero y esta rama traer `main` con merge antes de implementar. La 001 también cambia `SalidaVista` (costo), `EnemigoVista` (`es_cazador`), `Partida.vista()` y `_paneles_izquierdos`; con niebla esos datos deben salir del conocimiento. En esta rama los cambios aún están previstos por la 001, no implementados.
 - El umbral de 5 ms depende del equipo y del mapa real de referencia; cada informe debe indicar entorno.
-- Campos de guardado y reconstrucción histórica se coordinan con 004; este plan no controla formato, checkpoints ni migración.
+- Esta capacidad define los campos lógicos del conocimiento y su proyección. La 004 es dueña del formato binario y su versión y hará un solo cambio de versión; esta capacidad no controla checkpoints ni migración. El criterio de cripta de referencia (mayor total de salas o constante `CRIPTA_REFERENCIA` prevista por 001) se unificará con el grupo, sin decisión actual.
 
 ### Revisión de decisiones de la Parte I
 
@@ -116,8 +118,8 @@ Las etiquetas describen esta rama, no el estado futuro. Las rutas **Nuevo** son 
 | Ruta | Estado | Impacto |
 |---|---|---|
 | `cripta/modelo/conocimiento_jugador.py` | Nuevo | Estado sala/puerta, consultas, revelación, observación e inversas. |
-| `cripta/modelo/partida.py` | Modificado | Propiedad del conocimiento, inicialización, entradas/efectos y propuesta del siguiente paso. |
-| `cripta/modelo/resultado_partida.py` | Modificado | Proyección inmutable del mapa y resultado/motivos de viaje. |
+| `cripta/modelo/partida.py` | Modificado / previsto por 001 | Propiedad del conocimiento, inicialización, entradas/efectos y propuesta del siguiente paso; `Partida.vista()` se basa en conocimiento. |
+| `cripta/modelo/resultado_partida.py` | Modificado / previsto por 001 | Proyección inmutable; `SalidaVista` (costo) y `EnemigoVista` (`es_cazador`) se integran con datos del conocimiento. |
 | `cripta/modelo/persistencia_modelo.py` | Modificado | Proyectar/restaurar niveles y observaciones como datos planos. |
 | `cripta/modelo/efectos.py` | Modificado | Avisar de cierres automáticos observables desde una sala vecina. |
 | `cripta/modelo/cripta_mapa.py` | Sin cambios | Mantener representación real completa y costos; conocimiento es otra proyección. |
@@ -125,12 +127,12 @@ Las etiquetas describen esta rama, no el estado futuro. Las rutas **Nuevo** son 
 | `cripta/modelo/historial_retroceso.py` | Sin cambios | Reutilizar `registrar_cambio`, LIFO e intervalos por acción. |
 | `cripta/controlador/controlador_cripta.py` | Modificado | Órdenes de mapa/viaje, bucle por acciones ordinarias y motivo final. |
 | `cripta/vista/vista_base.py` | Modificado | Contrato de presentación de mapa conocido y detención. |
-| `cripta/vista/vista_consola.py` | Modificado | Comando de mapa, estados visibles y motivo sin información oculta. |
+| `cripta/vista/vista_consola.py` | Modificado / previsto por 001 | Comando de mapa, estados visibles y motivo; `_paneles_izquierdos` muestra datos derivados del conocimiento. |
 | `cripta/servicios/servicio_partida.py` | Modificado | Comentario único antes del primer paso y movimientos individuales. |
 | `cripta/infraestructura/partida_log.py` | Modificado | Comentario compatible con lectura/replay. |
 | `cripta/servicios/servicio_replay.py` | Modificado | Omitir comentario de depuración y reproducir acciones. |
 | `cripta/infraestructura/estado_guardado.py` | Modificado, coordinar 004 | Campo lógico para conocimiento; no define codificación binaria. |
-| `cripta/infraestructura/guardado_binario.py` | Modificado, bloqueado por decisión de la 004 | Guardar el conocimiento exige cambiar la codificación; formato y versión corresponden a la 004. |
+| `cripta/infraestructura/guardado_binario.py` | Depende de 004 | La 004 incorpora la proyección al formato binario y realiza el único cambio de versión. |
 | `cripta/bench/cargas_bench.py` | Modificado | Cargas de ruta, revelación y reversión con alternativas. |
 | `cripta/servicios/servicio_bench.py` | Modificado | Registrar `niebla_rutas`; seguir sin vista. |
 | `cripta/modelo/buscador_rutas.py` | Sin cambios (previsto por la 001) | No está en esta rama. No se reutiliza ni se modifica; ver la decisión de búsqueda. |
@@ -150,7 +152,7 @@ Las rutas existentes citadas se comprobaron en esta rama. Los destinos nuevos es
 
 ## Trazabilidad requisito → componente → medición/prueba
 
-Las rutas de pruebas de la tabla son propuestas futuras. Cada prueba citará los requisitos que cubre. `B-NIE-*` nombra los seis casos de niebla e «ir a» de Parte2.md §449-456.
+Las rutas de pruebas de la tabla son propuestas futuras. Cada prueba citará los requisitos que cubre. `B-NIE-*` nombra los casos de niebla e «ir a» del Apéndice B de la Parte II.
 
 | Requisito/caso | Componente | Medición o prueba prevista |
 |---|---|---|
@@ -178,6 +180,7 @@ Las rutas de pruebas de la tabla son propuestas futuras. Cada prueba citará los
 | FR-NIE-022 | Estado antorcha/conocimiento | Apagar conserva salas/puertas; SC-NIE-001/005. |
 | FR-NIE-023 | Activación de antorcha | Encender en sitio no revela hasta entrada; SC-NIE-001. |
 | FR-NIE-024 | Inversas de revelación | B-NIE-005; celdas regresan al estado anterior; SC-NIE-005. |
+| FR-NIE-025 | Salida sin puerta cerrable | Escenario 3.18 (decisión del grupo); abierta al explorar la sala. |
 | SC-NIE-001 | Modelo y vista | Casos de estados y ocultamiento, FR-001–008/022/023; `tests/modelo/test_conocimiento_jugador.py` (Nuevo), `tests/vista/test_vista_consola.py` (Modificado), `tests/aceptacion/test_niebla_ir_a.py` (Nuevo). |
 | SC-NIE-002 | Ruta y validación | FR-009/010/012/014/019/021 y `niebla_rutas`; `tests/modelo/test_ir_a.py` (Nuevo), `tests/servicios/test_servicio_bench.py` (Nuevo). |
 | SC-NIE-003 | Bucle/resultado/servicio | FR-011/013/015/016/017/020 y aceptación integrada; `tests/controlador/test_controlador_cripta.py` (Modificado), `tests/vista/test_vista_consola.py` (Modificado), `tests/aceptacion/test_niebla_ir_a.py` (Nuevo). |

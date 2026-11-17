@@ -5,7 +5,7 @@ Este contrato describe límites entre capas, no añade reglas de juego.
 ## Modelo
 
 - Acepta datos de la partida; no importa red, archivos, controlador ni vista.
-- Consulta nivel de conocimiento por sala y observación por puerta.
+- Consulta nivel de conocimiento por sala, costo conocido por salida y observación por puerta; una salida sin puerta cerrable queda abierta al explorar la sala (FR-NIE-025).
 - Devuelve una proyección sin contenido de salas desconocidas o avistadas.
 - Revela y observa solo lo descrito en `spec.md`.
 - Registra una inversa puntual por celda cambiada en el historial conectado.
@@ -29,4 +29,4 @@ Este contrato describe límites entre capas, no añade reglas de juego.
 
 ## Persistencia
 
-La proyección del conocimiento se entrega al estado lógico y se restaura al cargar. La capacidad 004 posee el formato binario y su compatibilidad; este contrato no define bytes, claves ni migraciones.
+La proyección del conocimiento, incluidos los costos por salida, se entrega al estado lógico y se restaura al cargar sin recalcular costos desde el esqueleto. Esta capacidad define los campos y la proyección; la 004 posee el formato binario y su versión y hará un solo cambio de versión. Este contrato no define bytes, claves ni migraciones.

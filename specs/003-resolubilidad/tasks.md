@@ -45,7 +45,7 @@ aislada de red, disco y vista. Las pruebas van primero.
 
 ### Pruebas de dominio — se escriben primero
 
-- [ ] T001 [P] [US1][US2][US3] Crear el esqueleto de `tests/modelo/test_resolubilidad.py` con los fixtures sintéticos reutilizables (cripta lineal simple, cripta con ciclo, cripta con enemigo errante, cripta con varios órdenes válidos); todos los casos de prueba del bloque T002–T004 se colocan en este archivo — **Nuevo**: `tests/modelo/test_resolubilidad.py`
+- [ ] T001 [US1][US2][US3] Crear el esqueleto de `tests/modelo/test_resolubilidad.py` con los fixtures sintéticos reutilizables (cripta lineal simple, cripta con ciclo, cripta con enemigo errante, cripta con varios órdenes válidos); todos los casos de prueba del bloque T002–T004 se colocan en este archivo — **Nuevo**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-001 a FR-RES-012, FR-RES-018, FR-RES-019, FR-RES-022, SC-003, SC-004
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: el archivo existe, `discover` lo encuentra, todos los casos fallan con `ImportError` o `AttributeError` (aún no hay implementación).
@@ -107,7 +107,7 @@ Depende de Fase A completa (T001–T009 en ✅).
 
 ### Pruebas de servicio — se escriben primero
 
-- [ ] T010 [P] Escribir `tests/servicios/test_servicio_resolubilidad.py` con casos: obtiene llaves por red y persiste en caché, segunda llamada usa caché sin consumir presupuesto, presupuesto agotado antes de llaves lanza `CriptaLimiteError` sin reporte parcial, costos contradictorios en esqueleto lanzan `CriptaDatosInvalidosError`, retorna `ResultadoResolubilidad` completo sobre fixture resoluble — **Nuevo**: `tests/servicios/test_servicio_resolubilidad.py`
+- [ ] T010 Escribir `tests/servicios/test_servicio_resolubilidad.py` con casos: obtiene llaves por red y persiste en caché, segunda llamada usa caché sin consumir presupuesto, presupuesto agotado antes de llaves lanza `CriptaLimiteError` sin reporte parcial, costos contradictorios en esqueleto lanzan `CriptaDatosInvalidosError`, retorna `ResultadoResolubilidad` completo sobre fixture resoluble — **Nuevo**: `tests/servicios/test_servicio_resolubilidad.py`
   - Requisitos: FR-RES-017, FR-RES-021, FR-RES-023, SC-006, SC-008
   - Comando: `py -m unittest tests.servicios.test_servicio_resolubilidad`
   - Hecho: archivo existe, `discover` lo encuentra, todos los casos fallan por `ImportError`.
@@ -258,7 +258,7 @@ T001 ──► T002 ──► T005 ──► T006 ──► T007 ──► T008 
 ### Oportunidades de paralelismo
 
 - **[P] dentro de Fase A**: T002, T003 y T004 pueden escribirse simultáneamente (mismo archivo de pruebas, distintos métodos).
-- **[P] dentro de Fase B**: T010 puede escribirse mientras se revisan las pruebas de Fase A (distintos archivos).
+- **[P] dentro de Fase B**: ninguna; T010 empieza cuando la Fase A está completa.
 - **[P] dentro de Fase C**: T012, T013 pueden iniciarse simultáneamente (distintos archivos); T014 espera T013.
 - **[P] Fases C y D**: pueden avanzar en paralelo una vez Fase B esté completa.
 - **[P] dentro de Fase E**: T021 y T022 pueden ejecutarse simultáneamente.

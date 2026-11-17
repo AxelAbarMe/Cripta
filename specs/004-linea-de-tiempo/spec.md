@@ -14,8 +14,9 @@
 
 - P: ¿Cómo debe numerarse k en historia #k y qué debe ocurrir si k es cero o no corresponde a una acción existente? → R: La primera acción es 1. Cero y cualquier valor sin acción correspondiente se rechazan. «Acción correspondiente» significa una acción que ya ocurrió y sigue vigente (no revertida por pergamino); el valor siguiente a la última acción vigente se rechaza, igual que t mayor que el reloj.
 - P: ¿Una orden del jugador que se rechaza debe contar al numerar las acciones de historia #k? → R: Solo cuentan las acciones ejecutadas y registradas en partida.log; las órdenes rechazadas, las consultas de historia y del mapa, y las líneas de comentario de la bitácora no cuentan. Cada paso de un viaje «ir a» cuenta como una acción.
+- P: ¿El uso de un pergamino recibe número en «historia #k» y cómo continúa la numeración después del recorte? → R: El pergamino no es una acción numerada; recorta la línea vigente y la numeración continúa desde la última acción vigente.
 - P: Si `t` coincide con el momento de una decisión del jugador, ¿qué estado debe mostrar `historia t`? → R: Se incluyen todos los eventos con tiempo menor que t y los eventos de t que la agenda de la Parte I ejecuta antes de la decisión del jugador; se muestra el estado justo antes de esa decisión. La decisión misma y los eventos de t posteriores a ella no se incluyen. Si en t no hay decisión del jugador, se aplica FR-LIN-001: estado después de todos los eventos de t.
-- P: Después de un pergamino que revierte eventos, ¿cómo debe tratarse `historia t` para un instante que pertenecía a esos eventos revertidos? → R: Tras un pergamino el reloj queda en el valor restaurado, así que un `t` posterior a ese reloj se rechaza igual que cualquier `t` mayor que el reloj actual; un `t` menor o igual se acepta y muestra el estado de la línea vigente en ese instante, sin las acciones revertidas. Lo mismo aplica a `historia #k`: si `k` corresponde a una acción revertida, se rechaza.
+- P: Después de un pergamino que revierte eventos, ¿cómo debe tratarse `historia t` para un instante que pertenecía a esos eventos revertidos? → R: Tras un pergamino el reloj queda en el valor restaurado, así que un `t` posterior a ese reloj se rechaza igual que cualquier `t` mayor que el reloj actual; un `t` menor o igual se acepta y muestra el estado de la línea vigente en ese instante, sin las acciones revertidas. Para `historia #k`, #k se refiere solo a la línea vigente: las acciones revertidas dejan de tener número y k se rechaza si es cero o mayor que la cantidad de acciones vigentes.
 - P: Al cargar un archivo guardado de la Parte I, ¿debe el sistema reportar incompatibilidad o permitir una migración explícita? → R: Al cargar un archivo de la Parte I se reporta la incompatibilidad por versión y no se carga; nunca se carga en silencio ni se modifica o borra el archivo (la invalidación es por versión, como pide la capacidad de terreno y cazador). No se ofrece migración.
 - P: ¿Qué valores acepta --checkpoint-cada K y qué ocurre con un valor inválido? → R: K debe ser un entero mayor o igual que 1. Un valor inválido (cero, negativo o no numérico) se rechaza al iniciar, informando el motivo, y la partida no inicia.
 - P: ¿Qué ocurre con una consulta de historia rechazada? → R: Toda consulta de historia rechazada (instante posterior al reloj, «#k» inválido o argumento mal formado) informa el motivo del rechazo y no produce ningún efecto: no consume tiempo, no se registra ni cambia el estado o el historial de retroceso.
@@ -53,7 +54,7 @@ Como jugador, quiero localizar un estado justo antes de una acción numerada par
 
 1. **Dado** que existe una acción vigente del jugador numerada `k` desde 1, **cuando** se consulta `historia #k`, **entonces** se muestra el estado justo antes de esa acción.
 2. **Dado** que existe una acción vigente `k`, **cuando** se consulta `historia #k` con cero, un valor sin acción vigente correspondiente o el valor siguiente a la última acción vigente, **entonces** la consulta se rechaza.
-3. **Dado** que se numeran las acciones, **cuando** se consulta `historia #k`, **entonces** solo cuentan las acciones ejecutadas y registradas en `partida.log`, y no cuentan las órdenes rechazadas, las consultas de historia y del mapa ni las líneas de comentario de la bitácora.
+3. **Dado** que se numeran las acciones, **cuando** se consulta `historia #k`, **entonces** solo cuentan las acciones ejecutadas y registradas, salvo el uso de pergamino, que recorta la línea y no se numera; tampoco cuentan las órdenes rechazadas, las consultas de historia y del mapa ni las líneas de comentario de la bitácora.
 4. **Dado** un viaje «ir a», **cuando** se numeran las acciones, **entonces** cada paso cuenta como una acción.
 
 ### Historia de usuario 3: Reproducir hasta un instante sin vista (Prioridad: P2)
@@ -66,7 +67,7 @@ Como persona que revisa una partida, quiero reproducir su bitácora hasta un ins
 
 **Escenarios de aceptación**:
 
-1. **Dado** una bitácora reproducible, **cuando** se ejecuta `--replay partida.log --hasta t`, **entonces** se imprime el mismo resumen definido para `historia t` sin vista.
+1. **Dado** una bitácora reproducible, **cuando** se ejecuta `--replay partida.log --hasta t`, **entonces** se reproduce la bitácora completa para construir la misma línea vigente que la partida viva y se consulta con el mismo componente que `historia <t>`, sin vista.
 2. **Dado** que la partida termina antes de `t`, **cuando** se ejecuta `--replay partida.log --hasta t`, **entonces** se muestra el estado final y se indica que la partida terminó antes de `t`.
 
 ### Historia de usuario 4: Guardar y cargar la línea de tiempo (Prioridad: P2)
@@ -98,7 +99,7 @@ Como jugador, quiero indicar cada cuántas acciones se guardan puntos de control
 
 - Una consulta a un instante posterior al reloj actual se rechaza.
 - Cuando varios eventos tienen el mismo instante, la consulta incluye todos ellos si no hay una decisión del jugador en ese instante; si la hay, incluye solo los eventos anteriores a la decisión según la agenda de la Parte I.
-- Después de usar un pergamino, el reloj queda en el valor restaurado y las acciones revertidas ya no forman parte de la línea consultable. Un `t` posterior a ese reloj se rechaza; un `t` menor o igual se acepta y muestra el estado de la línea vigente, sin las acciones revertidas. `historia #k` se rechaza si `k` corresponde a una acción revertida.
+- Después de usar un pergamino, el reloj queda en el valor restaurado y las acciones revertidas ya no forman parte de la línea consultable. Un `t` posterior a ese reloj se rechaza; un `t` menor o igual se acepta y muestra el estado de la línea vigente, sin las acciones revertidas. #k se refiere solo a la línea vigente: las acciones revertidas dejan de tener número y k se rechaza si es cero o mayor que la cantidad de acciones vigentes.
 - Una consulta histórica no debe modificar la partida ni el historial de retroceso.
 - Si `--hasta t` queda después del final de la partida reproducida, se muestra el estado final y se indica que terminó antes.
 - Un archivo guardado de la Parte I se rechaza por incompatibilidad de versión sin cargarlo, modificarlo ni borrarlo; no se ofrece migración.
@@ -109,12 +110,12 @@ Como jugador, quiero indicar cada cuántas acciones se guardan puntos de control
 
 - **FR-LIN-001**: Si en el instante `t` no corresponde una decisión del jugador, el sistema DEBE definir el estado como el estado después de ejecutar todos los eventos con tiempo menor o igual que `t`.
 - **FR-LIN-002**: Si en `t` corresponde una decisión del jugador, la consulta DEBE incluir todos los eventos con tiempo menor que `t` y los eventos de `t` que la agenda de la Parte I ejecuta antes de esa decisión. DEBE mostrar el estado justo antes de tomarla, sin incluir la decisión ni los eventos de `t` posteriores a ella.
-- **FR-LIN-003**: El sistema DEBE permitir consultar el pasado mediante `historia <t>` y `historia #k`, donde `#k` identifica el estado justo antes de la acción vigente `k` del jugador. Las acciones se numeran desde 1; solo cuentan las acciones ejecutadas y registradas en `partida.log`. Las órdenes rechazadas, las consultas de historia y del mapa, y las líneas de comentario de la bitácora NO DEBEN contar; cada paso de un viaje «ir a» DEBE contar como una acción. Cero, cualquier valor sin acción vigente correspondiente y el valor siguiente a la última acción vigente DEBEN rechazarse.
+- **FR-LIN-003**: El sistema DEBE permitir consultar el pasado mediante `historia <t>` y `historia #k`, donde `#k` identifica el estado justo antes de la acción vigente `k` del jugador. Las acciones se numeran desde 1; solo cuentan las acciones ejecutadas y registradas, salvo el uso de pergamino, que recorta la línea vigente y no se numera. Las órdenes rechazadas, las consultas de historia y del mapa, y las líneas de comentario de la bitácora NO DEBEN contar; cada paso de un viaje «ir a» DEBE contar como una acción. Cero, cualquier valor sin acción vigente correspondiente y el valor siguiente a la última acción vigente DEBEN rechazarse.
 - **FR-LIN-004**: La consulta DEBE mostrar como mínimo el reloj, la sala del jugador, su vida y estadísticas, el inventario, los efectos activos, los enemigos de la sala consultada con su vida y el mapa conocido en ese momento.
 - **FR-LIN-005**: La consulta histórica NO DEBE consumir tiempo, registrarse como acción, aparecer en `partida.log`, alterar el estado de la partida ni modificar el historial de retroceso.
 - **FR-LIN-006**: El sistema DEBE rechazar la consulta de un instante posterior al reloj actual, incluido el reloj restaurado por un pergamino. Un instante menor o igual que ese reloj DEBE mostrar el estado de la línea vigente en ese instante.
-- **FR-LIN-007**: Las acciones revertidas por pergaminos DEBEN dejar de existir en la línea de tiempo consultable. `historia #k` DEBE rechazarse si `k` corresponde a una acción revertida; una consulta temporal DEBE mostrar solo el estado de la línea vigente, sin incluir acciones revertidas.
-- **FR-LIN-008**: `--replay partida.log --hasta <t>` DEBE reproducir hasta `t` e imprimir el mismo resumen que la consulta histórica, sin instanciar la vista.
+- **FR-LIN-007**: Las acciones revertidas por pergaminos DEBEN dejar de existir en la línea de tiempo consultable. #k se refiere solo a la línea vigente: las acciones revertidas dejan de tener número y k se rechaza si es cero o mayor que la cantidad de acciones vigentes. Una consulta temporal DEBE mostrar solo el estado de la línea vigente, sin incluir acciones revertidas.
+- **FR-LIN-008**: `--replay partida.log --hasta <t>` DEBE reproducir la bitácora completa para construir la misma línea vigente que la partida viva y consultar con el mismo componente que `historia <t>`, sin instanciar la vista. Si `t` supera el reloj final, DEBE limitar la consulta a ese reloj e indicar el final anticipado conforme a FR-LIN-009.
 - **FR-LIN-009**: Si la partida reproducida termina antes de `<t>`, la reproducción DEBE mostrar el estado final e indicar que terminó antes.
 - **FR-LIN-010**: Guardar y cargar una partida DEBE conservar la línea de tiempo completa.
 - **FR-LIN-011**: El formato binario de guardado DEBE cambiar respecto de la Parte I. Al intentar cargar un archivo de la Parte I, el sistema DEBE reportar incompatibilidad por versión y NO DEBE cargarlo en silencio, modificarlo ni borrarlo.
@@ -147,7 +148,7 @@ Como jugador, quiero indicar cada cuántas acciones se guardan puntos de control
 - **SC-LIN-002**: Una consulta válida no cambia el reloj, el estado de la partida, el registro de acciones ni el historial de retroceso.
 - **SC-LIN-003**: En una partida de al menos 5 000 acciones, la consulta tarda menos de 50 ms con el valor predeterminado de `K` justificado por mediciones del grupo.
 - **SC-LIN-004**: La memoria de la línea de tiempo crece con los cambios registrados y los puntos de control, sin crecer como acciones por tamaño del estado.
-- **SC-LIN-005**: La reproducción hasta un instante produce el mismo resumen histórico, o el estado final con indicación de final anticipado cuando corresponda.
+- **SC-LIN-005**: La reproducción de la bitácora completa produce la misma línea vigente y el mismo resumen histórico que `historia <t>`; si `t` supera el reloj final, consulta ese reloj e indica el final anticipado. La prueba incluye una bitácora con pergamino.
 - **SC-LIN-006**: Guardar y cargar conserva la línea de tiempo completa y un archivo de la Parte I nunca se carga en silencio.
 - **SC-LIN-007**: Un valor inválido de `K` y una consulta de historia rechazada informan su motivo y no producen efecto alguno.
 
@@ -159,5 +160,6 @@ Como jugador, quiero indicar cada cuántas acciones se guardan puntos de control
 - Los archivos guardados de la Parte I se rechazan por incompatibilidad de versión, sin cargarlos, modificarlos ni borrarlos, y no se ofrece migración.
 - Decisiones del grupo tomadas en las sesiones de aclaraciones, pendientes de confirmar con el profesor porque el enunciado no las fija expresamente:
   - Las acciones se numeran desde 1 en «historia #k»; solo cuentan las acciones ejecutadas y registradas, y los valores sin acción vigente correspondiente se rechazan.
+  - El uso de pergamino no se numera: recorta la línea y la numeración continúa desde la última acción vigente.
   - Los archivos guardados de la Parte I se rechazan por versión y no se ofrece migración (el enunciado permite también migrarlos explícitamente).
   - `--checkpoint-cada K` exige un entero mayor o igual que 1; un valor inválido se rechaza al iniciar informando el motivo y la partida no inicia.

@@ -1059,3 +1059,42 @@ Informe: tabla con ID, gravedad (CRÍTICA, ALTA, MEDIA, BAJA), archivo y línea,
 **Prompt (resumido):** Se pidió un análisis de solo lectura de la consistencia entre spec.md, plan.md, tasks.md, los anexos y la constitución de la capacidad de resolubilidad, con informe en el chat clasificado por gravedad.
 
 **Para qué se usó:** Detectar requisitos sin tarea, reglas nuevas en el plan, estructuras prohibidas y rutas incoherentes antes de /speckit-implement.
+
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo archivos dentro de specs/003-resolubilidad/ (spec.md, plan.md y tasks.md). No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego salvo lo pedido aquí; si algo cambia el resultado observable y no está decidido, detente y pregunta.
+
+Spec primero:
+1. spec.md: agrega al final de Supuestos las decisiones del grupo pendientes de confirmar con el profesor porque el enunciado no las fija: el orden incluye todas las llaves obtenibles, se informa un ciclo representativo por grupo, y una puerta cerrada sin llave es infranqueable. Agrega también los códigos de salida de --verificar (0 si la verificación termina, sea resoluble o no; 1 por datos inválidos; 2 por error externo) como requisito FR-RES-024 con su escenario, tomando el texto de contracts/contrato_resolubilidad.md §1.1 sin cambiarlo.
+
+Plan y tareas (después de la spec):
+2. tasks.md T013 y T014: fusiónalas en una sola tarea (método abstracto en vista_base.py, vistas falsas de las pruebas e implementación en vista_consola.py) para que la suite completa no se rompa entre ambas.
+3. Unifica el ancho del reporte entre plan.md §4 y la tarea de la vista, tomando el valor de contracts/contrato_resolubilidad.md §3.
+4. Agrega, antes de las tareas de bench, una tarea de prueba (tests/servicios/test_servicio_bench.py, Nuevo o Modificado según exista en esta rama, comprobándolo) para FR-RES-020 y SC-007: el generador sintético y las cargas producen la misma salida con la misma semilla; usa el nombre test_bench_resolubilidad_reproducible del plan.
+5. Agrega una tarea que ejecute py -m cripta --bench --solo resolubilidad y py -m cripta --bench --solo resolubilidad_cota, y guarde los resultados en docs/bench/. La tarea de DECISIONES.md pasa a la sección «5.4 Resolubilidad», con alternativas, complejidad, evidencia medida y límites conocidos, y depende de esa tarea.
+6. plan.md §3.2 y §7: declara el factor O(E log V) de CriptaMapa.obtener o indica que el verificador copia las salas a listas planas en una pasada, y ajusta la complejidad total. §5.1: alinea K = 40 y V = 800 con las tres escalas crecientes que pide la tarea de la carga. Agrega el «#» a la primera línea del plan.
+7. Renumera las tareas y actualiza dependencias y trazabilidad.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/003-resolubilidad/.
+```
+
+**Prompt (resumido):** Aplicar la revisión del Pull Request de la capacidad de resolubilidad a la especificación, el plan y las tareas: supuestos del grupo, códigos de salida de --verificar, fusión de tareas de la vista, ancho del reporte, prueba de reproducibilidad del bench, tarea de mediciones, complejidad declarada y formato del plan.
+
+**Para qué se usó:** Atender los seis puntos bloqueantes y las sugerencias de la revisión antes de fusionar el PR de documentación.
+
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo plan.md y tasks.md dentro de specs/003-resolubilidad/. No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego; si algo cambia el resultado observable y no está decidido, detente y pregunta.
+1. [Solo si ls-files imprimió la ruta] tests/servicios/test_servicio_bench.py ya existe en esta rama: marca T017 y la fila del plan §4 como Modificado, agregando test_bench_resolubilidad_reproducible sin alterar las pruebas existentes.
+2. tasks.md: corrige el diagrama de dependencias entre fases, porque la Fase C va de T012 a T016, y cualquier otro rango desplazado.
+3. tasks.md T012: agrega FR-RES-024 a Requisitos, porque prueba los códigos de salida de --verificar.
+4. tasks.md T020 y plan.md §5.2: la carga resolubilidad_cota no usa red. Lee el listado de criptas desde fixtures/ con ClienteOffline, como hace ciclo_referencia de la 001, y elige la de mayor total de salas sin fijar su id. Agrega que T019 y T020 deben ejecutarse a escala mínima, porque la prueba de tests/bench/ recorre todas las cargas de CARGAS.
+5. [Solo si los comandos lo detectaron] Elimina de plan.md el texto suelto «[2 coincidencias]» y el BOM del inicio.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/003-resolubilidad/.
+```
+
+**Prompt (resumido):** Ajustes finales de la 003 tras la revisión: rangos de fases, requisito de T012, origen de datos offline de la carga de cota y limpieza del plan.
+
+**Para qué se usó:** Cerrar inconsistencias detectadas al revisar los cambios aplicados al PR de la 003 antes de aprobarlo.
+

@@ -1248,3 +1248,54 @@ No agregues reglas fuera de lo pedido. Si algo cambia lo que el jugador observa 
 **Prompt (resumido):** Corrección de la ruta conocida y sus pruebas: casos que distingan el desempate y el costo de elegir la primera salida, pruebas reales de los motivos de detención, limpieza del resultado del viaje, rechazo coherente de destinos inexistentes y puertas que empiezan cerradas sin llave ni cierre.
 
 **Para qué se usó:** Cerrar los hallazgos de la revisión de T015 a T021 y un comentario de la revisión del PR de las fases A y B sobre FR-NIE-025.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/11-implement-002.md. Solo T014, T017, T018 y T022. No sigas con T023.
+```
+(El texto completo está en prompts/p2/11-implement-002.md.)
+
+**Prompt (resumido):** Pruebas de aceptación y del controlador, y implementación de la consulta del mapa conocido y del bucle del viaje «ir a» en el controlador (T014, T017, T018 y T022).
+
+**Para qué se usó:** Agregar las órdenes del mapa e «ir a» al controlador con recálculo de ruta por paso y motivos de detención, y los casos B-NIE-001, B-NIE-002, B-NIE-003 y B-NIE-006, sin tocar la vista, los servicios ni el modelo.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo cripta/controlador/controlador_cripta.py, tests/controlador/test_controlador_cripta.py y tests/aceptacion/test_niebla_ir_a.py.
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en la rama 002-niebla-ir-a-fases-c-d: no crees ni cambies de rama y no hagas commit ni push. No toques tasks.md: T014, T017, T018 y T022 siguen en [X]. Redacta en español.
+Reglas: sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". No agregues reglas del juego. Si algo cambia lo que el jugador observa o contradice FR-NIE-013, detente y pregunta en vez de ajustar la prueba a lo observado.
+
+1. Paso rechazado. Hoy _ejecutar_accion devuelve False tanto si el movimiento se rechaza como si se acepta y la partida sigue, así que un paso rechazado haría repetir el mismo paso sin fin. Primero escribe una prueba con un servicio falso que rechaza el movimiento y que lanza AssertionError si lo llaman más de 3 veces, para que falle sin colgar la suite. Debe verificar que el viaje se detiene, que no se piden más pasos, que se muestra el motivo de rechazo una sola vez y que no se llama a mostrar_motivos_viaje. Muéstrame que falla. Después corrige el controlador con el cambio mínimo, sin alterar el comportamiento de _ejecutar_accion para las demás órdenes, y anota el nombre nuevo si lo hay.
+2. B-NIE-006. Usa una ruta de al menos 3 pasos, ejecuta 2 pasos con _ejecutar_paso_viaje y comprueba que el jugador está en la tercera sala. Registra el tiempo tras el primer paso. Lanza el pergamino con Orden("pergamino") por el controlador, no con partida.ejecutar_accion. Comprueba que el jugador queda en la sala del primer paso con ese tiempo, que revirtió solo un paso y que no se movió ni se llamó a mostrar_motivos_viaje después.
+3. B-NIE-003. El enemigo dormido va en una sala intermedia y el destino es una sala posterior, no la sala del enemigo. Ejecuta el viaje por el controlador. Espera primero lo que dice FR-NIE-013 y comprueba que el jugador queda en la sala del enemigo, que el enemigo está activo y que los motivos incluyen enemigos_vivos y no incluyen llegada_destino. Agrega el control positivo: el mismo mapa sin enemigo llega al destino.
+4. B-NIE-002. Agrega el control positivo (antes de observar el cierre, siguiente_paso devuelve dirección) y quita la asignación directa de partida._jugador.sala_actual: usa acciones reales de mover para entrar y volver. La única manipulación directa permitida es cambiar el estado real de la puerta en el mapa para simular el cierre no observado. Si no se puede sin tocar archivos no permitidos, detente y explícalo.
+5. Quita el ";" del docstring de _ejecutar_paso_viaje y revisa con git diff que ninguna línea agregada en cripta/ ni tests/ tenga ";" en comentarios o docstrings.
+Al terminar corre py -m unittest tests.aceptacion.test_niebla_ir_a tests.controlador.test_controlador_cripta y luego py -m unittest discover -s tests -t . y reporta cuántas pasan. Dime qué cambiaste por punto, los nombres nuevos y verifica con git diff que solo cambiaron esos tres archivos.
+```
+
+**Prompt (resumido):** Corrección del viaje «ir a» tras la revisión: detener el viaje si un paso es rechazado y reforzar los casos B-NIE-002, B-NIE-003 y B-NIE-006 con controles positivos y rutas de varios pasos.
+
+**Para qué se usó:** Evitar un posible bucle sin fin cuando un movimiento es rechazado (nuevo `_ejecutar_accion_viaje`) y hacer que los casos de aceptación comprueben lo que describen. Esta corrección no tiene archivo en prompts/p2/.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo cripta/controlador/controlador_cripta.py y tests/controlador/test_controlador_cripta.py.
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en la rama 002-niebla-ir-a-fases-c-d: no crees ni cambies de rama y no hagas commit ni push. No toques tasks.md. Redacta en español.
+Reglas: sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". No agregues reglas del juego. Si algo cambia lo que el jugador observa, detente y pregunta.
+
+1. Defecto: _ejecutar_accion_viaje devuelve True cuando el desenlace no es "en_curso" pero no llama a self._finalizar(resultado.desenlace), como sí hace _ejecutar_accion. Si el jugador muere o gana durante un viaje, la partida vuelve al menú sin pedir nombre, sin registrar el puntaje y sin las pantallas de resultado y final. Primero escribe en tests/controlador/test_controlador_cripta.py una prueba que lo demuestre: un viaje cuyo paso termina la partida debe dejar en la vista exactamente un mostrar_resultado y un mostrar_final, y ningún mostrar_motivos_viaje. Hazla con el servicio real (preparar_controlador) y, si no es viable, con un servicio falso cuyo ejecutar devuelva un desenlace distinto de en_curso. Muéstrame que falla porque no se finaliza.
+2. Corrige con el cambio mínimo: la rama de fin de partida de _ejecutar_accion_viaje llama a self._finalizar(resultado.desenlace) antes de devolver True. No dupliques lógica y no cambies _ejecutar_accion.
+3. La prueba actual de muerte reemplaza _ejecutar_accion_viaje por un lambda y no cubre la finalización. Aclara en su docstring que solo comprueba que _ejecutar_paso_viaje no consulta motivos cuando el paso termina la partida, y que la finalización la cubre la prueba nueva.
+Al terminar corre py -m unittest tests.aceptacion.test_niebla_ir_a tests.controlador.test_controlador_cripta y luego py -m unittest discover -s tests -t . y reporta cuántas pasan. Dime qué cambiaste por punto, los nombres nuevos y verifica con git diff que en este paso solo cambiaron esos dos archivos.
+```
+
+**Prompt (resumido):** Corrección del viaje «ir a»: finalizar la partida cuando un paso del viaje termina con muerte o victoria, con su prueba.
+
+**Para qué se usó:** Evitar que un viaje que termina la partida vuelva al menú sin registrar el puntaje ni mostrar las pantallas de resultado y final.

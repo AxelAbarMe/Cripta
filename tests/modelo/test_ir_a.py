@@ -24,7 +24,6 @@ class TestRutaConocida(unittest.TestCase):
         for sala_id in (2, 3, 4):
             conocimiento.al_entrar(sala_id, False)
         self.assertEqual(siguiente_paso(conocimiento, 1, 4), "E")
-        self.assertEqual(1 + 3, 2 + 2)
 
     def test_elige_el_costo_total_menor(self):
         """FR-NIE-010, escenario 3.1: evita una ruta conocida más costosa."""
@@ -38,7 +37,6 @@ class TestRutaConocida(unittest.TestCase):
         for sala_id in (2, 3, 4):
             conocimiento.al_entrar(sala_id, False)
         self.assertEqual(siguiente_paso(conocimiento, 1, 4), "E")
-        self.assertLess(2 + 1, 1 + 10)
 
     def test_puerta_no_observada_o_cerrada_no_se_cruza(self):
         """FR-NIE-010 y 014, escenario 3.2: solo se cruza una puerta abierta recordada."""

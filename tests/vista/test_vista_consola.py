@@ -3,10 +3,13 @@
 Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.vista.test_vista_consola -v
 """
 import unittest
+from types import SimpleNamespace
 
 from cripta.controlador.controlador_cripta import Orden
+from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.resultado_partida import EnemigoVista, SalidaVista, VistaPartida
 from cripta.vista.vista_consola import ANCHO, VistaConsola, _caja_mensajes
+from tests.modelo.test_conocimiento_jugador import crear_partida_sintetica, salida
 
 
 def crear(*respuestas):
@@ -144,6 +147,47 @@ class TestTerrenoEnLaVista(unittest.TestCase):
             linea = next(l for l in lineas if enemigo.etiqueta in l)
             resto.append(" ".join(linea.replace(enemigo.etiqueta, "").replace(f"{numero}.", "").split()))
         self.assertNotEqual(resto[0], resto[1])
+
+
+class TestVistaConNiebla(unittest.TestCase):
+    """T023: FR-NIE-007 y FR-NIE-008, escenarios 1.2, 1.4 y 1.5."""
+
+    def test_partida_proyecta_costos_y_puertas_recordados_sin_filtrar_datos(self):
+        partida = crear_partida_sintetica((
+            {"id": 1, "nombre": "Vestibulo visible", "salidas": {
+                "E": salida(2, 37, llave="llave"), "N": salida(3, 211),
+            }},
+            {"id": 2, "nombre": "Sala avistada secreta", "salidas": {"O": salida(1, 37, llave="llave")}},
+            {"id": 3, "nombre": "Sala desconocida secreta", "salidas": {"S": salida(1, 211)}},
+        ))
+        ficha = SimpleNamespace(
+            id="ent_cazador", nombre="Acechador", vida_max=12, ataque=2,
+            defensa=0, velocidad=100, comportamiento="cazador", suelta=(), rango=3,
+        )
+        partida._mapa.obtener(1).enemigos_activos.append(Enemigo("e-prueba", ficha, 1))
+
+        vista_antes = partida.vista()
+        salida_este = next(s for s in vista_antes.salidas if s.direccion == "E")
+        salida_norte = next(s for s in vista_antes.salidas if s.direccion == "N")
+        self.assertEqual((salida_este.costo, salida_norte.costo), (37, 211))
+        self.assertFalse(salida_este.cerrada)
+        self.assertFalse(salida_norte.cerrada)
+        self.assertTrue(vista_antes.enemigos[0].es_cazador)
+        panel_antes = "\n".join(VistaConsola()._paneles_izquierdos(vista_antes))
+        self.assertIn("[CAZADOR]", panel_antes)
+        self.assertIn("E->2 (37)", panel_antes)
+
+        partida._mapa.cerrar_puerta(1, "E")
+        vista = partida.vista()
+        salida_este = next(s for s in vista.salidas if s.direccion == "E")
+        self.assertFalse(salida_este.cerrada)
+        panel = "\n".join(VistaConsola()._paneles_izquierdos(vista))
+        self.assertIn("E->2 (37)", panel)
+        self.assertNotIn("[CERRADA]", panel)
+        for nombre_oculto in ("Sala avistada secreta", "Sala desconocida secreta"):
+            self.assertNotIn(nombre_oculto, repr(vista))
+            self.assertNotIn(nombre_oculto, panel)
+        self.assertIn("Sala avistada secreta", repr(partida._mapa.obtener(2).esqueleto.nombre))
 
 
 if __name__ == "__main__":

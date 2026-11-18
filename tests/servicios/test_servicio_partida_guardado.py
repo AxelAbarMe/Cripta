@@ -6,6 +6,7 @@ import dataclasses
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from cripta.excepciones import CriptaFormatoIncompatibleError
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
@@ -14,10 +15,16 @@ from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
 from cripta.infraestructura.partida_log import LectorBitacoraPartida
 from cripta.infraestructura.puntajes_disco import RepositorioPuntajes
 from cripta.modelo.accion import Accion as A
+from cripta.modelo.cripta_mapa import CriptaMapa
 from cripta.modelo.inventario import ObjetoInventario
+from cripta.modelo.partida import Partida
 from cripta.modelo.puntajes import Puntaje
 from cripta.servicios.servicio_partida import ServicioPartida
+from cripta.servicios.servicio_catalogo import ServicioCatalogo
+from cripta.servicios.servicio_precarga import ServicioPrecarga
+from cripta.infraestructura.cliente_offline import ClienteOffline
 from tests.servicios.test_servicio_partida import ClienteContado, juego
+from tests.modelo.test_conocimiento_jugador import crear_mapa, salida
 
 CRIPTA = "cripta-01"
 
@@ -276,6 +283,105 @@ class PruebaPuntajes(unittest.TestCase):
     def test_puntajes_globales_sin_tabla_configurada(self):
         with self.assertRaises(RuntimeError):
             armar(ClienteContado).puntajes_globales()
+
+
+class PruebaConocimientoGuardado(unittest.TestCase):
+    def test_proyecta_y_restaura_conocimiento_y_permite_retroceso_nuevo(self):
+        servicio = armar()
+        self.addCleanup(servicio.cerrar)
+        iniciar(servicio)
+        ficha = servicio._catalogo.obtener("itm_antorcha")
+        servicio.partida._jugador.inventario.recoger(ObjetoInventario("antorcha-t010", ficha))
+        pergamino = servicio._catalogo.obtener("itm_pergamino_retroceso")
+        servicio.partida._jugador.inventario.recoger(ObjetoInventario("pergamino-t010", pergamino))
+        self.assertTrue(servicio.ejecutar(A("usar", 0)).aceptada)
+        self.assertTrue(servicio.ejecutar(A("mover", "N")).aceptada)
+        estado = estado_de(servicio)
+        original = servicio.partida._conocimiento.proyectar()
+        self.assertIsNotNone(estado.conocimiento)
+        sala_dos = next(sala for sala in original if sala.id_sala == 2)
+        self.assertEqual(next(salida.estado_puerta for salida in sala_dos.salidas if salida.direccion == "E"), "cerrada")
+        self.assertEqual(next(sala.estado for sala in original if sala.id_sala == 3), "explorada")
+        cliente = ClienteOffline("tests/datos")
+        general = cliente.obtener_general(CRIPTA)
+        mapa = CriptaMapa()
+        catalogo = ServicioCatalogo(cliente)
+        precarga = ServicioPrecarga(cliente, CRIPTA, mapa, servicio_catalogo=catalogo, asincrono=False)
+        self.addCleanup(precarga.cerrar)
+        precarga.cargar_esqueleto(general.paginas)
+        restaurada = Partida.desde_estado_guardado(estado, general, mapa, catalogo, precarga)
+        self.assertEqual(restaurada._conocimiento.proyectar(), original)
+        antes_de_nueva_entrada = restaurada._conocimiento.proyectar()
+        self.assertTrue(restaurada.ejecutar_accion(A("mover", "N")).aceptada)
+        self.assertNotEqual(restaurada._conocimiento.proyectar(), antes_de_nueva_entrada)
+        self.assertTrue(restaurada.ejecutar_accion(A("pergamino")).aceptada)
+        self.assertEqual(restaurada._conocimiento.proyectar(), antes_de_nueva_entrada)
+
+    def test_conocimiento_completo_de_puertas_se_conserva_al_restaurar(self):
+        salas = (
+            {"id": 1, "nombre": "A", "salidas": {"E": salida(2, cerrada=True, llave="llave"), "N": salida(3)}},
+            {"id": 2, "nombre": "B", "salidas": {"O": salida(1, cerrada=True, llave="llave"), "S": salida(3)}},
+            {"id": 3, "nombre": "C", "salidas": {"S": salida(1), "N": salida(2)}},
+        )
+        mapa = crear_mapa(salas)
+        general = SimpleNamespace(
+            id="sintetica", version="1", sala_inicial=1, sala_salida=99, llave_salida="salida", inventario_max=4,
+            jugador=SimpleNamespace(vida=100, vida_max=100, ataque=10, defensa=0, velocidad=100),
+        )
+        ficha = SimpleNamespace(id="antorcha", clase="antorcha", nombre="Antorcha", peso=1, valor=1, duracion=5000)
+
+        class Catalogo:
+            def obtener(self, ficha_id):
+                return ficha
+
+        class Precarga:
+            def __init__(self, mapa_partida):
+                self.mapa = mapa_partida
+
+            def preparar_sala(self, sala_id):
+                return self.mapa.obtener(sala_id)
+
+            def precargar_desde(self, sala_id):
+                return None
+
+        partida = Partida(general, mapa, Catalogo(), Precarga(mapa), 7)
+        partida.iniciar()
+        partida._jugador.inventario.recoger(ObjetoInventario("antorcha", ficha))
+        estado = partida.a_estado_guardado("catalogo")
+
+        mapa_restaurado = crear_mapa(salas)
+        restaurada = Partida.desde_estado_guardado(
+            estado, general, mapa_restaurado, Catalogo(), Precarga(mapa_restaurado)
+        )
+
+        self.assertTrue(partida.ejecutar_accion(A("usar", 0)).aceptada)
+        self.assertTrue(restaurada.ejecutar_accion(A("usar", 0)).aceptada)
+        self.assertTrue(partida.ejecutar_accion(A("mover", "N")).aceptada)
+        self.assertTrue(restaurada.ejecutar_accion(A("mover", "N")).aceptada)
+        self.assertEqual(partida._conocimiento.proyectar(), restaurada._conocimiento.proyectar())
+        sala_b = next(sala for sala in restaurada._conocimiento.proyectar() if sala.id_sala == 2)
+        self.assertEqual(next(salida.estado_puerta for salida in sala_b.salidas if salida.direccion == "O"), "cerrada")
+
+    def test_estado_sin_conocimiento_reconstruye_la_sala_actual_y_retroceso(self):
+        servicio = armar()
+        self.addCleanup(servicio.cerrar)
+        iniciar(servicio)
+        ficha_pergamino = servicio._catalogo.obtener("itm_pergamino_retroceso")
+        servicio.partida._jugador.inventario.recoger(ObjetoInventario("pergamino-sin-conocimiento", ficha_pergamino))
+        estado = dataclasses.replace(estado_de(servicio), conocimiento=None)
+        cliente = ClienteOffline("tests/datos")
+        general = cliente.obtener_general(CRIPTA)
+        mapa = CriptaMapa()
+        catalogo = ServicioCatalogo(cliente)
+        precarga = ServicioPrecarga(cliente, CRIPTA, mapa, servicio_catalogo=catalogo, asincrono=False)
+        self.addCleanup(precarga.cerrar)
+        precarga.cargar_esqueleto(general.paginas)
+        restaurada = Partida.desde_estado_guardado(estado, general, mapa, catalogo, precarga)
+        previo = restaurada._conocimiento.proyectar()
+        self.assertEqual(restaurada._conocimiento.estado_de_sala(restaurada._jugador.sala_actual), "explorada")
+        self.assertTrue(restaurada.ejecutar_accion(A("mover", "N")).aceptada)
+        self.assertTrue(restaurada.ejecutar_accion(A("pergamino")).aceptada)
+        self.assertEqual(restaurada._conocimiento.proyectar(), previo)
 
 
 if __name__ == "__main__":

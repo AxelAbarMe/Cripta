@@ -9,7 +9,7 @@ acciones a partir de esos datos.
 Incluye el estado interno de random.Random(semilla) para que, al continuar una
 partida cargada, la secuencia de azar sea EXACTAMENTE la que habría seguido (§2.6).
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Tipos de evento de la agenda (qué debe reconstruir el cargador)
 EV_TURNO_ACTOR = 0        # sujeto = "jugador" o instancia del enemigo
@@ -71,6 +71,13 @@ class SalaGuardada:
 
 
 @dataclass(frozen=True, slots=True)
+class ConocimientoGuardado:
+    estados: tuple[str, ...]
+    puertas: tuple[tuple[str, ...], ...]
+    costos: tuple[tuple[int | None, ...], ...]
+
+
+@dataclass(frozen=True, slots=True)
 class EventoGuardado:
     tiempo: int
     secuencia: int
@@ -110,3 +117,5 @@ class EstadoPartida:
     salas: tuple[SalaGuardada, ...]
     eventos: tuple[EventoGuardado, ...]
     mensajes: tuple[str, ...]
+    # La 004 debe codificar este campo y quitar compare=False.
+    conocimiento: ConocimientoGuardado | None = field(default=None, compare=False)

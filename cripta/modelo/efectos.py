@@ -216,15 +216,19 @@ class EfectoTrampa:
 
 class EfectoCierrePuerta:
     """Programa el cierre automático de una puerta tras el intervalo indicado al abrirse.
-    Cierra los dos lados de la puerta a través del mapa: una salida conecta dos salas (§2.1)."""
+    Cierra los dos lados de la puerta a través del mapa: una salida conecta dos salas (§2.1).
+    El segundo callback solo observa cierres visibles para el jugador."""
 
-    def __init__(self, reloj, mapa, sala_id: int, direccion: str, intervalo: int, al_cerrar=None):
+    def __init__(self, reloj, mapa, sala_id: int, direccion: str, intervalo: int, al_cerrar=None,
+                 es_observable=None, al_cerrar_observable=None):
         self._reloj = reloj
         self._mapa = mapa
         self._sala_id = sala_id
         self._direccion = direccion
         self._intervalo = intervalo
         self._al_cerrar = al_cerrar
+        self._es_observable = es_observable
+        self._al_cerrar_observable = al_cerrar_observable
 
     def programar_cierre(self) -> None:
         self._reloj.programar_en(
@@ -242,3 +246,6 @@ class EfectoCierrePuerta:
         self._mapa.cerrar_puerta(self._sala_id, self._direccion)
         if self._al_cerrar is not None:
             self._al_cerrar()
+        if (self._al_cerrar_observable is not None and self._es_observable is not None
+                and self._es_observable()):
+            self._al_cerrar_observable()

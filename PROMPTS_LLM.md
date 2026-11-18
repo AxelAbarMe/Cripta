@@ -1112,3 +1112,16 @@ Al terminar, dime qué cambiaste por punto y verifica con git diff que solo camb
 **Prompt (resumido):** Ajustes finales de la 003 tras la revisión: rangos de fases, requisito de T012, origen de datos offline de la carga de cota y limpieza del plan.
 
 **Para qué se usó:** Cerrar inconsistencias detectadas al revisar los cambios aplicados al PR de la 003 antes de aprobarlo.
+
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/07-implement-002.md. Solo T001 a T005, solo pruebas. No sigas con T006.
+```
+(El texto completo está en prompts/p2/07-implement-002.md.)
+
+**Prompt (resumido):** Escritura de las pruebas del dominio del conocimiento del jugador de la capacidad de niebla de guerra e «ir a» (Fase A, T001 a T005), antes del código.
+
+**Para qué se usó:** Crear tests/modelo/test_conocimiento_jugador.py con las pruebas de estados de sala, memoria de puertas, antorcha, inversas puntuales y salida sin puerta cerrable. Debían fallar porque cripta/modelo/conocimiento_jugador.py aún no existe.

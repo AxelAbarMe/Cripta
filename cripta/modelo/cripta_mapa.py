@@ -1,5 +1,5 @@
 """CriptaMapa: junta las páginas del esqueleto en un solo mapa navegable por id de sala
-Usa VectorOrdenado: búsqueda por id en O(log n) por búsqueda binaria.
+Usa VectorOrdenado para el orden y un índice plano por id para obtener en O(1).
 """
 from cripta.estructuras.vector import VectorOrdenado
 from cripta.modelo.sala import Sala
@@ -9,14 +9,23 @@ from cripta.excepciones import CriptaDatosInvalidosError
 class CriptaMapa:
     def __init__(self):
         self._salas = VectorOrdenado(clave=lambda sala: sala.id)
+        self._indice = []   # lista indexada por id de sala, None donde no hay sala
 
     def agregar_pagina(self, pagina_dto) -> None:
         # pagina_dto: PaginaEsqueletoDTO
         for sala_dto in pagina_dto.salas:
-            if self._salas.contiene(sala_dto.id):
+            if self.obtener(sala_dto.id) is not None:
                 continue   # página repetida (por ejemplo, un reintento): se ignora
-            self._salas.insertar(Sala(sala_dto))
+            sala = Sala(sala_dto)
+            self._salas.insertar(sala)
+            self._indexar(sala)
             self._validar_costos(sala_dto)
+
+    def _indexar(self, sala) -> None:
+        # Amplía el índice plano hasta el id de la sala y la guarda en su posición
+        if sala.id >= len(self._indice):
+            self._indice.extend([None] * (sala.id + 1 - len(self._indice)))
+        self._indice[sala.id] = sala
 
     def _validar_costos(self, sala_dto) -> None:
         # Si la sala vecina ya está y declara otro costo para la misma conexión, el esqueleto es inválido
@@ -50,7 +59,9 @@ class CriptaMapa:
         return self._salas.elementos()
 
     def obtener(self, sala_id: int) -> Sala | None:
-        return self._salas.buscar(sala_id)
+        if 0 <= sala_id < len(self._indice):
+            return self._indice[sala_id]
+        return None
 
     def vecinos(self, sala_id: int) -> tuple[tuple[str, int], ...]:
         # [(direccion, id_sala_destino), ...] para las salidas que existen, abiertas o no
@@ -138,4 +149,4 @@ class CriptaMapa:
         return len(self._salas)
 
     def __contains__(self, sala_id: int) -> bool:
-        return self._salas.contiene(sala_id)
+        return self.obtener(sala_id) is not None

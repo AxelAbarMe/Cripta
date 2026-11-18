@@ -45,11 +45,14 @@ from cripta.modelo.persistencia_modelo import (
     siguiente_instancia_tras,
 )
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
+from cripta.modelo.ruta_conocida import siguiente_paso as buscar_siguiente_paso
 
 from cripta.modelo.resultado_partida import (
     EnemigoVista,
     ObjetoSueloVista,
     ResultadoAccion,
+    ResultadoViaje,
+    MapaConocido,
     ResumenPuntaje,
     SalidaVista,
     TrampaVista,
@@ -644,6 +647,39 @@ class Partida:
         return ResumenPuntaje(
             self._acciones_ejecutadas, self._enemigos_derrotados, self._reloj.tiempo_actual, self._desenlace == VICTORIA
         )
+
+    def mapa_conocido(self) -> MapaConocido:
+        """Entrega una proyección inmutable del conocimiento actual."""
+        return MapaConocido(self._conocimiento.proyectar())
+
+    def siguiente_paso(self, destino: int) -> ResultadoViaje:
+        """Propone un paso sin ejecutar acciones ni alterar el estado de la partida."""
+        if (isinstance(destino, bool) or not isinstance(destino, int)
+                or self._mapa.obtener(destino) is None):
+            return ResultadoViaje(None, "destino_inexistente")
+        if self._conocimiento.estado_de_sala(destino) != "explorada":
+            return ResultadoViaje(None, "destino_no_explorado")
+        if destino == self._jugador.sala_actual:
+            return ResultadoViaje(None, "sala_actual")
+        direccion = buscar_siguiente_paso(self._conocimiento, self._jugador.sala_actual, destino)
+        if direccion is None:
+            return ResultadoViaje(None, "sin_ruta")
+        return ResultadoViaje(direccion, None)
+
+    def motivos_despues_de_paso(self, destino: int, vida_anterior: int) -> tuple[str, ...]:
+        """Devuelve las condiciones coincidentes en el orden prescrito por FR-NIE-013."""
+        if not self._jugador.esta_vivo():
+            return ()
+        motivos = []
+        sala = self._sala_actual()
+        if sala.id == destino:
+            motivos.append("llegada_destino")
+        enemigos = sala.enemigos_activos + sala.enemigos_dormidos
+        if any(enemigo.esta_vivo() for enemigo in enemigos):
+            motivos.append("enemigos_vivos")
+        if self._jugador.vida < vida_anterior:
+            motivos.append("daño_recibido")
+        return tuple(motivos)
 
     def fichas_en_uso(self) -> tuple[str, ...]:
         """Ids de ficha que la caché del catálogo no puede liberar (§4.4): objetos del inventario, objetos

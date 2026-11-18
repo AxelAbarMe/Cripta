@@ -6,6 +6,22 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
+class MapaConocido:
+    """Proyección inmutable de las salas conocidas por el jugador."""
+    salas: tuple
+
+    def __post_init__(self):
+        object.__setattr__(self, "salas", tuple(self.salas))
+
+
+@dataclass(frozen=True, slots=True)
+class ResultadoViaje:
+    """Paso propuesto o razón por la que no hay paso."""
+    direccion: str | None
+    motivo: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class ResultadoAccion:
     aceptada: bool
     motivo_rechazo: str | None

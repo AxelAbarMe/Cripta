@@ -51,6 +51,8 @@ from cripta.modelo.persistencia_modelo import (
     contenido_inicial_de,
     copiar_mapa_estatico,
     crear_estado,
+    linea_a_guardada,
+    linea_desde_guardada,
     restaurar_jugador,
     restaurar_conocimiento,
     restaurar_sala,
@@ -179,6 +181,8 @@ class Partida:
             salas_preparadas=self._salas_preparadas, acciones_jugador=self._acciones_ejecutadas,
             enemigos_derrotados=self._enemigos_derrotados, mensajes=self._bitacora.mensajes(),
             conocimiento=self._conocimiento,
+            linea=linea_a_guardada(self._linea, self._estado_base, self._contenido_inicial),
+            siguiente_instancia=self._siguiente_instancia,
         )
 
 
@@ -196,7 +200,10 @@ class Partida:
         with partida._historial.sin_registrar():   # cargar no es una acción: nada de esto se podría deshacer
             partida._restaurar(estado)
         partida._precarga.precargar_desde(partida._jugador.sala_actual)
-        partida._estado_base = partida._capturar()   # la línea de tiempo de una partida cargada parte de aquí
+        if estado.linea is None:
+            partida._estado_base = partida._capturar()   # sin línea guardada, la historia parte de la carga
+        else:
+            partida._linea, partida._estado_base, partida._contenido_inicial = linea_desde_guardada(estado.linea)
         return partida
 
     def _restaurar(self, estado, materializada: bool = False) -> None:
@@ -227,7 +234,7 @@ class Partida:
         self._enemigos_derrotados = estado.enemigos_derrotados
         for mensaje in estado.mensajes:
             self._bitacora.agregar(mensaje)
-        self._siguiente_instancia = siguiente_instancia_tras(self._jugador.inventario)
+        self._siguiente_instancia = max(estado.siguiente_instancia, siguiente_instancia_tras(self._jugador.inventario))
         self._turno_listo = True                    # solo se guarda cuando al jugador le toca decidir
         self._buscador.invalidar()
         self._mensajes_nuevos = []
@@ -811,6 +818,7 @@ class Partida:
             semilla=self._semilla, azar=self._azar, reloj=self._reloj, jugador=self._jugador, mapa=self._mapa,
             salas_preparadas=self._salas_preparadas, acciones_jugador=self._acciones_ejecutadas,
             enemigos_derrotados=self._enemigos_derrotados, mensajes=(), conocimiento=self._conocimiento,
+            siguiente_instancia=self._siguiente_instancia,
         )
         return (estado, self._siguiente_instancia)
 

@@ -9,7 +9,8 @@ Disposición del archivo (todo little-endian):
   ÍNDICE      n registros de fixed 16 B "<IQI" = id de sala | offset | longitud,
               ORDENADOS por id de sala con el selector automático (§4.9).
   GLOBAL      cripta/versiones, semilla, estado del RNG, reloj, contadores, jugador
-              e inventario, agenda de eventos y mensajes.
+              e inventario, agenda de eventos, mensajes, conocimiento del jugador (002)
+              y la línea de tiempo (004): acciones, ajustes y puntos de control completos.
   SALA        estado mutable de una sala (puertas, rastro, suelo, trampas, enemigos).
 
 Recuperar UNA sala sin leer el archivo completo: como los registros del índice miden
@@ -19,7 +20,8 @@ de esa sala. Ni el índice completo ni las demás salas se leen.
 
 Compatibilidad: el encabezado lleva un magic y la versión del formato; cualquier
 diferencia (o un archivo truncado) lanza CriptaFormatoIncompatibleError en vez de
-interpretar bytes ajenos.
+interpretar bytes ajenos. La versión 2 es la de la línea de tiempo: un archivo de la
+Parte I (versión 1) se rechaza sin cargarlo, modificarlo ni migrarlo.
 
 Al final del módulo hay guardar_json/cargar_json, solo para las comparaciones de
 tamaño y tiempo de carga que exige el enunciado.
@@ -32,13 +34,20 @@ import struct
 from cripta.estructuras.ordenamiento_selector import ordenar_auto
 from cripta.excepciones import CriptaFormatoIncompatibleError
 from cripta.infraestructura.estado_guardado import (
-    EnemigoGuardado, EstadoPartida, EstadoRNG, EventoGuardado, JugadorGuardado,
-    ObjetoGuardado, SalaGuardada, TrampaGuardada,
+    AccionGuardada, AjusteGuardado, ConocimientoGuardado, ContenidoSalaGuardado, EnemigoGuardado,
+    EstadoPartida, EstadoRNG, EventoGuardado, JugadorGuardado, LineaGuardada, ObjetoGuardado,
+    PuntoControlGuardado, SalaGuardada, TrampaGuardada,
 )
 
 MAGIC = b"CRPT"
-FORMATO_VERSION = 1
+FORMATO_VERSION = 2
 _ESTADO_RNG_ENTEROS = 625
+
+# Los estados del conocimiento se guardan como un código de 1 byte según estas tablas
+_ESTADOS_SALA = ("desconocida", "avistada", "explorada")
+_ESTADOS_PUERTA = ("no_observada", "abierta", "cerrada")
+_SIN_COSTO = -(2**31)    # marca de un costo todavía no observado
+_ARG_NINGUNO, _ARG_TEXTO, _ARG_ENTERO = 0, 1, 2   # tipo del argumento de una acción guardada
 
 # Formatos precompilados: struct.Struct interpreta el texto del formato una vez y se reutiliza
 # en cada número, en vez de reinterpretar "<I" en cada llamada a struct.pack / struct.unpack.
@@ -186,7 +195,7 @@ def _leer_enemigo(r: _Lector) -> EnemigoGuardado:
 
 
 # --------------------------------------------------------------- global
-def _escribir_global(w: _Escritor, e: EstadoPartida) -> None:
+def _escribir_global_base(w: _Escritor, e: EstadoPartida) -> None:
     w.cadena(e.cripta_id); w.cadena(e.cripta_version); w.cadena(e.catalogo_version)
     w.i64(e.semilla)
     w.u32(e.rng.version)
@@ -212,9 +221,177 @@ def _escribir_global(w: _Escritor, e: EstadoPartida) -> None:
     w.cantidad(len(e.mensajes), "mensajes")
     for mensaje in e.mensajes:
         w.cadena(mensaje)
+    w.i32(e.siguiente_instancia)
+    _escribir_conocimiento(w, e.conocimiento)
 
 
-def _leer_global(r: _Lector):
+def _escribir_global(w: _Escritor, e: EstadoPartida) -> None:
+    _escribir_global_base(w, e)
+    _escribir_linea(w, e.linea)
+
+
+# ---------------------------------------------------- conocimiento (002)
+def _codigo_de(tabla, texto, que: str) -> int:
+    for codigo, valor in enumerate(tabla):
+        if valor == texto:
+            return codigo
+    raise ValueError(f"No se puede guardar {que} {texto!r}")
+
+
+def _texto_de(tabla, codigo: int) -> str:
+    if codigo >= len(tabla):
+        raise CriptaFormatoIncompatibleError("código de conocimiento desconocido")
+    return tabla[codigo]
+
+
+def _escribir_conocimiento(w: _Escritor, c) -> None:
+    w.bool_(c is not None)
+    if c is None:
+        return
+    n = len(c.estados)
+    if len(c.puertas) != n or len(c.costos) != n:
+        raise ValueError("El conocimiento debe tener el mismo número de filas en estados, puertas y costos")
+    w.u32(n)
+    for i in range(n):
+        if len(c.puertas[i]) != 4 or len(c.costos[i]) != 4:
+            raise ValueError("Cada sala del conocimiento debe tener cuatro puertas y cuatro costos")
+        w.u8(_codigo_de(_ESTADOS_SALA, c.estados[i], "el estado de sala"))
+        for puerta in c.puertas[i]:
+            w.u8(_codigo_de(_ESTADOS_PUERTA, puerta, "el estado de puerta"))
+        for costo in c.costos[i]:
+            if costo == _SIN_COSTO:
+                raise ValueError(f"El costo {costo} está reservado como marca de costo desconocido")
+            w.i32(_SIN_COSTO if costo is None else costo)
+
+
+def _leer_conocimiento(r: _Lector):
+    if not r.bool_():
+        return None
+    estados, puertas, costos = [], [], []
+    for _ in range(r.u32()):
+        estados.append(_texto_de(_ESTADOS_SALA, r.u8()))
+        puertas.append(tuple(_texto_de(_ESTADOS_PUERTA, r.u8()) for _ in range(4)))
+        fila = tuple(r.i32() for _ in range(4))
+        costos.append(tuple(None if costo == _SIN_COSTO else costo for costo in fila))
+    return ConocimientoGuardado(tuple(estados), tuple(puertas), tuple(costos))
+
+
+# ------------------------------------------------- línea de tiempo (004)
+def _escribir_accion(w: _Escritor, a: AccionGuardada) -> None:
+    w.cadena(a.tipo)
+    argumento = a.argumento
+    if argumento is None:
+        w.u8(_ARG_NINGUNO)
+    elif isinstance(argumento, bool):
+        raise ValueError(f"El argumento de una acción no puede ser un booleano: {argumento!r}")
+    elif isinstance(argumento, str):
+        w.u8(_ARG_TEXTO)
+        w.cadena(argumento)
+    elif isinstance(argumento, int):
+        w.u8(_ARG_ENTERO)
+        w.i64(argumento)
+    else:
+        raise ValueError(f"El argumento de una acción debe ser texto, entero o None: {argumento!r}")
+    w.i64(a.tiempo)
+
+
+def _leer_accion(r: _Lector) -> AccionGuardada:
+    tipo = r.cadena()
+    clase = r.u8()
+    if clase == _ARG_NINGUNO:
+        argumento = None
+    elif clase == _ARG_TEXTO:
+        argumento = r.cadena()
+    elif clase == _ARG_ENTERO:
+        argumento = r.i64()
+    else:
+        raise CriptaFormatoIncompatibleError("tipo de argumento de acción desconocido")
+    return AccionGuardada(tipo, argumento, r.i64())
+
+
+def _escribir_punto(w: _Escritor, punto: PuntoControlGuardado) -> None:
+    estado = punto.estado
+    if estado.linea is not None:
+        raise ValueError("Un punto de control no puede llevar su propia línea de tiempo")
+    w.u32(punto.numero_acciones)
+    w.i32(punto.siguiente_instancia)
+    _escribir_global_base(w, estado)
+    w.u32(len(estado.salas))
+    for sala in estado.salas:
+        _escribir_sala(w, sala)
+
+
+def _leer_punto(r: _Lector) -> PuntoControlGuardado:
+    numero, siguiente = r.u32(), r.i32()
+    (cripta_id, cripta_version, catalogo_version, semilla, rng, reloj, sig_secuencia, acciones, derrotados,
+     jugador, eventos, mensajes, conocimiento, contador) = _leer_global_base(r)
+    salas = tuple(_leer_sala(r) for _ in range(r.u32()))
+    estado = EstadoPartida(cripta_id, cripta_version, catalogo_version, semilla, rng, reloj, sig_secuencia,
+                           acciones, derrotados, jugador, salas, eventos, mensajes, conocimiento,
+                           siguiente_instancia=contador)
+    return PuntoControlGuardado(numero, estado, siguiente)
+
+
+def _escribir_contenido(w: _Escritor, c: ContenidoSalaGuardado) -> None:
+    w.u32(c.sala_id)
+    w.cantidad(len(c.objetos), "objetos iniciales")
+    for objeto in c.objetos:
+        w.cadena(objeto)
+    w.cantidad(len(c.trampas), "trampas iniciales")
+    for instancia, tipo in c.trampas:
+        w.cadena(instancia)
+        w.cadena(tipo)
+    w.cantidad(len(c.enemigos), "enemigos iniciales")
+    for instancia, tipo, vida in c.enemigos:
+        w.cadena(instancia)
+        w.cadena(tipo)
+        w.i32(vida)
+
+
+def _leer_contenido(r: _Lector) -> ContenidoSalaGuardado:
+    sala_id = r.u32()
+    objetos = tuple(r.cadena() for _ in range(r.u16()))
+    trampas = tuple((r.cadena(), r.cadena()) for _ in range(r.u16()))
+    enemigos = tuple((r.cadena(), r.cadena(), r.i32()) for _ in range(r.u16()))
+    return ContenidoSalaGuardado(sala_id, objetos, trampas, enemigos)
+
+
+def _escribir_linea(w: _Escritor, linea) -> None:
+    w.bool_(linea is not None)
+    if linea is None:
+        return
+    w.u32(linea.frecuencia)
+    _escribir_punto(w, linea.base)
+    w.u32(len(linea.acciones))
+    for accion in linea.acciones:
+        _escribir_accion(w, accion)
+    w.u32(len(linea.ajustes))
+    for ajuste in linea.ajustes:
+        w.u32(ajuste.posicion)
+        w.cadena(ajuste.operacion)
+        w.cadena(ajuste.instancia_id)
+        w.cadena(ajuste.ficha_id)
+    w.u32(len(linea.checkpoints))
+    for punto in linea.checkpoints:
+        _escribir_punto(w, punto)
+    w.u32(len(linea.contenidos))
+    for contenido in linea.contenidos:
+        _escribir_contenido(w, contenido)
+
+
+def _leer_linea(r: _Lector):
+    if not r.bool_():
+        return None
+    frecuencia = r.u32()
+    base = _leer_punto(r)
+    acciones = tuple(_leer_accion(r) for _ in range(r.u32()))
+    ajustes = tuple(AjusteGuardado(r.u32(), r.cadena(), r.cadena(), r.cadena()) for _ in range(r.u32()))
+    checkpoints = tuple(_leer_punto(r) for _ in range(r.u32()))
+    contenidos = tuple(_leer_contenido(r) for _ in range(r.u32()))
+    return LineaGuardada(frecuencia, base, acciones, ajustes, checkpoints, contenidos)
+
+
+def _leer_global_base(r: _Lector):
     cripta_id, cripta_version, catalogo_version = r.cadena(), r.cadena(), r.cadena()
     semilla = r.i64()
     rng_version = r.u32()
@@ -231,8 +408,10 @@ def _leer_global(r: _Lector):
     jugador = JugadorGuardado(vida, vida_max, ataque, defensa, velocidad, sala_actual, tiempo_sig, capacidad, cursor, objetos)
     eventos = tuple(EventoGuardado(r.i64(), r.i64(), r.u8(), r.cadena(), r.i64(), r.i64()) for _ in range(r.u32()))
     mensajes = tuple(r.cadena() for _ in range(r.u16()))
+    siguiente_instancia = r.i32()
+    conocimiento = _leer_conocimiento(r)
     return (cripta_id, cripta_version, catalogo_version, semilla, rng, reloj, siguiente,
-            acciones, derrotados, jugador, eventos, mensajes)
+            acciones, derrotados, jugador, eventos, mensajes, conocimiento, siguiente_instancia)
 
 
 def _validar_encabezado(crudo: bytes):
@@ -302,15 +481,17 @@ class GuardadoBinario:
             crudo = archivo.read()
         n_salas, offset_global, longitud_global = _validar_encabezado(crudo)
         _validar_estructura(len(crudo), n_salas, offset_global, longitud_global)
+        lector = _Lector(crudo[offset_global:offset_global + longitud_global])
         (cripta_id, cripta_version, catalogo_version, semilla, rng, reloj, siguiente, acciones,
-         derrotados, jugador, eventos, mensajes) = _leer_global(_Lector(crudo[offset_global:offset_global + longitud_global]))
+         derrotados, jugador, eventos, mensajes, conocimiento, contador) = _leer_global_base(lector)
+        linea = _leer_linea(lector)
         salas = []
         for i in range(n_salas):
             _sala_id, offset, longitud = _REGISTRO_INDICE.unpack_from(crudo, _ENCABEZADO.size + i * _REGISTRO_INDICE.size)
             _validar_bloque(len(crudo), offset, longitud)
             salas.append(_leer_sala(_Lector(crudo[offset:offset + longitud])))
         return EstadoPartida(cripta_id, cripta_version, catalogo_version, semilla, rng, reloj, siguiente,
-                             acciones, derrotados, jugador, tuple(salas), eventos, mensajes)
+                             acciones, derrotados, jugador, tuple(salas), eventos, mensajes, conocimiento, linea, contador)
 
     def cargar_sala(self, ruta, sala_id: int):
         """Devuelve la SalaGuardada de `sala_id` (o None) SIN leer el archivo completo:

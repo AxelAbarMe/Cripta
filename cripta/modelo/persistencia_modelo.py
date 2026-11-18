@@ -8,19 +8,27 @@ from types import SimpleNamespace
 
 from cripta.constantes import DIRECCIONES
 from cripta.estructuras.ordenamiento_selector import ordenar_auto
-from cripta.excepciones import CriptaError
+from cripta.estructuras.vector import VectorOrdenado
+from cripta.excepciones import CriptaError, CriptaFormatoIncompatibleError
 from cripta.infraestructura.estado_guardado import (
+    AccionGuardada,
+    AjusteGuardado,
+    ContenidoSalaGuardado,
     EnemigoGuardado,
     ConocimientoGuardado,
     EstadoPartida,
     EstadoRNG,
     EventoGuardado,
     JugadorGuardado,
+    LineaGuardada,
     ObjetoGuardado,
+    PuntoControlGuardado,
     SalaGuardada,
     TrampaGuardada,
 )
+from cripta.modelo.accion import Accion
 from cripta.modelo.cripta_mapa import CriptaMapa
+from cripta.modelo.linea_tiempo import LineaTiempo
 from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.conocimiento_jugador import ConocimientoJugador
 from cripta.modelo.inventario import ObjetoInventario
@@ -81,7 +89,8 @@ def _evento_guardado(evento) -> EventoGuardado:
 
 
 def crear_estado(*, cripta_id, cripta_version, catalogo_version, semilla, azar, reloj, jugador, mapa,
-                 salas_preparadas, acciones_jugador, enemigos_derrotados, mensajes, conocimiento) -> EstadoPartida:
+                 salas_preparadas, acciones_jugador, enemigos_derrotados, mensajes, conocimiento,
+                 linea=None, siguiente_instancia=0) -> EstadoPartida:
     salas = tuple(_sala_guardada(s, salas_preparadas.contiene(s.id)) for s in mapa.todas_las_salas())
     # Los eventos viajan ordenados por (tiempo, secuencia), así el archivo es el mismo para el mismo estado
     pares = [(e.tiempo, e.secuencia, _evento_guardado(e)) for e in reloj.eventos_vigentes()]
@@ -101,6 +110,8 @@ def crear_estado(*, cripta_id, cripta_version, catalogo_version, semilla, azar, 
         eventos=tuple(e for _t, _s, e in pares),
         mensajes=tuple(mensajes),
         conocimiento=ConocimientoGuardado(*conocimiento.exportar_celdas()),
+        linea=linea,
+        siguiente_instancia=siguiente_instancia,
     )
     
     
@@ -242,6 +253,58 @@ class PrecargaMaterializada:
 
     def precargar_desde(self, sala_id: int) -> None:
         return None
+
+
+def linea_a_guardada(linea, base, contenidos) -> LineaGuardada:
+    """Línea vigente completa como datos planos. `base` es (estado, siguiente_instancia) y `contenidos`
+    el VectorOrdenado de ContenidoInicial. Los puntos de control de la línea guardan la misma pareja."""
+    acciones = []
+    for numero in range(1, len(linea) + 1):
+        accion = linea.accion(numero)
+        acciones.append(AccionGuardada(accion.tipo, accion.argumento, linea.tiempo_de(numero)))
+    ajustes = []
+    for posicion in range(len(linea) + 1):
+        for operacion in linea.ajustes_en(posicion):
+            ficha = operacion[2] if len(operacion) > 2 else ""
+            ajustes.append(AjusteGuardado(posicion, operacion[0], operacion[1], ficha))
+    puntos = []
+    numero = len(linea)
+    punto = linea.buscar_checkpoint(numero)
+    while punto is not None:
+        puntos.append(PuntoControlGuardado(punto.numero_acciones, punto.estado[0], punto.estado[1]))
+        punto = linea.buscar_checkpoint(punto.numero_acciones - 1)
+    puntos.reverse()
+    guardados = tuple(
+        ContenidoSalaGuardado(c.sala_id, c.objetos, c.trampas, c.enemigos) for c in contenidos.elementos()
+    )
+    return LineaGuardada(linea.frecuencia, PuntoControlGuardado(0, base[0], base[1]), tuple(acciones),
+                         tuple(ajustes), tuple(puntos), guardados)
+
+
+def linea_desde_guardada(guardada):
+    """Inversa de linea_a_guardada: devuelve (LineaTiempo, base, contenidos) con las mismas parejas en memoria."""
+    try:
+        linea = LineaTiempo(guardada.frecuencia)
+        for posicion in range(len(guardada.acciones) + 1):
+            if posicion > 0:
+                a = guardada.acciones[posicion - 1]
+                linea.registrar_accion(Accion(a.tipo, a.argumento), a.tiempo)
+            for punto in guardada.checkpoints:
+                if punto.numero_acciones == posicion:
+                    linea.registrar_checkpoint((punto.estado, punto.siguiente_instancia))
+            operaciones = []
+            for ajuste in guardada.ajustes:
+                if ajuste.posicion == posicion:
+                    operaciones.append((ajuste.operacion, ajuste.instancia_id) if ajuste.operacion == "quitar"
+                                       else (ajuste.operacion, ajuste.instancia_id, ajuste.ficha_id))
+            if len(operaciones) > 0:
+                linea.registrar_ajuste(operaciones)
+    except ValueError as error:
+        raise CriptaFormatoIncompatibleError(f"la línea de tiempo guardada es inconsistente: {error}") from None
+    contenidos = VectorOrdenado(clave=lambda c: c.sala_id)
+    for c in guardada.contenidos:
+        contenidos.insertar(ContenidoInicial(c.sala_id, c.objetos, c.trampas, c.enemigos))
+    return linea, (guardada.base.estado, guardada.base.siguiente_instancia), contenidos
 
 
 def copiar_mapa_estatico(mapa):

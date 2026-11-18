@@ -56,7 +56,7 @@ def _hacer(partida, tipo, argumento=None):
     # Ejecuta una acción que debe ser aceptada
     resultado = partida.ejecutar_accion(A(tipo, argumento))
     if not resultado.aceptada:
-        raise AssertionError(f"La acción {tipo} fue rechazada: {resultado.motivo}")
+        raise AssertionError(f"La acción {tipo} fue rechazada: {resultado.motivo_rechazo}")
     return resultado
 
 

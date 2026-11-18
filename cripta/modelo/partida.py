@@ -33,6 +33,7 @@ from cripta.modelo.efectos import (
     EfectoVeneno,
 )
 from cripta.modelo.historial_retroceso import HistorialRetroceso
+from cripta.modelo.conocimiento_jugador import ConocimientoJugador
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
 
@@ -73,6 +74,7 @@ class Partida:
         self._bitacora = BitacoraMensajes()
         self._buscador = BuscadorRutas()         # tabla de rutas compartida por todos los cazadores
         self._historial = HistorialRetroceso()
+        self._conocimiento = ConocimientoJugador(mapa, datos_generales.sala_inicial)
         self._conectar_retroceso()
         self._desenlace = EN_CURSO
         self._acciones_ejecutadas = 0
@@ -93,6 +95,7 @@ class Partida:
         self._reloj.registrador = registrar
         self._jugador.registrador = registrar
         self._jugador.inventario.registrador = registrar
+        self._conocimiento.registrador = registrar
         self._mapa.conectar_registrador(registrar)
 
     def _con_retroceso(self, objeto):
@@ -205,7 +208,10 @@ class Partida:
                 EfectoTrampa(self._reloj, trampa).restaurar_rearme(ev.tiempo, ev.secuencia)
             elif ev.tipo == EV_CIERRE_PUERTA:
                 EfectoCierrePuerta(
-                    self._reloj, self._mapa, int(ev.sujeto), DIRECCIONES[ev.a], 0, self._avisar_cierre_de_puerta
+                    self._reloj, self._mapa, int(ev.sujeto), DIRECCIONES[ev.a], 0,
+                    self._avisar_cierre_de_puerta,
+                    lambda sid=int(ev.sujeto), direccion=DIRECCIONES[ev.a]: self._puerta_observable(sid, direccion),
+                    lambda sid=int(ev.sujeto), direccion=DIRECCIONES[ev.a]: self._observar_cierre_de_puerta(sid, direccion)
                 ).restaurar(ev.tiempo, ev.secuencia)
             else:
                 raise CriptaFormatoIncompatibleError(f"Tipo de evento desconocido en la agenda guardada: {ev.tipo}.")
@@ -226,6 +232,7 @@ class Partida:
         if self._iniciada:
             raise RuntimeError("La partida ya fue iniciada.")
         sala = self._precarga.preparar_sala(self._datos.sala_inicial)
+        self._conocimiento.al_entrar(sala.id, self._antorcha_encendida)
         self._marcar_preparada(sala.id)
         self._precarga.precargar_desde(self._datos.sala_inicial)
         sala.marcar_visita(0)
@@ -397,6 +404,7 @@ class Partida:
         tiempo = self._reloj.tiempo_actual
         sala.marcar_visita(tiempo)
         self._jugador.sala_actual = destino.id
+        self._conocimiento.al_entrar(destino.id, self._antorcha_encendida)
         self._buscador.invalidar()
         destino.marcar_visita(tiempo)   # el rastro de la sala destino es el instante en que se entra
         self._decir(f"Entras a {destino.esqueleto.nombre}.")
@@ -449,10 +457,14 @@ class Partida:
         sala.marcar_visita(self._reloj.tiempo_actual)
         self._mapa.abrir_puerta(sala.id, direccion)
         self._buscador.invalidar()
+        self._conocimiento.observar_puerta(sala.id, direccion)
         self._decir(f"Abres la puerta hacia el {direccion}.")
         if cierre is not None:
             EfectoCierrePuerta(
-                self._reloj, self._mapa, sala.id, direccion, cierre, self._avisar_cierre_de_puerta
+                self._reloj, self._mapa, sala.id, direccion, cierre,
+                self._avisar_cierre_de_puerta,
+                lambda sid=sala.id, direccion_cierre=direccion: self._puerta_observable(sid, direccion_cierre),
+                lambda sid=sala.id, direccion_cierre=direccion: self._observar_cierre_de_puerta(sid, direccion_cierre)
             ).programar_cierre()
         self._terminar_accion_jugador(accion.costo_base)
         return self._aceptar()
@@ -462,6 +474,14 @@ class Partida:
         # El efecto cierra los dos lados; quien ya cruzó se queda donde está (solo se impide volver a atravesar)
         self._buscador.invalidar()
         self._decir("Una puerta se cierra sola.")
+
+    def _observar_cierre_de_puerta(self, sala_id: int, direccion: str) -> None:
+        self._conocimiento.observar_puerta(sala_id, direccion)
+
+    def _puerta_observable(self, sala_id: int, direccion: str) -> bool:
+        origen = self._mapa.obtener(sala_id)
+        salida = origen.esqueleto.salida(direccion) if origen is not None else None
+        return salida is not None and self._jugador.sala_actual in (sala_id, salida.sala_destino)
 
 
     def _atacar(self, accion) -> ResultadoAccion:

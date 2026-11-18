@@ -11,7 +11,9 @@ from pathlib import Path
 from cripta.controlador.controlador_cripta import ControladorCripta, Orden
 from cripta.excepciones import CriptaApiError
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
+from cripta.infraestructura.partida_log import LectorBitacoraPartida
 from cripta.infraestructura.puntajes_disco import RepositorioPuntajes
+from cripta.modelo.inventario import ObjetoInventario
 from cripta.vista.vista_base import VistaBase
 from tests.servicios.test_servicio_partida import ClienteContado
 from tests.servicios.test_servicio_partida_guardado import armar
@@ -35,6 +37,7 @@ class VistaFalsa(VistaBase):
         self.nombre, self.cripta = nombre, cripta
         self.estados, self.avisos, self.errores, self.ordenados = [], [], [], []
         self.resultados, self.finales, self.preguntas = [], [], []
+        self.historias = []
         self.ultimo_vista = None
 
     def pedir_opcion_menu(self):
@@ -80,6 +83,9 @@ class VistaFalsa(VistaBase):
 
     def mostrar_final(self, datos):
         self.finales.append(datos)
+
+    def mostrar_historia(self, resumen, referencia):
+        self.historias.append((resumen, referencia))
 
 
 class BaseControlador(unittest.TestCase):
@@ -252,6 +258,141 @@ class TestGuardarYCargar(BaseControlador):
         self.jugar(vista)
         self.assertEqual(len(vista.errores), 1)
         self.assertEqual(vista.ultimo_vista.tiempo, 100)
+
+
+def _campos(estado):
+    # Los grupos comparables de un VistaPartida o de un ResumenHistorico (los dos usan estos nombres)
+    enemigos = tuple((e.instancia, e.vida, e.vida_max) for e in estado.enemigos)
+    return (estado.tiempo, estado.sala_id, estado.vida, estado.vida_max, estado.ataque, estado.defensa,
+            estado.velocidad, estado.efectos_activos, enemigos)
+
+
+class VistaConInstantaneas(VistaFalsa):
+    """Toma una fotografía del servicio cada vez que se pide una orden y puede preparar la partida antes de la primera."""
+
+    def __init__(self, observar, preparar=None, **opciones):
+        super().__init__(**opciones)
+        self.observar, self.preparar, self.instantaneas = observar, preparar, []
+
+    def pedir_orden(self, vista):
+        if self.preparar is not None:
+            self.preparar()
+            self.preparar = None
+        self.instantaneas.append(self.observar())
+        return super().pedir_orden(vista)
+
+
+class TestHistoria(BaseControlador):
+    ESPERAS = [Orden("esperar")] * 3          # deja decisiones en 0, 100, 200 y 300 en la sala 1, sin enemigos
+
+    def setUp(self):
+        super().setUp()
+        self.ruta_log = self.dir / "p.log"
+
+    def observar(self):
+        p = self.servicio.partida
+        return (p.vista(), p.mensajes(), p.puntaje(), len(p._historial), len(p.linea_tiempo()),
+                p._reloj.tiempo_actual, p._azar.getstate(), self.ruta_log.read_bytes())
+
+    def jugar_sin_ajustes(self, vista):
+        # A diferencia de jugar() no sube la vida del jugador: la historia parte del estado inicial real
+        ControladorCripta(self.servicio, vista, ruta_guardado=str(self.dir / "p.sav"), ruta_bitacora=str(self.ruta_log),
+                          semilla=5).ejecutar()
+
+    def consultar(self, *consultas, preparar=None):
+        ordenes = self.ESPERAS + [Orden("historia", c) for c in consultas]
+        vista = VistaConInstantaneas(self.observar, preparar, ordenes=ordenes)
+        self.jugar_sin_ajustes(vista)
+        return vista
+
+    def test_historia_por_instante_muestra_el_estado_de_ese_instante(self):  # FR-LIN-001, FR-LIN-003, FR-LIN-004
+        vista = self.consultar("100")
+        self.assertEqual(len(vista.historias), 1)
+        resumen, referencia = vista.historias[0]
+        self.assertEqual(referencia, "t=100")
+        self.assertEqual(_campos(resumen), _campos(vista.estados[1][0]))
+
+    def test_historia_por_accion_muestra_el_estado_justo_antes_de_la_accion(self):  # FR-LIN-003, FR-LIN-004
+        vista = self.consultar("#3")
+        self.assertEqual(len(vista.historias), 1)
+        resumen, referencia = vista.historias[0]
+        self.assertEqual(referencia, "#3")
+        self.assertEqual(_campos(resumen), _campos(vista.estados[2][0]))
+
+    def test_los_limites_cero_y_reloj_actual_son_validos(self):  # FR-LIN-001, FR-LIN-006
+        vista = self.consultar("0", "300", "#1")
+        self.assertEqual([r for _, r in vista.historias], ["t=0", "t=300", "#1"])
+        self.assertEqual(_campos(vista.historias[0][0]), _campos(vista.estados[0][0]))
+        self.assertEqual(_campos(vista.historias[1][0]), _campos(vista.estados[3][0]))
+        self.assertEqual(_campos(vista.historias[2][0]), _campos(vista.estados[0][0]))
+
+    def test_el_resumen_trae_los_siete_grupos(self):  # FR-LIN-004, SC-LIN-001
+        historias = self.consultar("100").historias
+        self.assertEqual(len(historias), 1)
+        resumen = historias[0][0]
+        for nombre in ("tiempo", "sala_id", "vida", "vida_max", "ataque", "defensa", "velocidad",
+                       "inventario", "efectos_activos", "enemigos", "mapa_conocido"):
+            self.assertTrue(hasattr(resumen, nombre), nombre)
+        self.assertGreaterEqual(len(resumen.mapa_conocido), 1)
+
+    def test_una_consulta_valida_no_cambia_nada_ni_se_registra(self):  # FR-LIN-005, SC-LIN-002
+        vista = self.consultar("100", "#1", "0")
+        self.assertEqual(len(vista.historias), 3)
+        antes = vista.instantaneas[3]        # tras las tres esperas y antes de la primera consulta
+        self.assertEqual(vista.instantaneas[4:], [antes] * 3)
+        _, acciones = LectorBitacoraPartida(str(self.ruta_log)).leer()
+        self.assertEqual(len(acciones), 3)
+
+    def test_una_consulta_no_consume_tiempo(self):  # FR-LIN-005
+        vista = VistaFalsa(ordenes=self.ESPERAS + [Orden("historia", "100"), Orden("esperar")])
+        self.jugar_sin_ajustes(vista)
+        self.assertEqual(len(vista.historias), 1)
+        self.assertEqual([e[0].tiempo for e in vista.estados], [0, 100, 200, 300, 300, 400])
+
+    RECHAZOS = (("10000", "reloj"), ("301", "reloj"), ("#0", "acción"), ("#4", "acción"), ("#99", "acción"),
+                ("abc", None), ("#abc", None), ("#", None), ("-5", None), ("1.5", None), ("1 2", None),
+                ("", None), (None, None))
+
+    def test_toda_consulta_rechazada_informa_el_motivo(self):  # FR-LIN-006, FR-LIN-023, SC-LIN-007
+        for argumento, palabra in self.RECHAZOS:
+            with self.subTest(argumento=argumento):
+                vista = self.consultar(argumento)
+                self.assertEqual(vista.historias, [])
+                self.assertEqual(vista.errores, [])
+                self.assertEqual(len(vista.avisos), 1)
+                self.assertNotEqual(vista.avisos[0].strip(), "")
+                if palabra is not None:
+                    self.assertIn(palabra, vista.avisos[0])
+
+    def test_una_consulta_rechazada_no_produce_ningun_efecto(self):  # FR-LIN-023, SC-LIN-007
+        for argumento, _ in self.RECHAZOS:
+            with self.subTest(argumento=argumento):
+                vista = self.consultar(argumento)
+                self.assertEqual(len(vista.avisos), 1)
+                self.assertNotIn("Orden desconocida", vista.avisos[0])
+                self.assertEqual(vista.instantaneas[4], vista.instantaneas[3])
+                _, acciones = LectorBitacoraPartida(str(self.ruta_log)).leer()
+                self.assertEqual(len(acciones), 3)
+
+    def test_tras_una_consulta_rechazada_el_juego_sigue(self):  # FR-LIN-023
+        vista = VistaFalsa(ordenes=self.ESPERAS + [Orden("historia", "999"), Orden("esperar")])
+        self.jugar_sin_ajustes(vista)
+        self.assertEqual(len(vista.avisos), 1)
+        self.assertIn("reloj", vista.avisos[0])
+        self.assertEqual(vista.estados[-1][0].tiempo, 400)
+
+    def test_tras_un_pergamino_las_acciones_revertidas_no_se_consultan(self):  # FR-LIN-006, FR-LIN-007
+        def dar_pergamino():
+            ficha = self.servicio._catalogo.obtener("itm_pergamino_retroceso")
+            self.servicio.partida._jugador.inventario.recoger(ObjetoInventario("p0", ficha))
+        ordenes = self.ESPERAS + [Orden("pergamino", 1), Orden("historia", "#3"), Orden("historia", "#2"),
+                                  Orden("historia", "300"), Orden("historia", "200")]
+        vista = VistaConInstantaneas(self.observar, dar_pergamino, ordenes=ordenes)
+        self.jugar_sin_ajustes(vista)
+        self.assertEqual(vista.estados[-1][0].tiempo, 200)       # el reloj volvió a 200
+        self.assertEqual([r for _, r in vista.historias], ["#2", "t=200"])
+        self.assertEqual(len(vista.avisos), 2)                   # #3 y t=300 ya no existen
+        self.assertEqual(_campos(vista.historias[0][0]), _campos(vista.estados[1][0]))
 
 
 if __name__ == "__main__":

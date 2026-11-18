@@ -1298,3 +1298,40 @@ Al terminar corre py -m unittest tests.aceptacion.test_niebla_ir_a tests.control
 **Prompt (resumido):** Corrección del viaje «ir a»: finalizar la partida cuando un paso del viaje termina con muerte o victoria, con su prueba.
 
 **Para qué se usó:** Evitar que un viaje que termina la partida vuelva al menú sin registrar el puntaje ni mostrar las pantallas de resultado y final.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/12-implement-002.md. Solo T023 y T024. No sigas con T025.
+```
+(El texto completo está en prompts/p2/12-implement-002.md.)
+
+**Prompt (resumido):** Pruebas de la vista con datos del conocimiento (T023) y cambio de Partida.vista() para que las salidas de la sala actual salgan del conocimiento del jugador (T024).
+
+**Para qué se usó:** Que las salidas, costos y puertas que muestra la vista sean las que el jugador conoce y no las del mapa real, sin filtrar nombres de salas avistadas o desconocidas.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo cripta/modelo/persistencia_modelo.py, tests/modelo/test_guardado_vuelta.py, tests/vista/test_vista_consola.py y specs/002-niebla-ir-a/tasks.md. Si el arreglo exige tocar otro archivo de cripta/modelo/, úsalo solo si es el cambio mínimo y anótalo.
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en la rama 002-niebla-ir-a-fases-c-d: no crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Redacta en español.
+Reglas: sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". No agregues reglas del juego. No modifiques pruebas existentes, solo agrega. Si algo cambia lo que el jugador observa más allá de lo descrito, detente y pregunta.
+
+Contexto: tras T024, Partida.vista() toma las salidas del conocimiento. test_por_el_archivo_binario falla porque el archivo binario aún no guarda el conocimiento (el formato es de la capacidad 004). La partida cargada reconstruye un conocimiento sin observación de las puertas y su vista no coincide con la original. Dijiste que corregirlo queda fuera de lo autorizado, pero no es así: persistencia_modelo.py está en cripta/modelo/ y sí está autorizado. Lo prohibido sigue siendo guardado_binario.py, estado_guardado.py y toda codificación de bytes.
+
+1. Cuando el estado restaurado no trae conocimiento (el caso del archivo binario), reconstruye una base coherente: la sala actual explorada con sus puertas observadas desde el mapa real, igual que en una entrada ordinaria, reutilizando el método existente del conocimiento. No cambies la forma de EstadoPartida ni escribas bytes. Cuando el estado sí trae conocimiento (la ruta en memoria), no cambies nada.
+2. Primero escribe en tests/modelo/test_guardado_vuelta.py una prueba nueva, sin tocar las existentes: una partida jugada hasta una sala con una salida cerrada con llave, cargada desde un estado sin conocimiento (el mismo camino del archivo binario, o el estado con el campo del conocimiento en su valor por defecto), debe mostrar en vista() las mismas salidas, costos y cerradas que la original, con su control positivo (la salida con llave sale cerrada). Muéstrame que falla por la razón actual y no por un error de la prueba.
+3. Con el arreglo, test_por_el_archivo_binario debe pasar sin modificarlo, igual que toda la suite.
+4. En la prueba de T023 de tests/vista/test_vista_consola.py quitaste las aserciones de salidas_antes, que eran el control positivo previo al cambio de la puerta real. Restáuralas si siguen siendo válidas, o explica por qué no.
+5. Dime cómo mapea Partida.vista() una puerta no_observada a SalidaVista.cerrada y si ese caso puede darse en la sala actual. No lo cambies, solo repórtalo.
+6. Marca T024 como [X] en tasks.md solo si la suite completa pasa.
+Al terminar corre py -m unittest tests.modelo.test_guardado_vuelta tests.vista.test_vista_consola y luego py -m unittest discover -s tests -t . (si py no puede ejecutarse usa .venv/Scripts/python.exe -m unittest) y reporta cuántas pasan. Dime qué cambiaste por punto, los nombres nuevos y verifica con git diff que en este paso solo cambiaron los archivos autorizados.
+```
+
+**Prompt (resumido):** Corrección de la carga desde archivo binario: reconstruir el conocimiento de la sala actual con sus puertas observadas cuando el estado no lo trae, para que la vista cargada coincida con la original.
+
+**Para qué se usó:** Mantener en verde la prueba de guardado y carga por archivo binario tras hacer que la vista salga del conocimiento, hasta que la 004 codifique el conocimiento completo en el formato binario.
+

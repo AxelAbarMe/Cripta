@@ -1125,3 +1125,63 @@ Sigue las instrucciones de prompts/p2/07-implement-002.md. Solo T001 a T005, sol
 **Prompt (resumido):** Escritura de las pruebas del dominio del conocimiento del jugador de la capacidad de niebla de guerra e «ir a» (Fase A, T001 a T005), antes del código.
 
 **Para qué se usó:** Crear tests/modelo/test_conocimiento_jugador.py con las pruebas de estados de sala, memoria de puertas, antorcha, inversas puntuales y salida sin puerta cerrable. Debían fallar porque cripta/modelo/conocimiento_jugador.py aún no existe.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/08-implement-002.md. Solo T006 a T009. No sigas con T010.
+```
+(El texto completo está en prompts/p2/08-implement-002.md.)
+
+**Prompt (resumido):** Implementación del conocimiento del jugador (T006), pruebas de entrada y cierres observables (T007), integración en la partida (T008) y avisos de cierres automáticos (T009).
+
+**Para qué se usó:** Crear cripta/modelo/conocimiento_jugador.py para que pasen las pruebas de T001 a T005 sin modificarlas, e integrarlo con las entradas, la antorcha, el pergamino y los cierres automáticos de la partida.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en la rama 002-niebla-ir-a-fases-a-b: no crees ni cambies de rama y no hagas commit ni push. Corrige solo cripta/modelo/conocimiento_jugador.py, cripta/modelo/partida.py, cripta/modelo/efectos.py y tests/modelo/test_conocimiento_jugador.py. No toques tasks.md ni PROMPTS_LLM.md ni las pruebas de T001 a T005. Mismas reglas de estilo de prompts/p2/08-implement-002.md (CRLF, sin sed -i, sin ";" en comentarios nuevos, sin estructuras prohibidas).
+1. Regresión de T009. Hoy EfectoCierrePuerta._cerrar solo llama a al_cerrar si es_observable() es verdadero. Eso evita que un cierre fuera de las salas del jugador invalide el BuscadorRutas y emita "Una puerta se cierra sola.", que es el comportamiento de la 001 y de la Parte I. Restáuralo: al_cerrar se llama siempre, como antes. El aviso al conocimiento va por un segundo callback opcional que solo se llama cuando es_observable() es verdadero (ajusta el nombre del parámetro si hace falta y anótalo).
+2. Deja _avisar_cierre_de_puerta(self) sin parámetros, como estaba, y mueve la lógica de observar la puerta a un método aparte que reciba sala_id y direccion. Con esto test_cazador_persecucion.py:97 funciona sin cambios.
+3. Reemplaza la prueba test_cierre_automatico_solo_actualiza_si_jugador_esta_en_un_extremo por una que use el flujo real: abre una puerta con cierre automático, avanza el reloj con acciones reales y comprueba (a) que con el jugador en un extremo el conocimiento pasa a "cerrada" y (b) que con el jugador lejos el conocimiento no cambia pero el mensaje "Una puerta se cierra sola." sí sale y el BuscadorRutas queda invalidado.
+4. En ConocimientoJugador.al_entrar quita la llamada redundante observar_puerta(destino, ...) y la variable sala sin uso de _explorar.
+5. En partida.py no cambies el final de archivo y no uses "dir" como nombre en las lambdas.
+No agregues reglas fuera de lo pedido. Si algo cambia lo que el jugador observa, detente y pregunta. Al terminar corre py -m unittest discover -s tests -t . y dime qué cambiaste por punto y verifica con git diff que solo cambiaron los cuatro archivos permitidos.
+```
+
+**Prompt (resumido):** Corrección de la integración del conocimiento con los cierres automáticos de puertas: restaurar el aviso y la invalidación de rutas en todo cierre, separar el aviso al conocimiento observable, probar el flujo real y limpiar código redundante.
+
+**Para qué se usó:** Corregir una regresión de T009 detectada en la revisión: los cierres fuera de las salas del jugador dejaban de invalidar el buscador de rutas de los cazadores y de emitir su mensaje.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en la rama 002-niebla-ir-a-fases-a-b: no crees ni cambies de rama y no hagas commit ni push. Corrige solo cripta/modelo/partida.py, cripta/modelo/efectos.py y tests/modelo/test_conocimiento_jugador.py. No toques tasks.md, PROMPTS_LLM.md ni las pruebas de T001 a T005. Mismas reglas de estilo de prompts/p2/08-implement-002.md (CRLF, sin sed -i, sin ";" en comentarios nuevos, sin estructuras prohibidas).
+1. La prueba test_cierre_automatico_actualiza_solo_si_jugador_esta_en_un_extremo no detecta un aviso faltante en el caso observable: la puerta nace cerrada, el jugador la observa cerrada al entrar y al final también se espera "cerrada", así que pasaría aunque nunca se avisara al conocimiento. Divídela en dos pruebas sin bucle ni ramas, una observable y otra lejana. En la observable, el jugador abre la puerta, la cruza y comprueba con una aserción que el conocimiento la recuerda "abierta", el cierre ocurre mientras el jugador sigue en uno de sus extremos y entonces el conocimiento pasa a "cerrada". La lejana conserva sus tres comprobaciones (memoria sin cambio, mensaje "Una puerta se cierra sola.", buscador invalidado).
+2. En efectos.py restaura en el docstring de EfectoCierrePuerta la línea que cita §2.1 y deja la nota del segundo callback en una línea aparte.
+3. Tras abrir una puerta con la acción abrir, el conocimiento sigue recordándola cerrada aunque el jugador está en uno de sus extremos. spec.md, sección Supuestos, dice que la observación ocurre al entrar o permanecer en las salas. Haz que tras abrir con éxito se observe esa puerta (observar_puerta con la sala actual y la dirección), antes de avanzar el tiempo de la acción, y agrega una prueba con la acción real. Si esto cambia lo que el jugador observa o contradice una regla de spec.md, detente y pregunta.
+No agregues reglas fuera de lo pedido. Al terminar corre py -m unittest discover -s tests -t . y dime qué cambiaste por punto y verifica con git diff que solo cambiaron los tres archivos permitidos.
+```
+
+**Prompt (resumido):** Segunda corrección de la integración del conocimiento con los cierres automáticos: prueba del cierre observable que detecte el aviso faltante, docstring de `EfectoCierrePuerta` y observación de la puerta tras abrirla.
+
+**Para qué se usó:** Cerrar tres hallazgos de la revisión: una prueba que pasaba sin verificar el aviso al conocimiento, una referencia a la especificación borrada de un docstring y la memoria de una puerta recién abierta por el jugador.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/09-implement-002.md. Solo T010 a T013. No sigas con T014.
+```
+(El texto completo está en prompts/p2/09-implement-002.md.)
+
+**Prompt (resumido):** Proyección lógica del conocimiento en el estado guardado (T010 y T011), comprobación del paquete de aceptación (T012) y casos B-NIE-004 y B-NIE-005 (T013).
+
+**Para qué se usó:** Incluir el conocimiento en el estado lógico de la partida sin tocar el formato binario, que corresponde a la 004, y verificar con casos de aceptación la antorcha y su reversión.

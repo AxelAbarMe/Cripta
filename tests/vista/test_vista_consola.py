@@ -8,6 +8,9 @@ from types import SimpleNamespace
 from cripta.controlador.controlador_cripta import Orden
 from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.resultado_partida import EnemigoVista, SalidaVista, VistaPartida
+from cripta.modelo.conocimiento_jugador import SalaConocida, SalidaConocida
+from cripta.modelo.resultado_partida import MapaConocido
+from cripta.vista.vista_base import VistaBase
 from cripta.vista.vista_consola import ANCHO, VistaConsola, _caja_mensajes
 from tests.modelo.test_conocimiento_jugador import crear_partida_sintetica, salida
 
@@ -188,6 +191,89 @@ class TestVistaConNiebla(unittest.TestCase):
             self.assertNotIn(nombre_oculto, repr(vista))
             self.assertNotIn(nombre_oculto, panel)
         self.assertIn("Sala avistada secreta", repr(partida._mapa.obtener(2).esqueleto.nombre))
+
+
+class TestContratoNiebla(unittest.TestCase):
+    def test_vista_base_exige_presentacion_del_mapa_y_motivos(self):
+        """FR-NIE-007/008/013, escenario 1.2 y viaje detenido con motivos."""
+        metodos = VistaBase.__abstractmethods__
+        self.assertIn("mostrar_mapa_conocido", metodos)
+        self.assertIn("mostrar_motivos_viaje", metodos)
+
+        implementaciones = {nombre: (lambda self, *args: None) for nombre in metodos
+                            if nombre not in ("mostrar_mapa_conocido", "mostrar_motivos_viaje")}
+        vista_incompleta = type("VistaIncompleta", (VistaBase,), implementaciones)
+        with self.assertRaises(TypeError):
+            vista_incompleta()
+        implementaciones["mostrar_mapa_conocido"] = lambda self, proyeccion: None
+        implementaciones["mostrar_motivos_viaje"] = lambda self, motivos: None
+        vista_completa = type("VistaCompleta", (VistaBase,), implementaciones)
+        self.assertIsInstance(vista_completa(), VistaBase)
+
+
+class TestPresentacionNiebla(unittest.TestCase):
+    """FR-NIE-007/008/009/013, escenarios 1.2, 1.3 y viaje detenido."""
+
+    def test_mapa_muestra_datos_explorados_y_solo_existencia_avistada(self):
+        """La proyeccion garantiza que solo hay nombre en la sala explorada."""
+        proyeccion = MapaConocido((
+            SalaConocida(1, "explorada", "Vestibulo", (
+                SalidaConocida("E", 2, 37, "abierta"),
+                SalidaConocida("N", 3, 211, "cerrada"),
+            )),
+            SalaConocida(2, "avistada", "Secreto", ()),
+        ))
+        vista, salida = crear()
+        vista.mostrar_mapa_conocido(proyeccion)
+        lineas = salida + vista._pendientes
+
+        def linea_de_caja(contenido):
+            return f"| {contenido.ljust(ANCHO - 4)} |"
+
+        for contenido in (
+            "Sala 1: Vestibulo (explorada)",
+            "  E -> sala 2, costo 37, puerta abierta",
+            "  N -> sala 3, costo 211, puerta cerrada",
+            "Sala 2: existe, sin explorar",
+        ):
+            self.assertIn(linea_de_caja(contenido), lineas)
+        texto = "\n".join(lineas)
+        self.assertIn("Vestibulo", texto)
+        self.assertNotIn("Secreto", texto)
+
+    def test_motivos_se_traducen_y_conservan_el_orden(self):
+        vista, salida = crear()
+        motivos = ("llegada_destino", "enemigos_vivos", "daño_recibido", "sin_ruta")
+        vista.mostrar_motivos_viaje(motivos)
+        texto = "\n".join(salida + vista._pendientes)
+        textos = ("destino", "enemigos", "daño", "ruta")
+        posiciones = [texto.lower().find(palabra) for palabra in textos]
+        self.assertTrue(all(posicion >= 0 for posicion in posiciones), texto)
+        self.assertTrue(posiciones[0] < posiciones[1] < posiciones[2] < posiciones[3])
+
+    def test_interpreta_mapa_e_ir_a_con_identificador_entero(self):
+        vista = VistaConsola()
+        self.assertEqual(vista._interpretar(["mapa"]), Orden("mapa"))
+        self.assertEqual(vista._interpretar(["ir", "a", "3"]), Orden("ir_a", 3))
+        for partes in (["ir", "a"], ["ir", "a", "x"], ["ir", "a", "-3"], ["ir", "3"]):
+            with self.subTest(partes=partes):
+                self.assertIsNone(vista._interpretar(partes))
+
+    def test_controles_visibles_listan_mapa_e_ir_a_sin_salirse_de_celda(self):
+        lineas = VistaConsola._controles()
+        texto = "\n".join(lineas).lower()
+        self.assertIn("mapa", texto)
+        self.assertIn("ir a <sala>", texto)
+
+        bordes = lineas[:-1:2]
+        filas = lineas[1:-1:2]
+        self.assertEqual(len(bordes), len(filas))
+        for borde, fila in zip(bordes, filas):
+            self.assertEqual(len(fila), len(borde))
+            separadores = [indice for indice, caracter in enumerate(borde) if caracter == "+"]
+            self.assertTrue(all(fila[indice] == "|" for indice in separadores))
+            anchos_celdas = [derecha - izquierda for izquierda, derecha in zip(separadores, separadores[1:])]
+            self.assertTrue(all(ancho == anchos_celdas[0] for ancho in anchos_celdas))
 
 
 if __name__ == "__main__":

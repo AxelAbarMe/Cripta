@@ -227,7 +227,10 @@ class TestGuardadoLineaDeTiempo(unittest.TestCase):
     def test_el_resto_del_estado_no_cambia_por_llevar_linea(self):  # FR-LIN-010, FR-LIN-021
         sin_salas = lambda estado: replace(estado, salas=(), linea=None)
         self.assertEqual(sin_salas(self.cargado), sin_salas(self.estado))
-        self.assertEqual(self.cargado.salas, self.estado.salas)
+        self.assertEqual(len(self.cargado.salas), N_SALAS)
+        for sala in self.cargado.salas:   # las salas vuelven ordenadas por id, así que se comparan una a una
+            original = [s for s in self.estado.salas if s.sala_id == sala.sala_id][0]
+            self.assertEqual(sala, original)
 
     def test_cargar_una_sala_y_leer_el_encabezado_siguen_funcionando(self):  # FR-LIN-010
         for sala in self.estado.salas[:3]:
@@ -250,6 +253,43 @@ class TestGuardadoLineaDeTiempo(unittest.TestCase):
             self.ruta.write_bytes(crudo[: len(crudo) * (fraccion - 1) // fraccion])
             with self.assertRaises(CriptaFormatoIncompatibleError):
                 self.guardado.cargar(self.ruta)
+
+
+class TestGuardadoContadorDeInstancias(unittest.TestCase):
+    def setUp(self):
+        carpeta = tempfile.TemporaryDirectory()
+        self.addCleanup(carpeta.cleanup)
+        self.ruta = Path(carpeta.name) / "partida.sav"
+        self.guardado = GuardadoBinario()
+
+    def test_el_contador_vuelve_igual(self):  # FR-LIN-010, FR-LIN-021
+        for contador in (0, 1, 7, 123456):
+            self.guardado.guardar(self.ruta, replace(estado_sintetico(N_SALAS), siguiente_instancia=contador))
+            self.assertEqual(self.guardado.cargar(self.ruta).siguiente_instancia, contador)
+
+    def test_el_contador_forma_parte_de_la_igualdad_del_estado(self):  # FR-LIN-021
+        estado = estado_sintetico(N_SALAS)
+        self.assertNotEqual(replace(estado, siguiente_instancia=3), replace(estado, siguiente_instancia=4))
+
+    def test_cada_checkpoint_conserva_el_contador_de_su_estado(self):  # FR-LIN-010, FR-LIN-017
+        linea = _linea()
+        puntos = tuple(replace(p, estado=replace(p.estado, siguiente_instancia=p.siguiente_instancia + 10))
+                       for p in linea.checkpoints)
+        base = replace(linea.base, estado=replace(linea.base.estado, siguiente_instancia=5))
+        estado = replace(estado_sintetico(N_SALAS), siguiente_instancia=9,
+                         linea=replace(linea, base=base, checkpoints=puntos))
+        self.guardado.guardar(self.ruta, estado)
+        cargado = self.guardado.cargar(self.ruta)
+        self.assertEqual(cargado.siguiente_instancia, 9)
+        self.assertEqual(cargado.linea.base.estado.siguiente_instancia, 5)
+        self.assertEqual([p.estado.siguiente_instancia for p in cargado.linea.checkpoints], [11, 12])
+
+    def test_un_contador_que_no_cabe_es_error_y_no_toca_el_archivo_anterior(self):  # FR-LIN-010
+        self.guardado.guardar(self.ruta, estado_sintetico(N_SALAS))
+        antes = self.ruta.read_bytes()
+        with self.assertRaises(ValueError):
+            self.guardado.guardar(self.ruta, replace(estado_sintetico(N_SALAS), siguiente_instancia=2**40))
+        self.assertEqual(self.ruta.read_bytes(), antes)
 
 
 class TestGuardadoConocimiento(unittest.TestCase):

@@ -101,6 +101,22 @@ class ConocimientoJugador(Reversible):
                 resultado.append(SalaConocida(sala_id, _AVISTADA, None, ()))
         return tuple(resultado)
 
+    def exportar_celdas(self) -> tuple[tuple[str, ...], tuple[tuple[str, ...], ...], tuple[tuple[int | None, ...], ...]]:
+        return tuple(self._estados), tuple(tuple(fila) for fila in self._puertas), tuple(
+            tuple(fila) for fila in self._costos
+        )
+
+    def importar_celdas(self, celdas) -> None:
+        estados, puertas, costos = celdas
+        cantidad = len(self._estados)
+        if (len(estados) != cantidad or len(puertas) != cantidad or len(costos) != cantidad
+                or any(len(fila) != len(_DIRECCIONES) for fila in puertas)
+                or any(len(fila) != len(_DIRECCIONES) for fila in costos)):
+            raise ValueError("El tamaño de las celdas no coincide con el mapa")
+        self._estados = list(estados)
+        self._puertas = [list(fila) for fila in puertas]
+        self._costos = [list(fila) for fila in costos]
+
     def _explorar(self, sala_id: int) -> None:
         if self.estado_de_sala(sala_id) == _EXPLORADA:
             return

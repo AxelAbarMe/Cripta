@@ -9,6 +9,7 @@ from cripta.estructuras.ordenamiento_selector import ordenar_auto
 from cripta.excepciones import CriptaError
 from cripta.infraestructura.estado_guardado import (
     EnemigoGuardado,
+    ConocimientoGuardado,
     EstadoPartida,
     EstadoRNG,
     EventoGuardado,
@@ -18,6 +19,7 @@ from cripta.infraestructura.estado_guardado import (
     TrampaGuardada,
 )
 from cripta.modelo.enemigo import Enemigo
+from cripta.modelo.conocimiento_jugador import ConocimientoJugador
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.trampa import Trampa
 
@@ -76,7 +78,7 @@ def _evento_guardado(evento) -> EventoGuardado:
 
 
 def crear_estado(*, cripta_id, cripta_version, catalogo_version, semilla, azar, reloj, jugador, mapa,
-                 salas_preparadas, acciones_jugador, enemigos_derrotados, mensajes) -> EstadoPartida:
+                 salas_preparadas, acciones_jugador, enemigos_derrotados, mensajes, conocimiento) -> EstadoPartida:
     salas = tuple(_sala_guardada(s, salas_preparadas.contiene(s.id)) for s in mapa.todas_las_salas())
     # Los eventos viajan ordenados por (tiempo, secuencia), así el archivo es el mismo para el mismo estado
     pares = [(e.tiempo, e.secuencia, _evento_guardado(e)) for e in reloj.eventos_vigentes()]
@@ -95,6 +97,7 @@ def crear_estado(*, cripta_id, cripta_version, catalogo_version, semilla, azar, 
         salas=salas,
         eventos=tuple(e for _t, _s, e in pares),
         mensajes=tuple(mensajes),
+        conocimiento=ConocimientoGuardado(*conocimiento.exportar_celdas()),
     )
     
     
@@ -120,6 +123,14 @@ def restaurar_jugador(jugador, guardado, catalogo) -> None:
             inventario.armadura_equipada = objeto
     if guardado.indice_cursor >= 0:
         inventario.ir_a_posicion(guardado.indice_cursor)
+
+
+def restaurar_conocimiento(mapa, sala_actual: int, proyeccion):
+    conocimiento = ConocimientoJugador(mapa, sala_actual)
+    if proyeccion is None:
+        return conocimiento
+    conocimiento.importar_celdas((proyeccion.estados, proyeccion.puertas, proyeccion.costos))
+    return conocimiento
 
 
 def restaurar_sala(sala, guardada, precarga, catalogo, enemigos, trampas) -> None:

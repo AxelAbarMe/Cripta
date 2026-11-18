@@ -40,6 +40,7 @@ from cripta.modelo.jugador import Jugador
 from cripta.modelo.persistencia_modelo import (
     crear_estado,
     restaurar_jugador,
+    restaurar_conocimiento,
     restaurar_sala,
     siguiente_instancia_tras,
 )
@@ -132,6 +133,7 @@ class Partida:
             semilla=self._semilla, azar=self._azar, reloj=self._reloj, jugador=self._jugador, mapa=self._mapa,
             salas_preparadas=self._salas_preparadas, acciones_jugador=self._acciones_ejecutadas,
             enemigos_derrotados=self._enemigos_derrotados, mensajes=self._bitacora.mensajes(),
+            conocimiento=self._conocimiento,
         )
 
 
@@ -162,6 +164,8 @@ class Partida:
             if guardada.contenido_cargado:
                 self._marcar_preparada(sala.id)
         restaurar_jugador(self._jugador, estado.jugador, self._catalogo)
+        self._conocimiento = restaurar_conocimiento(self._mapa, self._jugador.sala_actual, estado.conocimiento)
+        self._conocimiento.registrador = self._historial.registrar_cambio
         for trampa in trampas.elementos():
             self._con_retroceso(trampa)
         for enemigo in enemigos.elementos():

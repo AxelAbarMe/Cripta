@@ -1,5 +1,5 @@
 '''Contrato de la Vista de Cripta: lo que el ControladorCripta espera de cualquier interfaz.
-VistaConsola hereda de esta clase e implementa los 13 métodos, otra interfaz solo tendría que hacer lo mismo.
+VistaConsola hereda de esta clase e implementa sus 15 métodos abstractos.
 La vista solo lee VistaPartida y ResultadoAccion; nunca toca el modelo ni el servicio.
 Sus órdenes salen como objetos Orden y recibe DatosFinales (ambos en controlador/controlador_cripta.py).
 '''
@@ -50,6 +50,14 @@ class VistaBase(ABC):
     @abstractmethod
     def mostrar_inventario_ordenado(self, criterio: str, objetos) -> None:
         '''Lista del inventario ordenada por "peso", "valor" o "nombre"; objetos con .ficha.nombre/.peso/.valor.'''
+
+    @abstractmethod
+    def mostrar_mapa_conocido(self, proyeccion) -> None:
+        '''Presenta la proyección de salas y salidas conocidas por el jugador.'''
+
+    @abstractmethod
+    def mostrar_motivos_viaje(self, motivos: tuple[str, ...]) -> None:
+        '''Presenta en orden los motivos por los que se detuvo un viaje.'''
 
     @abstractmethod
     def pedir_texto(self, pregunta: str) -> str | None:

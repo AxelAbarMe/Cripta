@@ -20,7 +20,8 @@ CURSO = "Estructuras de Datos - II Ciclo 2026"
 _CONTROLES = (
     "n/s/e/o  moverse", "abrir <dir>  abrir puerta", "atacar <#>  ataca enemigo", "esperar  pasar el tiempo",
     "recoger <#>  del suelo", "sig / ant  mover cursor", "usar / equipar / soltar", "ordenar peso|valor|nombre",
-    "pergamino  deshacer", "guardar  guardar partida", "cargar  cargar partida", "salir  volver al menu",
+    "pergamino  deshacer", "mapa  ver mapa conocido", "ir a <sala>  viajar", "salir  volver al menu",
+    "guardar  guardar partida", "cargar  cargar partida",
 )
 
 
@@ -182,6 +183,13 @@ class VistaConsola(VistaBase):
             if argumento is not None and argumento.isdigit():
                 return Orden(comando, int(argumento) - 1)
             return None
+        if comando == "mapa":
+            return Orden("mapa") if len(partes) == 1 else None
+        if comando == "ir" and len(partes) == 3 and partes[1] == "a":
+            identificador = partes[2]
+            if identificador.isdecimal():
+                return Orden("ir_a", int(identificador))
+            return None
         if comando == "ordenar":
             return Orden("ordenar", argumento) if argumento in CRITERIOS_ORDEN else None
         if comando in ("esperar", "usar", "equipar", "soltar", "guardar", "cargar", "salir"):
@@ -312,6 +320,33 @@ class VistaConsola(VistaBase):
         lineas = [f"{n}. {o.ficha.nombre}  (peso {o.ficha.peso}, valor {o.ficha.valor})"
                   for n, o in enumerate(objetos, start=1)]
         self._pendientes += _caja(f"INVENTARIO ORDENADO POR {criterio.upper()}", lineas or ["(vacio)"], ANCHO)
+
+    def mostrar_mapa_conocido(self, proyeccion) -> None:
+        lineas = []
+        for sala in proyeccion.salas:
+            if sala.estado == "avistada":
+                lineas.append(f"Sala {sala.id_sala}: existe, sin explorar")
+                continue
+            lineas.append(f"Sala {sala.id_sala}: {sala.nombre} (explorada)")
+            for salida in sala.salidas:
+                puerta = salida.estado_puerta.replace("_", " ")
+                lineas.append(f"  {salida.direccion} -> sala {salida.id_sala_destino}, costo {salida.costo}, puerta {puerta}")
+        self._pendientes += _caja("MAPA CONOCIDO", lineas or ["(sin salas conocidas)"], ANCHO)
+
+    def mostrar_motivos_viaje(self, motivos: tuple[str, ...]) -> None:
+        traducciones = (
+            ("llegada_destino", "Llegaste al destino."),
+            ("enemigos_vivos", "Hay enemigos vivos en la sala."),
+            ("daño_recibido", "Recibiste daño durante el viaje."),
+            ("sin_ruta", "No queda una ruta conocida."),
+        )
+        lineas = []
+        for motivo in motivos:
+            for codigo, texto in traducciones:
+                if motivo == codigo:
+                    lineas.append(texto)
+                    break
+        self._pendientes += _caja("VIAJE DETENIDO", lineas or ["El viaje se detuvo."], ANCHO)
 
     # ------------------------------------------------------- puntajes y final
     def mostrar_resultado(self, desenlace, resumen, nombre, ranking, puntajes) -> None:

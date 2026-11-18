@@ -17,8 +17,8 @@ _ERRORES = (CriptaError, FileNotFoundError, RuntimeError, ValueError)
 class Orden:
     '''Intención del usuario, igual para consola y gráfica. `argumento` según el tipo:
     mover/abrir: "N","S","E","O"; atacar/recoger: posición en vista.enemigos / vista.objetos_suelo;
-    ordenar: "peso","valor" o "nombre"; el resto no lleva.
-    Tipos: mover, abrir, atacar, esperar, recoger, usar, equipar, soltar, pergamino,
+    ordenar: "peso","valor" o "nombre". ir_a: identificador entero de sala. El resto no lleva.
+    Tipos: mover, ir_a, mapa, abrir, atacar, esperar, recoger, usar, equipar, soltar, pergamino,
     siguiente, anterior, ordenar, guardar, cargar, salir.
     '''
     tipo: str
@@ -136,10 +136,76 @@ class ControladorCripta:
             self._cargar()
         elif orden.tipo == "pergamino":
             return self._retroceder(orden.argumento or 1, vista)
+        elif orden.tipo == "mapa":
+            self._mostrar_mapa_conocido()
+        elif orden.tipo == "ir_a":
+            return self._viajar(orden.argumento)
         else:
             accion = self._traducir(orden, vista)
             return accion is not None and self._ejecutar_accion(accion)
         return False
+
+    def _mostrar_mapa_conocido(self) -> None:
+        """Entrega a la vista solo la proyección conocida por el jugador."""
+        ok, mapa = self._intentar(self._servicio.partida.mapa_conocido)
+        if ok:
+            self._vista.mostrar_mapa_conocido(mapa)
+
+    def _viajar(self, destino: int) -> bool:
+        """Ejecuta pasos ordinarios, recalculando la ruta tras cada paso."""
+        partida = self._servicio.partida
+        ok, paso = self._intentar(partida.siguiente_paso, destino)
+        if not ok:
+            return False
+        if paso.direccion is None:
+            self._avisar_motivo_viaje(paso.motivo)
+            return False
+        while True:
+            estado_paso = self._ejecutar_paso_viaje(destino, paso.direccion)
+            if estado_paso is not None:
+                return estado_paso
+            ok, paso = self._intentar(partida.siguiente_paso, destino)
+            if not ok:
+                return False
+            if paso.direccion is None:
+                self._vista.mostrar_motivos_viaje((paso.motivo,))
+                return False
+
+    def _ejecutar_paso_viaje(self, destino: int, direccion: str) -> bool | None:
+        """Ejecuta un paso aislado. True termina la partida, False detiene el viaje y None permite seguir."""
+        partida = self._servicio.partida
+        vida_anterior = partida.vista().vida
+        resultado_paso = self._ejecutar_accion_viaje(Accion("mover", direccion))
+        if resultado_paso is not None:
+            return resultado_paso
+        motivos = partida.motivos_despues_de_paso(destino, vida_anterior)
+        if motivos:
+            self._vista.mostrar_motivos_viaje(motivos)
+            return False
+        return None
+
+    def _ejecutar_accion_viaje(self, accion: Accion) -> bool | None:
+        """Ejecuta la acción de un viaje y distingue rechazo, fin de partida y continuación."""
+        ok, resultado = self._intentar(self._servicio.ejecutar, accion)
+        if not ok:
+            return False
+        if not resultado.aceptada:
+            self._vista.mostrar_aviso(resultado.motivo_rechazo)
+            return False
+        if resultado.desenlace != "en_curso":
+            self._finalizar(resultado.desenlace)
+            return True
+        return None
+
+    def _avisar_motivo_viaje(self, motivo: str | None) -> None:
+        """Traduce las validaciones sin ejecutar pasos ni registrar la orden."""
+        mensajes = {
+            "destino_inexistente": "La sala de destino no existe.",
+            "destino_no_explorado": "La sala de destino no está explorada.",
+            "sala_actual": "Ya estás en esa sala.",
+            "sin_ruta": "No hay una ruta conocida hasta esa sala.",
+        }
+        self._vista.mostrar_aviso(mensajes.get(motivo, "No se puede iniciar el viaje."))
 
     def _retroceder(self, cantidad: int, vista) -> bool:
         # Cada pergamino deshace una acción; se limita a lo que la vista dice que es posible.

@@ -1335,3 +1335,18 @@ Al terminar corre py -m unittest tests.modelo.test_guardado_vuelta tests.vista.t
 
 **Para qué se usó:** Mantener en verde la prueba de guardado y carga por archivo binario tras hacer que la vista salga del conocimiento, hasta que la 004 codifique el conocimiento completo en el formato binario.
 
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo plan.md y tasks.md dentro de specs/002-niebla-ir-a/. No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a. Redacta en español. No agregues reglas del juego. No marques ni desmarques ninguna casilla. Respeta los finales de línea CRLF. Si algo falta o cambia el resultado observable, detente y pregunta.
+1. tasks.md T025 y T027: el contrato de presentación debe nombrar los dos métodos que el controlador ya pide a la vista: mostrar_mapa_conocido(proyeccion) y mostrar_motivos_viaje(motivos). Indica que motivos es una tupla de códigos y que la vista debe presentar llegada_destino, enemigos_vivos, daño_recibido y también sin_ruta, porque el controlador entrega sin_ruta por ese método cuando la ruta desaparece a mitad del viaje.
+2. tasks.md T029 y T030: la vista de consola debe interpretar el comando mapa y el comando «ir a <sala>» (la sala es un identificador entero) y devolver las órdenes ya definidas en el controlador, Orden("mapa") y Orden("ir_a", id). Un argumento ausente o no entero no produce orden. Los controles visibles de la pantalla deben listar ambos comandos. Hoy ninguna tarea cubre este punto aunque FR-NIE-007 y FR-NIE-009 lo exigen.
+3. tasks.md T026 y T028 y plan.md: hoy nadie llama al registro del comentario. ServicioPartida.ejecutar(Accion("mover")) no sabe que un movimiento pertenece a un viaje, así que el comentario único de FR-NIE-016 exige un método nuevo en ServicioPartida (el nombre lo propone la implementación) y que ControladorCripta lo llame una sola vez antes del primer paso, solo si la ruta tiene al menos un paso. Agrega a T028 la ruta cripta/controlador/controlador_cripta.py (Modificado) y la mención de ese método. Agrega a T026 la prueba del controlador en tests/controlador/test_controlador_cripta.py (Modificado) que verifica una sola llamada antes del primer paso y ninguna cuando la orden se rechaza. Revisa si [P] sigue siendo correcto en T026. En la tabla de impacto de plan.md ajusta las filas de servicio_partida.py y controlador_cripta.py para reflejarlo.
+4. Comprueba con Test-Path que todas las rutas que citas existen y que su estado Nuevo o Modificado es correcto. Revisa que research.md, contracts/ y quickstart.md no contradigan estos cambios. Si alguno los contradice, no lo edites: dímelo.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/002-niebla-ir-a/ y que ninguna casilla cambió de estado.
+```
+
+**Prompt (resumido):** Ajuste del plan y las tareas de la Fase D de niebla de guerra e «ir a»: nombres de los métodos de presentación, interpretación de los comandos mapa e «ir a» en la vista de consola, y llamada del controlador al registro del comentario del viaje.
+
+**Para qué se usó:** Cerrar dos huecos detectados antes de implementar la Fase D: ninguna tarea cubría la interpretación de los comandos en la vista ni la llamada que escribe el comentario de viaje en partida.log.
+

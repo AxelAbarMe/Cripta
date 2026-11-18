@@ -1,7 +1,31 @@
 """Línea de tiempo pura: acciones vigentes, checkpoints y ajustes de inventario en listas contiguas.
 Las búsquedas por instante y por número de acción son binarias escritas a mano.
-No usa red, archivos ni vista.
+No usa red, archivos ni vista. Incluye la proyección de solo lectura que devuelve una consulta histórica.
 """
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True, slots=True)
+class ObjetoHistorico:
+    # Objeto del inventario en un instante pasado
+    instancia_id: str
+    ficha_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class ResumenHistorico:
+    # Los siete grupos de FR-LIN-004 sin referencias al juego vivo
+    tiempo: int
+    sala_id: int
+    vida: int
+    vida_max: int
+    ataque: int
+    defensa: int
+    velocidad: int
+    inventario: tuple
+    efectos_activos: tuple
+    enemigos: tuple
+    mapa_conocido: tuple
 
 
 class PuntoControl:

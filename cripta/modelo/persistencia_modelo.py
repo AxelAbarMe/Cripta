@@ -4,6 +4,8 @@ Solo convierte datos: no escribe archivos (eso lo hace GuardadoBinario) y no con
 interfaz. La agenda se guarda como EventoGuardado (tipo + sujeto + dos números) porque las
 acciones del reloj son funciones y no se pueden escribir en un archivo.
 """
+from types import SimpleNamespace
+
 from cripta.constantes import DIRECCIONES
 from cripta.estructuras.ordenamiento_selector import ordenar_auto
 from cripta.excepciones import CriptaError
@@ -18,6 +20,7 @@ from cripta.infraestructura.estado_guardado import (
     SalaGuardada,
     TrampaGuardada,
 )
+from cripta.modelo.cripta_mapa import CriptaMapa
 from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.conocimiento_jugador import ConocimientoJugador
 from cripta.modelo.inventario import ObjetoInventario
@@ -136,6 +139,19 @@ def restaurar_conocimiento(mapa, sala_actual: int, proyeccion):
 def restaurar_sala(sala, guardada, precarga, catalogo, enemigos, trampas) -> None:
     """Repone el estado de una sala. `enemigos` y `trampas` son VectorOrdenado por instancia_id:
     se llenan para que la agenda pueda encontrar a quién pertenece cada evento."""
+    if guardada.contenido_cargado:
+        precarga.preparar_sala(sala.id)              # contenido y fichas (infraestructura)
+    _aplicar_estado_sala(sala, guardada, catalogo, enemigos, trampas)
+
+
+def restaurar_sala_materializada(sala, guardada, catalogo, enemigos, trampas) -> None:
+    """Igual que restaurar_sala pero sin precarga: el estado guardado ya trae todo el contenido de la sala."""
+    if guardada.contenido_cargado:
+        sala.contenido_cargado = True
+    _aplicar_estado_sala(sala, guardada, catalogo, enemigos, trampas)
+
+
+def _aplicar_estado_sala(sala, guardada, catalogo, enemigos, trampas) -> None:
     for direccion, cerrada in zip(DIRECCIONES, guardada.puertas_cerradas):
         if cerrada:
             sala.puertas.cerrar(direccion)
@@ -143,7 +159,6 @@ def restaurar_sala(sala, guardada, precarga, catalogo, enemigos, trampas) -> Non
             sala.puertas.abrir(direccion)
     sala.rastro_ultima_visita = None if guardada.rastro < 0 else guardada.rastro
     if guardada.contenido_cargado:
-        precarga.preparar_sala(sala.id)              # contenido y fichas (infraestructura)
         sala.objetos_en_suelo = list(guardada.objetos_suelo)
         sala.trampas = []
         for t in guardada.trampas:
@@ -172,3 +187,65 @@ def siguiente_instancia_tras(inventario) -> int:
         if prefijo == "i" and numero.isdigit():
             mayor = max(mayor, int(numero))
     return mayor
+
+
+# ----------------------------------------------------------------------------------------------
+# Reconstrucción aislada (línea de tiempo): contenido inicial de las salas ya materializadas y
+# un mapa nuevo que comparte solo el esqueleto estático. Nada de esto usa red, disco ni precarga.
+# ----------------------------------------------------------------------------------------------
+class ContenidoInicial:
+    """Contenido de una sala justo después de prepararla: objetos, trampas y enemigos dormidos."""
+    __slots__ = ("sala_id", "objetos", "trampas", "enemigos")
+
+    def __init__(self, sala_id, objetos, trampas, enemigos):
+        self.sala_id = sala_id
+        self.objetos = objetos        # ids de catálogo
+        self.trampas = trampas        # (instancia, tipo)
+        self.enemigos = enemigos      # (instancia, tipo, vida)
+
+
+def contenido_inicial_de(sala) -> ContenidoInicial:
+    # Se toma justo al preparar la sala, antes de que el jugador cambie algo en ella
+    objetos = tuple(sala.objetos_en_suelo)
+    trampas = tuple((t.instancia_id, t.tipo_catalogo) for t in sala.trampas)
+    enemigos = tuple((e.instancia_id, e.tipo_catalogo, e.vida) for e in sala.enemigos_dormidos)
+    return ContenidoInicial(sala.id, objetos, trampas, enemigos)
+
+
+def materializar_sala(sala, contenido, catalogo) -> None:
+    # Pone en la sala su contenido inicial usando solo fichas del catálogo ya cargado
+    sala.objetos_en_suelo = list(contenido.objetos)
+    sala.trampas = [Trampa(instancia, tipo) for instancia, tipo in contenido.trampas]
+    sala.enemigos_dormidos = [
+        Enemigo(instancia, catalogo.obtener(tipo), sala.id, vida) for instancia, tipo, vida in contenido.enemigos
+    ]
+    sala.contenido_cargado = True
+
+
+class PrecargaMaterializada:
+    """Sustituye a la precarga en la reconstrucción: entrega salas sin red, disco ni solicitudes."""
+
+    def __init__(self, mapa, contenidos, catalogo):
+        self._mapa = mapa
+        self._contenidos = contenidos   # VectorOrdenado de ContenidoInicial por sala_id
+        self._catalogo = catalogo
+
+    def preparar_sala(self, sala_id: int):
+        sala = self._mapa.obtener(sala_id)
+        if not sala.contenido_cargado:
+            contenido = self._contenidos.buscar(sala_id)
+            if contenido is None:
+                sala.contenido_cargado = True
+            else:
+                materializar_sala(sala, contenido, self._catalogo)
+        return sala
+
+    def precargar_desde(self, sala_id: int) -> None:
+        return None
+
+
+def copiar_mapa_estatico(mapa):
+    """Mapa nuevo con las mismas salas de esqueleto y sin nada del estado vivo."""
+    copia = CriptaMapa()
+    copia.agregar_pagina(SimpleNamespace(salas=tuple(sala.esqueleto for sala in mapa.todas_las_salas())))
+    return copia

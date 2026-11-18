@@ -7,9 +7,11 @@ import dataclasses
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from cripta.controlador.controlador_cripta import ControladorCripta, Orden
 from cripta.excepciones import CriptaApiError
+from cripta.modelo.inventario import ObjetoInventario
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
 from cripta.infraestructura.puntajes_disco import RepositorioPuntajes
 from cripta.vista.vista_base import VistaBase
@@ -34,6 +36,7 @@ class VistaFalsa(VistaBase):
         self.ordenes, self.confirmaciones, self.opciones = list(ordenes), list(confirmaciones), list(opciones)
         self.nombre, self.cripta = nombre, cripta
         self.estados, self.avisos, self.errores, self.ordenados = [], [], [], []
+        self.mapas, self.motivos_viaje = [], []
         self.resultados, self.finales, self.preguntas = [], [], []
         self.ultimo_vista = None
 
@@ -65,6 +68,12 @@ class VistaFalsa(VistaBase):
 
     def mostrar_inventario_ordenado(self, criterio, objetos):
         self.ordenados.append((criterio, tuple(objetos)))
+
+    def mostrar_mapa_conocido(self, mapa):
+        self.mapas.append(mapa)
+
+    def mostrar_motivos_viaje(self, motivos):
+        self.motivos_viaje.append(tuple(motivos))
 
     def pedir_texto(self, pregunta):
         return self.nombre
@@ -108,6 +117,12 @@ class BaseControlador(unittest.TestCase):
         controlador.ejecutar()
         return controlador
 
+    def preparar_controlador(self, vista, semilla=5):
+        ruta = str(self.dir / "p.log")
+        self.servicio.iniciar_nueva(CRIPTA, semilla, ruta)
+        return ControladorCripta(self.servicio, vista, ruta_guardado=str(self.dir / "p.sav"),
+                                 ruta_bitacora=ruta, semilla=semilla)
+
 
 class TestFlujoDelMenu(BaseControlador):
     def test_salir_del_menu_cierra_el_servicio(self):
@@ -143,6 +158,200 @@ class TestFlujoDelMenu(BaseControlador):
 
 
 class TestOrdenes(BaseControlador):
+    def test_ir_a_rechaza_destino_actual_y_ausente_sin_consumir_tiempo_ni_log(self):
+        """FR-NIE-009, FR-NIE-019 y FR-NIE-021: órdenes sin paso no afectan partida ni bitácora."""
+        vista = VistaFalsa()
+        controlador = self.preparar_controlador(vista)
+        partida = self.servicio.partida
+        tiempo = partida.vista().tiempo
+        historial = len(partida._historial)
+        with open(self.dir / "p.log", encoding="utf-8") as archivo:
+            lineas = len(archivo.readlines())
+        controlador._procesar(Orden("ir_a", 1), partida.vista())
+        controlador._procesar(Orden("ir_a", 9999), partida.vista())
+        controlador._procesar(Orden("ir_a", "abc"), partida.vista())
+        self.assertEqual(len(vista.avisos), 3)
+        self.assertTrue(any("esa sala" in aviso.lower() for aviso in vista.avisos))
+        self.assertTrue(any("no existe" in aviso.lower() or "explorada" in aviso.lower()
+                            for aviso in vista.avisos))
+        self.assertEqual(partida.vista().tiempo, tiempo)
+        self.assertEqual(len(partida._historial), historial)
+        with open(self.dir / "p.log", encoding="utf-8") as archivo:
+            self.assertEqual(len(archivo.readlines()), lineas)
+
+    def test_ir_a_sin_ruta_conocida_no_ejecuta_pasos(self):
+        """FR-NIE-010 y FR-NIE-021: una sala explorada tras puerta cerrada no se alcanza."""
+        vista = VistaFalsa()
+        controlador = self.preparar_controlador(vista)
+        partida = self.servicio.partida
+        partida._conocimiento.al_entrar(5, False)
+        tiempo = partida.vista().tiempo
+        historial = len(partida._historial)
+        with open(self.dir / "p.log", encoding="utf-8") as archivo:
+            lineas = len(archivo.readlines())
+        controlador._procesar(Orden("ir_a", 5), partida.vista())
+        self.assertEqual(partida.vista().tiempo, tiempo)
+        self.assertEqual(len(partida._historial), historial)
+        self.assertTrue(any("ruta conocida" in aviso.lower() for aviso in vista.avisos))
+        with open(self.dir / "p.log", encoding="utf-8") as archivo:
+            self.assertEqual(len(archivo.readlines()), lineas)
+
+    def test_consultar_mapa_pide_proyeccion_y_la_entrega_a_vista(self):
+        """FR-NIE-007 y FR-NIE-008: mapa sin acción ni modificación del historial."""
+        vista = VistaFalsa()
+        controlador = self.preparar_controlador(vista)
+        partida = self.servicio.partida
+        proyeccion = partida.mapa_conocido()
+        tiempo = partida.vista().tiempo
+        historial = len(partida._historial)
+        with open(self.dir / "p.log", encoding="utf-8") as archivo:
+            lineas = len(archivo.readlines())
+        self.assertFalse(controlador._procesar(Orden("mapa"), partida.vista()))
+        self.assertEqual(vista.mapas, [proyeccion])
+        self.assertEqual(partida.vista().tiempo, tiempo)
+        self.assertEqual(len(partida._historial), historial)
+        with open(self.dir / "p.log", encoding="utf-8") as archivo:
+            self.assertEqual(len(archivo.readlines()), lineas)
+
+    def test_ir_a_ejecuta_movimiento_ordinario_y_muestra_motivos_ordenados(self):
+        """FR-NIE-011, FR-NIE-013 y FR-NIE-020: paso ordinario y llegada antes de enemigos."""
+        vista = VistaFalsa()
+        controlador = self.preparar_controlador(vista)
+        partida = self.servicio.partida
+        partida._jugador.vida_max = partida._jugador.vida = 1000
+        partida._conocimiento.al_entrar(2, False)
+        partida._mapa.abrir_puerta(1, "N")
+        estado = partida.vista()
+        terminó = controlador._procesar(Orden("ir_a", 2), estado)
+        self.assertFalse(terminó)
+        self.assertEqual(partida.vista().sala_id, 2)
+        self.assertEqual(partida.vista().tiempo, 100)
+        self.assertEqual(vista.motivos_viaje,
+                         [("llegada_destino", "enemigos_vivos", "daño_recibido")])
+
+    def test_ir_a_pergamino_revierte_el_ultimo_paso_y_no_reanuda_viaje(self):
+        """FR-NIE-017: el viaje termina al completarse y un pergamino posterior revierte un paso."""
+        vista = VistaFalsa()
+        controlador = self.preparar_controlador(vista)
+        partida = self.servicio.partida
+        partida._jugador.vida_max = partida._jugador.vida = 1000
+        partida._jugador.inventario.recoger(ObjetoInventario(
+            "pergamino-viaje", SimpleNamespace(clase="pergamino_retroceso", nombre="Pergamino")
+        ))
+        partida._conocimiento.al_entrar(2, False)
+        partida._mapa.abrir_puerta(1, "N")
+        controlador._procesar(Orden("ir_a", 2), partida.vista())
+        self.assertEqual(partida.vista().sala_id, 2)
+        motivos_previos = len(vista.motivos_viaje)
+        controlador._procesar(Orden("pergamino", 1), partida.vista())
+        self.assertEqual((partida.vista().sala_id, partida.vista().tiempo), (1, 0))
+        self.assertEqual(len(vista.motivos_viaje), motivos_previos)
+
+    def test_ir_a_recalcula_y_se_detiene_si_un_evento_cierra_la_puerta_observada(self):
+        """FR-NIE-012 y FR-NIE-015: vuelve a consultar la ruta tras los eventos del paso."""
+        class PartidaFalsa:
+            def __init__(self):
+                self.pasos = 0
+
+            def siguiente_paso(self, destino):
+                if self.pasos == 0:
+                    return SimpleNamespace(direccion="E", motivo=None)
+                return SimpleNamespace(direccion=None, motivo="sin_ruta")
+
+            def vista(self):
+                return SimpleNamespace(vida=100)
+
+            def motivos_despues_de_paso(self, destino, vida):
+                return ()
+
+        class ServicioFalso:
+            def __init__(self):
+                self.partida = PartidaFalsa()
+                self.acciones = []
+
+            def ejecutar(self, accion):
+                self.acciones.append(accion)
+                self.partida.pasos += 1
+                return SimpleNamespace(aceptada=True, desenlace="en_curso")
+
+        vista = VistaFalsa()
+        servicio = ServicioFalso()
+        controlador = ControladorCripta(servicio, vista)
+        self.assertFalse(controlador._procesar(Orden("ir_a", 3), servicio.partida.vista()))
+        self.assertEqual([(accion.tipo, accion.argumento) for accion in servicio.acciones], [("mover", "E")])
+        self.assertEqual(vista.motivos_viaje, [("sin_ruta",)])
+
+    def test_ir_a_movimiento_rechazado_detiene_el_viaje(self):
+        class PartidaFalsa:
+            def __init__(self):
+                self.consultas_paso = 0
+
+            def siguiente_paso(self, destino):
+                self.consultas_paso += 1
+                return SimpleNamespace(direccion="E", motivo=None)
+
+            def vista(self):
+                return SimpleNamespace(vida=100)
+
+            def motivos_despues_de_paso(self, destino, vida):
+                raise AssertionError("No se consultan motivos tras un movimiento rechazado")
+
+        class ServicioFalso:
+            def __init__(self):
+                self.partida = PartidaFalsa()
+                self.llamadas = 0
+
+            def ejecutar(self, accion):
+                self.llamadas += 1
+                if self.llamadas > 3:
+                    raise AssertionError("El controlador repitió el mismo paso")
+                return SimpleNamespace(aceptada=False, motivo_rechazo="La puerta está cerrada.")
+
+        vista = VistaFalsa()
+        servicio = ServicioFalso()
+        controlador = ControladorCripta(servicio, vista)
+
+        self.assertFalse(controlador._procesar(Orden("ir_a", 3), servicio.partida.vista()))
+        self.assertEqual(servicio.llamadas, 1)
+        self.assertEqual(servicio.partida.consultas_paso, 1)
+        self.assertEqual(vista.avisos, ["La puerta está cerrada."])
+        self.assertEqual(vista.motivos_viaje, [])
+
+    def test_ir_a_muerte_del_jugador_no_presenta_motivos_de_viaje(self):
+        """FR-NIE-013: comprueba que _ejecutar_paso_viaje no consulta motivos al terminar. La prueba de finalización cubre las pantallas de resultado."""
+        class PartidaFalsa:
+            def vista(self):
+                return SimpleNamespace(vida=1)
+
+            def motivos_despues_de_paso(self, destino, vida):
+                raise AssertionError("No se consultan motivos después de la muerte")
+
+        vista = VistaFalsa()
+        controlador = ControladorCripta(SimpleNamespace(partida=PartidaFalsa()), vista)
+        controlador._ejecutar_accion_viaje = lambda accion: True
+        self.assertTrue(controlador._ejecutar_paso_viaje(4, "E"))
+        self.assertEqual(vista.motivos_viaje, [])
+
+    def test_ir_a_finaliza_la_partida_si_un_paso_produce_un_desenlace(self):
+        """FR-NIE-013: un desenlace durante el viaje muestra una vez resultado y final, sin motivos."""
+        vista = VistaFalsa()
+        controlador = self.preparar_controlador(vista)
+        partida = self.servicio.partida
+        partida._conocimiento.al_entrar(2, False)
+        partida._mapa.abrir_puerta(1, "N")
+        self.servicio.ejecutar = lambda accion: SimpleNamespace(
+            aceptada=True, desenlace="derrota", motivo_rechazo=None
+        )
+
+        terminó = controlador._procesar(Orden("ir_a", 2), partida.vista())
+
+        self.assertTrue(terminó)
+        self.assertEqual(len(vista.resultados), 1)
+        self.assertEqual(len(vista.finales), 1)
+        self.assertEqual(vista.resultados[0][0], "derrota")
+        self.assertEqual(vista.finales[0].desenlace, "derrota")
+        self.assertEqual(vista.motivos_viaje, [])
+
     def test_atacar_o_recoger_una_posicion_inexistente_avisa(self):
         vista = VistaFalsa(ordenes=[Orden("atacar", 0), Orden("recoger", 5)])
         self.jugar(vista)

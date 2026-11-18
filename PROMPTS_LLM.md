@@ -1203,3 +1203,16 @@ No agregues reglas fuera de lo pedido. Si algo cambia lo que el jugador observa 
 
 **Para qué se usó:** Cerrar T011, que se había detenido porque el campo rompía dos pruebas de ida y vuelta binaria de la Parte I, y reforzar dos pruebas que pasaban sin comprobar lo pedido.
 
+
+### 2026-11-18 — Antigravity CLI 1.5.6 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/16-implement-003-fase-a-pruebas.md. Solo T001 a T004. No sigas con T005.
+```
+(El texto completo está en prompts/p2/16-implement-003-fase-a-pruebas.md.)
+
+**Prompt (resumido):** Pruebas de dominio de la resolubilidad (T001 a T004): esqueleto con fixtures sintéticos, recorrido incremental, diagnóstico, determinismo, enemigos y comparación con la alternativa ingenua.
+
+**Para qué se usó:** Escribir primero las pruebas que fijan la API del verificador, antes de implementar el módulo de dominio.

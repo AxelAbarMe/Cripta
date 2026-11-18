@@ -882,7 +882,7 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 
 **Prompt (resumido):** Aplicar la revisión del Pull Request de la capacidad 002 a la especificación, el plan y las tareas.
 
-**Para qué se usó:** Incorporar las correcciones de la revisión de saull04 antes de fusionar el PR de documentación.
+**Para qué se usó:** Incorporar las correcciones de la revisión del PR antes de fusionar el PR de documentación.
 
 
 ### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
@@ -1203,3 +1203,48 @@ No agregues reglas fuera de lo pedido. Si algo cambia lo que el jugador observa 
 
 **Para qué se usó:** Cerrar T011, que se había detenido porque el campo rompía dos pruebas de ida y vuelta binaria de la Parte I, y reforzar dos pruebas que pasaban sin comprobar lo pedido.
 
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/10-implement-002.md. Solo T015, T016, T019, T020 y T021. No sigas con T014, T017, T018 ni T022.
+```
+(El texto completo está en prompts/p2/10-implement-002.md.)
+
+**Prompt (resumido):** Pruebas y búsqueda de costo mínimo sobre el conocimiento del jugador (T015 y T016), proyección inmutable del mapa y del resultado del viaje (T019 y T020) y su entrega desde la partida (T021).
+
+**Para qué se usó:** Implementar en el modelo la ruta de «ir a» y las proyecciones que consumen el controlador y la vista, sin abrir puertas y usando solo el conocimiento del jugador.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/11-implement-002.md. Solo T014, T017, T018 y T022. No sigas con T023.
+```
+(El texto completo está en prompts/p2/11-implement-002.md.)
+
+**Prompt (resumido):** Casos de aceptación del viaje (T014), pruebas del controlador (T017 y T018) y el bucle del viaje con la consulta del mapa (T022).
+
+**Para qué se usó:** Implementar en el controlador la orden «ir a» como acciones ordinarias con recálculo por paso, motivos de detención y cancelación por pergamino, y la consulta del mapa conocido.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en una rama de trabajo: no crees ni cambies de rama y no hagas commit ni push. Corrige solo tests/modelo/test_ir_a.py, cripta/modelo/ruta_conocida.py (solo si hace falta), cripta/modelo/partida.py, cripta/modelo/resultado_partida.py, cripta/modelo/conocimiento_jugador.py y tests/modelo/test_conocimiento_jugador.py (solo agregar una prueba nueva, sin modificar las de T001 a T005). No toques tasks.md ni PROMPTS_LLM.md. Mismas reglas de estilo de prompts/p2/10-implement-002.md (CRLF, sin sed -i, sin ";" en comentarios nuevos, sin estructuras prohibidas, nombres nuevos mínimos y anotados).
+1. Dos pruebas de TestRutaConocida no discriminan: esperan "N", que es la primera dirección en el orden N, S, E, O, así que una implementación que tomara la primera salida abierta también pasaría. Reescríbelas. (a) Desempate: dos vecinas con costo total idéntico hacia el destino, donde la de menor id quede en una dirección POSTERIOR a la de mayor id (por ejemplo la de menor id al E y la de mayor id al N). (b) Costo: la primera arista más barata no es la ruta más barata, y la ruta correcta sale por una dirección posterior (E u O). Agrega una aserción de control en cada una. Comprueba de forma temporal, sin dejarlo en el repositorio, que una versión que elige la primera salida abierta haría fallar ambas, y cuéntamelo.
+2. Partida.motivos_despues_de_paso solo se prueba con llegada_destino, y la prueba de orden construye un ResultadoViaje a mano, así que no prueba la lógica. Agrega pruebas con Partida y un mapa sintético, colocando enemigos como en tests/aceptacion/test_niebla_ir_a.py: llegada más enemigo dormido más daño en el orden fijo de FR-NIE-013 (para el daño pasa como vida_anterior un valor mayor que la vida actual), un enemigo activo cuenta, un enemigo muerto no cuenta, sin llegada no aparece llegada_destino y con el jugador muerto el resultado es vacío.
+3. ResultadoViaje.motivos nunca lo llena Partida: quita el campo motivos y su __post_init__, deja en el docstring que motivo es la razón por la que no hay paso, y ajusta las pruebas de T019 para que comprueben los motivos reales de Partida.motivos_despues_de_paso.
+4. Partida.siguiente_paso: un id fuera del mapa (por ejemplo 99) da hoy destino_no_explorado y uno negativo da destino_inexistente. Haz que cualquier id que no exista en el mapa dé destino_inexistente. Agrega pruebas de ambos casos. Agrega también una prueba de sin_ruta con una puerta cerrada y el jugador con la llave en el inventario: el resultado es sin_ruta, la puerta sigue cerrada, y tiempo, mensajes y retrocesos_posibles no cambian (FR-NIE-014).
+5. FR-NIE-025: sala_conocida marca como abierta toda salida sin llave ni cierre automático, incluso si su puerta empieza cerrada (SalidaDTO.cerrada, que puede venir marcada en un solo lado de la conexión). FR-NIE-025 habla de una salida sin puerta que pueda cerrarse, y una puerta que empieza cerrada es una puerta. Haz que esa excepción aplique solo si ninguno de los dos lados trae cerrada. Agrega una prueba nueva en tests/modelo/test_conocimiento_jugador.py: una puerta cerrada sin llave ni cierre no figura abierta antes de observarla y figura cerrada tras observarla, y una salida sin llave, sin cierre y sin cerrada sigue abierta sin observación. Muestra que la prueba falla antes del cambio. Si el cambio altera algo observable fuera de esto, detente y pregunta.
+6. Confirma con conteo de bytes que cripta/modelo/ruta_conocida.py y tests/modelo/test_ir_a.py, y todo .py editado, quedan en CRLF, con la misma cantidad de CR y LF.
+No agregues reglas fuera de lo pedido. Si algo cambia lo que el jugador observa o contradice spec.md, detente y pregunta. Al terminar corre py -m unittest discover -s tests -t . y dime qué cambiaste por punto, los nombres nuevos, y verifica con git diff que solo cambiaron los archivos permitidos.
+```
+
+**Prompt (resumido):** Corrección de la ruta conocida y sus pruebas: casos que distingan el desempate y el costo de elegir la primera salida, pruebas reales de los motivos de detención, limpieza del resultado del viaje, rechazo coherente de destinos inexistentes y puertas que empiezan cerradas sin llave ni cierre.
+
+**Para qué se usó:** Cerrar los hallazgos de la revisión de T015 a T021 y un comentario de la revisión del PR de las fases A y B sobre FR-NIE-025.

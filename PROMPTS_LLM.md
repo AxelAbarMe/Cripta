@@ -1350,3 +1350,54 @@ Al terminar, dime qué cambiaste por punto y verifica con git diff que solo camb
 
 **Para qué se usó:** Cerrar dos huecos detectados antes de implementar la Fase D: ninguna tarea cubría la interpretación de los comandos en la vista ni la llamada que escribe el comentario de viaje en partida.log.
 
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/13-implement-002.md. Solo T025, T027, T029 y T030. No sigas con T026 ni T028.
+
+# Implementación 002, paso 7: contrato y presentación de la vista (T025, T027, T029 y T030)
+
+Solo T025, T027, T029 y T030 de specs/002-niebla-ir-a/tasks.md. No sigas con T026 ni T028.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-007, FR-NIE-008, FR-NIE-009 y FR-NIE-013), plan.md, data-model.md, research.md, quickstart.md y contracts/ antes de escribir. Lee cripta/vista/vista_base.py, cripta/vista/vista_consola.py, tests/vista/test_vista_consola.py, el tipo de la proyección del mapa en cripta/modelo/resultado_partida.py y Partida.mapa_conocido() en cripta/modelo/partida.py. La vista solo lee esos datos y nunca toca el modelo, el servicio ni el mapa real.
+2. Si necesitas un nombre nuevo que los documentos no definan, propón el mínimo siguiendo los patrones del código existente, en español, y anótalo en tu resumen con archivo y motivo. Solo detente y pregunta si algo cambia lo que el jugador observa o una regla de spec.md.
+3. Sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Errores de programación heredan de IndexError o ValueError.
+4. No modifiques pruebas existentes, solo agrega. No toques cripta/controlador/, cripta/modelo/, cripta/servicios/, cripta/infraestructura/ ni cripta/bench/. Si un defecto de esas capas lo exige, detente y explícalo. No crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". Comentarios cortos: cabecera de máximo 5 líneas y 1 o 2 líneas por método.
+5. Pruebas con valor: cada caso comprueba valores concretos, incluye un control positivo cuando afirma una ausencia, no asigna atributos privados si existe una acción real, y cita en su docstring el FR-NIE y el escenario que cubre.
+6. Marca cada casilla [X] en tasks.md cuando su tarea esté terminada y verificada.
+
+Contexto de diseño, ya decidido en plan.md y tasks.md:
+- El controlador ya llama a mostrar_mapa_conocido(proyeccion) y mostrar_motivos_viaje(motivos). motivos es una tupla de códigos (llegada_destino, enemigos_vivos, daño_recibido y sin_ruta) que la vista traduce a texto en español, conservando el orden recibido.
+- VistaBase es una clase abstracta. Los dos métodos nuevos se declaran como abstractos, así que VistaConsola no se podrá instanciar hasta implementarlos. Por eso T027 y T030 se hacen juntas y no debes correr la suite completa entre ambas. Actualiza en VistaBase el texto que dice cuántos métodos tiene la vista.
+- Los avisos y paneles de la consola salen por self._pendientes, justo encima de la entrada, como mostrar_inventario_ordenado. Presenta el mapa y los motivos con ese mismo patrón y con las cajas existentes (_caja y ANCHO).
+- El mapa conocido muestra solo lo que trae la proyección: salas exploradas con su nombre, salidas, costos y estado recordado de las puertas, y salas avistadas solo como existencia. Nunca muestra el nombre de una sala avistada o desconocida.
+- Comandos de consola: mapa devuelve Orden("mapa") e ir a <sala> devuelve Orden("ir_a", id) solo si el argumento es un entero. Ausente o no entero no produce orden y se informa como comando no reconocido. Solo se acepta la forma de tres palabras ir a <sala>. Los controles visibles de la pantalla deben listar ambos comandos sin romper la disposición actual de las celdas.
+
+Puntos de control:
+- T025: agrega a tests/vista/test_vista_consola.py la prueba del contrato: una subclase de VistaBase que implementa los métodos actuales pero no los dos nuevos no se puede instanciar, y con los dos sí. Debe fallar porque VistaBase aún no los declara. Muestra la razón.
+- T029: agrega a tests/vista/test_vista_consola.py las pruebas de presentación del mapa (explorada con nombre, salidas, costos y puertas, avistada solo como existencia, ningún nombre oculto, con control positivo), de los motivos (cada código con su texto, orden conservado, sin_ruta incluido), de interpretación de comandos (mapa, ir a 3, ir a, ir a x, ir a -3, ir 3) y de los controles visibles. Deben fallar por lo que aún no existe, no por errores de sintaxis ni nombres mal escritos. Muestra las razones.
+- T027 y T030, juntas: declara los dos métodos abstractos en cripta/vista/vista_base.py e impleméntalos en cripta/vista/vista_consola.py junto con la interpretación de comandos y los controles. Deben pasar T025 y T029. Corre py -m unittest tests.vista.test_vista_consola y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, reporta cuántas pruebas pasan, qué hiciste por tarea, los nombres nuevos y confirma que no cambió ningún archivo fuera de cripta/vista/, tests/vista/ y tasks.md.
+```
+
+**Prompt (resumido):** Contrato de presentación de la vista (T025 y T027), pruebas de presentación del mapa conocido, de los motivos de detención y de los comandos mapa e «ir a» (T029), e implementación en la vista de consola (T030).
+
+**Para qué se usó:** Que el jugador pueda consultar el mapa conocido y lanzar «ir a <sala>» desde la consola, y ver por qué se detuvo el viaje, sin que la vista acceda al mapa real ni muestre nombres de salas no exploradas. Codex no pudo mostrar las pruebas en rojo antes de implementar porque el sandbox bloqueó py.exe en la primera ejecución.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo tests/vista/test_vista_consola.py. No toques otros archivos, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a. Redacta en español. Ajusta solo las pruebas que agregó la corrida anterior (TestContratoNiebla y TestPresentacionNiebla) y no modifiques las pruebas existentes. No marques ni desmarques ninguna casilla. Los .py van en CRLF. En comentarios, docstrings y textos nuevos no uses ";". Si algo cambia el resultado observable o exige tocar otro archivo, detente y pregunta.
+1. test_mapa_muestra_datos_explorados_y_solo_existencia_avistada: hoy comprueba caracteres sueltos ("E", "N", "2", "3") que aparecen en cualquier texto, y assertNotIn("Secreto", texto) no prueba nada porque la proyección de la prueba no contiene ese nombre. Reemplaza esas aserciones por comprobaciones de las líneas completas que produce mostrar_mapa_conocido: la sala explorada con su nombre, cada salida con dirección, sala destino, costo y estado de la puerta, y la sala avistada como existente y sin explorar. Agrega la ausencia real con control positivo: arma una proyección con una sala avistada que traiga un nombre ("Secreto") si SalaConocida lo permite, comprueba que la vista no lo imprime y que el nombre de la sala explorada sí se imprime. Si SalaConocida rechaza un nombre en una sala avistada, elimina la aserción vacía, anota en el docstring que la proyección ya lo garantiza y dímelo.
+2. test_controles_visibles_listan_mapa_e_ir_a_sin_salirse_de_celda: el límite 4 * 29 + 1 es un número suelto. Derívalo de la constante o del cálculo que usa VistaConsola._controles() para armar las celdas, o comprueba la disposición real (filas y celdas por fila) sin números mágicos. Dime además cuántas filas tenía la cuadrícula de controles antes de la corrida anterior y cuántas tiene ahora, y si el cambio altera la altura de la pantalla.
+3. Corre py -m unittest tests.vista.test_vista_consola y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, dime qué cambiaste por punto y confirma que en esta corrección no editaste ningún archivo salvo tests/vista/test_vista_consola.py.
+```
+
+**Prompt (resumido):** Corrección de las pruebas de presentación del mapa conocido y de los controles visibles de la vista de consola: aserciones sobre líneas completas, ausencia de nombres ocultos con control positivo y disposición de controles sin números mágicos.
+
+**Para qué se usó:** Reforzar dos pruebas de la corrida 13 que no comprobaban lo que declaraban: la ausencia de nombres de salas no exploradas y la disposición de los controles.
+

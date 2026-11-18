@@ -66,7 +66,7 @@
 - `specs/002-niebla-ir-a/plan.md` y `data-model.md` describen el conocimiento del jugador como estado de partida con nivel por sala y observaciones por salida, plano y reversible. La 004 debe guardar esos datos en checkpoints e incluirlos en las consultas históricas. La codificación y versión binaria corresponden a 004.
 - La 002 decidió que los costos de salida forman parte de la proyección persistida. Se incluyen en checkpoints y en el cálculo de memoria del benchmark. Límite conocido: si la memoria resulta excesiva, podrían recalcularse desde el esqueleto.
 - La 001 cambió `SalidaVista` (costo), `EnemigoVista` (`es_cazador`), `Partida.vista()` y `_paneles_izquierdos`; el resumen histórico presenta enemigos y vida mediante esas vistas (Depende de 001). El criterio de cripta de referencia (mayor total de salas o `CRIPTA_REFERENCIA`) queda pendiente de unificación con el grupo.
-- `docs/ejemplos/partida_cripta-03.log` contiene un pergamino (recoge uno y lo usa). La prueba de equivalencia FR-LIN-008/SC-LIN-005 usará ese log, lo reproducirá completo y comparará con `historia` tras aplicar el mismo límite t (o el reloj final si t lo excede).
+- `docs/ejemplos/partida_cripta-02.log` contiene un pergamino (recoge uno y lo usa para revertir la última acción: quedan 8 acciones vigentes). La prueba de equivalencia FR-LIN-008/SC-LIN-005 usará ese log, lo reproducirá completo y comparará con `historia` tras aplicar el mismo límite t (o el reloj final si t lo excede).
 - La 001 y la 002 aún son dependencias de integración en las rutas compartidas. Se marcarán como tales; no se presenta código planeado como existente.
 
 ## Verificaciones del código actual

@@ -1,10 +1,17 @@
 """Pruebas del conocimiento del jugador para la capacidad 002."""
 import unittest
+from types import SimpleNamespace
 
 from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.sala_dto import SalaDTO
 from cripta.modelo.cripta_mapa import CriptaMapa
 from cripta.modelo.historial_retroceso import HistorialRetroceso
+from cripta.dto.cripta_general_dto import CriptaGeneralDTO
+from cripta.dto.jugador_inicial_dto import JugadorInicialDTO
+from cripta.modelo.partida import Partida
+from cripta.modelo.accion import Accion
+from cripta.modelo.inventario import ObjetoInventario
+from cripta.dto.llave_dto import LlaveDTO
 from cripta.modelo.conocimiento_jugador import (
     ConocimientoJugador,
     SalaConocida,
@@ -32,6 +39,27 @@ def salida(destino, costo=100, cerrada=False, llave=None, cierre=None):
         "llave": llave,
         "cierre_automatico": cierre,
     }
+
+
+class PrecargaSintetica:
+    def __init__(self, mapa):
+        self.mapa = mapa
+
+    def preparar_sala(self, sala_id):
+        return self.mapa.obtener(sala_id)
+
+    def precargar_desde(self, sala_id):
+        return None
+
+
+def crear_partida_sintetica(salas, sala_inicial=1):
+    mapa = crear_mapa(salas)
+    general = CriptaGeneralDTO("sintetica", "1", len(salas), 1, len(salas), sala_inicial,
+                               max(s["id"] for s in salas), "llave", 10, 4,
+                               JugadorInicialDTO(100, 10, 0, 100))
+    partida = Partida(general, mapa, object(), PrecargaSintetica(mapa), 1)
+    partida.iniciar()
+    return partida
 
 
 class TestConocimientoInicial(unittest.TestCase):
@@ -223,6 +251,91 @@ class TestSalidaSinPuertaCerrable(unittest.TestCase):
         proyeccion = conocimiento.sala_conocida(1)
         self.assertEqual(proyeccion.salidas[0].estado_puerta, "abierta")
         self.assertEqual(conocimiento.estado_de_puerta(1, "E"), "no_observada")
+
+
+class TestIntegracionPartida(unittest.TestCase):
+    """T007: FR-NIE-002, FR-NIE-004 y FR-NIE-015, caso B-NIE-002."""
+
+    def test_entrada_observa_puertas_y_revela_vecinas(self):
+        partida = crear_partida_sintetica((
+            {"id": 1, "nombre": "Inicio", "salidas": {"E": salida(2)}},
+            {"id": 2, "nombre": "Vecina", "salidas": {"O": salida(1), "S": salida(3)}},
+            {"id": 3, "nombre": "Lejana", "salidas": {"N": salida(2)}},
+        ))
+        partida.ejecutar_accion(Accion("mover", "E"))
+        self.assertEqual(partida._conocimiento.estado_de_sala(2), "explorada")
+        self.assertEqual(partida._conocimiento.estado_de_sala(3), "avistada")
+        self.assertEqual(partida._conocimiento.estado_de_puerta(2, "S"), "abierta")
+
+    def test_cierre_automatico_actualiza_conocimiento_en_un_extremo(self):
+        partida = crear_partida_sintetica((
+            {"id": 1, "nombre": "Inicio", "salidas": {"E": salida(2, cerrada=True, llave="llave", cierre=150)}},
+            {"id": 2, "nombre": "Centro", "salidas": {"O": salida(1, cerrada=True, llave="llave", cierre=150), "E": salida(3)}},
+            {"id": 3, "nombre": "Final", "salidas": {"O": salida(2)}},
+        ))
+        llave = LlaveDTO("llave", "Llave", "llave", 0, 0, None)
+        partida._jugador.inventario.recoger(ObjetoInventario("llave-instancia", llave))
+
+        self.assertEqual(partida._conocimiento.estado_de_puerta(1, "E"), "cerrada")
+        partida.ejecutar_accion(Accion("abrir", "E"))
+        self.assertEqual(partida._conocimiento.estado_de_puerta(1, "E"), "abierta")
+        resultado = partida.ejecutar_accion(Accion("mover", "E"))
+
+        self.assertTrue(partida._mapa.obtener(1).puertas.esta_cerrada("E"))
+        self.assertEqual(partida._conocimiento.estado_de_puerta(1, "E"), "cerrada")
+        self.assertIn("Una puerta se cierra sola.", resultado.mensajes)
+
+    def test_cierre_automatico_lejano_conserva_memoria_y_avisa(self):
+        partida = crear_partida_sintetica((
+            {"id": 1, "nombre": "Inicio", "salidas": {"E": salida(2)}},
+            {"id": 2, "nombre": "Centro", "salidas": {"O": salida(1),
+                                                              "E": salida(3, cerrada=True, llave="llave", cierre=350)}},
+            {"id": 3, "nombre": "Vecina", "salidas": {"O": salida(2, cerrada=True, llave="llave", cierre=350),
+                                                               "E": salida(4)}},
+            {"id": 4, "nombre": "Lejana", "salidas": {"O": salida(3)}},
+        ))
+        llave = LlaveDTO("llave", "Llave", "llave", 0, 0, None)
+        partida._jugador.inventario.recoger(ObjetoInventario("llave-instancia", llave))
+        partida.ejecutar_accion(Accion("mover", "E"))
+        partida.ejecutar_accion(Accion("abrir", "E"))
+        partida.ejecutar_accion(Accion("mover", "E"))
+        partida.ejecutar_accion(Accion("mover", "E"))
+        memoria_previa = partida._conocimiento.estado_de_puerta(2, "E")
+        partida._buscador._valido = True
+
+        resultado = partida.ejecutar_accion(Accion("esperar"))
+
+        self.assertEqual(partida._conocimiento.estado_de_puerta(2, "E"), memoria_previa)
+        self.assertIn("Una puerta se cierra sola.", resultado.mensajes)
+        self.assertFalse(partida._buscador._valido)
+
+    def test_abrir_actualiza_conocimiento_con_accion_real(self):
+        partida = crear_partida_sintetica((
+            {"id": 1, "nombre": "Inicio", "salidas": {"E": salida(2, cerrada=True, llave="llave")}},
+            {"id": 2, "nombre": "Final", "salidas": {"O": salida(1, cerrada=True, llave="llave")}},
+        ))
+        llave = LlaveDTO("llave", "Llave", "llave", 0, 0, None)
+        partida._jugador.inventario.recoger(ObjetoInventario("llave-instancia", llave))
+
+        resultado = partida.ejecutar_accion(Accion("abrir", "E"))
+
+        self.assertTrue(resultado.aceptada)
+        self.assertEqual(partida._conocimiento.estado_de_puerta(1, "E"), "abierta")
+
+    def test_pergamino_revierte_conocimiento_de_entrada_con_antorcha(self):
+        partida = crear_partida_sintetica((
+            {"id": 1, "nombre": "Inicio", "salidas": {"E": salida(2)}},
+            {"id": 2, "nombre": "Centro", "salidas": {"O": salida(1), "E": salida(3)}},
+            {"id": 3, "nombre": "Vecina", "salidas": {"O": salida(2)}},
+        ))
+        ficha = SimpleNamespace(clase="pergamino_retroceso")
+        partida._jugador.inventario.recoger(ObjetoInventario("pergamino", ficha))
+        partida._antorcha_encendida = True
+        partida.ejecutar_accion(Accion("mover", "E"))
+        self.assertEqual(partida._conocimiento.estado_de_sala(3), "explorada")
+        partida.ejecutar_accion(Accion("pergamino"))
+        self.assertEqual(partida._jugador.sala_actual, 1)
+        self.assertEqual(partida._conocimiento.estado_de_sala(3), "desconocida")
 
 
 if __name__ == "__main__":

@@ -368,8 +368,7 @@ spec.md ni otros archivos.
 5. En T007 cambia "id de ficha" por "id de la sala".
 6. En la trazabilidad de plan.md, usa para FR-TER-007 y FR-TER-021 el archivo de prueba que cita
    cada tarea. En T028 cambia "Ampliar" por "Crear".
-7. Usa en T021, T022 y T025 los nombres reales de cripta/modelo/reloj.py: <pega aquí el resultado
-   de Select-String>."
+7. Usa en T021, T022 y T025 los nombres reales de cripta/modelo/reloj.py: calcular_intervalo, calcular_tiempo_reprogramado, EventoProgramado y RelojEventos."
 
 **Prompt (resumido):** Ramas: quedaron tres Pull Requests: documentación, Fase A y Fases B a E, cada uno desde una rama nueva desde main.
 Paralelismo: quité las notas contradictorias. El orden es A, B, C, D, E.

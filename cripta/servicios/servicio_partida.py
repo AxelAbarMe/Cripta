@@ -8,7 +8,7 @@ import random
 import shutil
 from pathlib import Path
 
-from cripta.constantes import CACHE_TAMANO_DEFAULT
+from cripta.constantes import CACHE_TAMANO_DEFAULT, CHECKPOINT_CADA_DEFECTO
 from cripta.excepciones import CriptaBitacoraError, CriptaFormatoIncompatibleError
 from cripta.infraestructura.guardado_binario import GuardadoBinario
 from cripta.infraestructura.partida_log import CAMPOS_ENCABEZADO, EscritorBitacoraPartida, LectorBitacoraPartida
@@ -22,8 +22,10 @@ from cripta.servicios.servicio_presupuesto import ServicioPresupuesto
 
 class ServicioPartida:
     def __init__(self, cliente, contador, cache_disco=None, tamano_cache: int = CACHE_TAMANO_DEFAULT,
-                 asincrono: bool = True, repositorio_puntajes=None):
-        # `cliente` debe ser seguro entre hilos (ClienteGeneral) y `contador` el mismo que usa el cliente
+                 asincrono: bool = True, repositorio_puntajes=None, checkpoint_cada: int | None = None):
+        # `cliente` debe ser seguro entre hilos (ClienteGeneral) y `contador` el mismo que usa el cliente.
+        # `checkpoint_cada` es K de la línea de tiempo: un entero mayor o igual a 1, y se valida antes de pedir nada.
+        self._checkpoint_cada = _validar_checkpoint_cada(checkpoint_cada)
         self._cliente = cliente
         self._contador = contador
         self._cache_disco = cache_disco
@@ -40,6 +42,11 @@ class ServicioPartida:
         self._ruta_bitacora = None
         self._puntaje_registrado = False
         self.bitacora_completa = True    # False si se cargó un guardado cuya bitácora no estaba: no es reproducible
+
+    @property
+    def checkpoint_cada(self) -> int:
+        """Cada cuántas acciones del jugador se guarda un punto de control de la línea de tiempo."""
+        return self._checkpoint_cada
 
     @property
     def partida(self) -> Partida:
@@ -62,7 +69,8 @@ class ServicioPartida:
             semilla = random.SystemRandom().randrange(2 ** 32)   # la semilla queda en la bitácora y en el guardado
         try:
             mapa = self._armar(general, version_catalogo)
-            self._partida = Partida(general, mapa, self._catalogo, self._precarga, semilla)
+            self._partida = Partida(general, mapa, self._catalogo, self._precarga, semilla,
+                                    checkpoint_cada=self._checkpoint_cada)
             self._partida.iniciar()
         except BaseException:
             self.cerrar()
@@ -219,6 +227,15 @@ class ServicioPartida:
         if self._repositorio_puntajes is None:
             raise RuntimeError("Este servicio no tiene una tabla de puntajes configurada.")
         return self._repositorio_puntajes.cargar().globales()
+
+
+def _validar_checkpoint_cada(valor) -> int:
+    # None toma el valor provisional. Cualquier otra cosa que no sea un entero mayor o igual a 1 se rechaza con el motivo.
+    if valor is None:
+        return CHECKPOINT_CADA_DEFECTO
+    if isinstance(valor, bool) or not isinstance(valor, int) or valor < 1:
+        raise ValueError(f"--checkpoint-cada debe ser un entero mayor o igual a 1 y se recibió {valor!r}.")
+    return valor
 
 
 def _bitacora_del_guardado(ruta_guardado) -> Path:

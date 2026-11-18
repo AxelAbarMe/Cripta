@@ -52,5 +52,48 @@ class TestCriptaMapaCostos(unittest.TestCase):
         self.assertIn("2", ctx.exception.detalle)
 
 
+def pagina_de(numero, total, ids):
+    salas = [{"id": i, "nombre": f"S{i}", "salidas": {}} for i in ids]
+    return PaginaEsqueletoDTO.desde_json({"pagina": numero, "total_paginas": total, "salas": salas})
+
+
+class TestCriptaMapaObtener(unittest.TestCase):
+    def test_sala_existente_devuelve_su_sala(self):  # FR-TER-001
+        mapa = armar()
+        self.assertEqual(mapa.obtener(1).id, 1)
+        self.assertEqual(mapa.obtener(2).id, 2)
+
+    def test_sala_inexistente_devuelve_none(self):  # FR-TER-001
+        mapa = armar()
+        self.assertIsNone(mapa.obtener(3))
+
+    def test_ids_fuera_de_rango_devuelven_none(self):  # FR-TER-001
+        mapa = armar()
+        self.assertIsNone(mapa.obtener(0))
+        self.assertIsNone(mapa.obtener(-1))
+        self.assertIsNone(mapa.obtener(10 ** 6))
+        self.assertIsNone(CriptaMapa().obtener(1))
+
+    def test_paginas_en_desorden_con_huecos(self):  # FR-TER-001
+        mapa = CriptaMapa()
+        mapa.agregar_pagina(pagina_de(2, 3, [30, 12]))
+        mapa.agregar_pagina(pagina_de(1, 3, [5, 20]))
+        mapa.agregar_pagina(pagina_de(3, 3, [1, 44]))
+        for sala_id in (1, 5, 12, 20, 30, 44):
+            self.assertEqual(mapa.obtener(sala_id).id, sala_id)
+        for sala_id in (0, 2, 13, 29, 43, 45):
+            self.assertIsNone(mapa.obtener(sala_id))
+        self.assertEqual(len(mapa), 6)
+        self.assertEqual([s.id for s in mapa.todas_las_salas()], [1, 5, 12, 20, 30, 44])
+
+    def test_pagina_repetida_se_ignora(self):  # FR-TER-001
+        mapa = CriptaMapa()
+        mapa.agregar_pagina(pagina_de(1, 1, [3, 4]))
+        primera = mapa.obtener(3)
+        mapa.agregar_pagina(pagina_de(1, 1, [3, 4]))
+        self.assertIs(mapa.obtener(3), primera)
+        self.assertEqual(len(mapa), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

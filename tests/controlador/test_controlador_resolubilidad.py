@@ -64,13 +64,13 @@ class TestControladorResolubilidad(unittest.TestCase):
             with mock.patch("cripta.servicios.servicio_partida.ServicioResolubilidad") as verificador, \
                     mock.patch("cripta.servicios.servicio_partida.Partida") as partida:
                 verificador.return_value.verificar.return_value = resultado
-                verificador.return_value.verificar.side_effect = lambda _id: eventos.append("verificacion") or resultado
+                verificador.return_value.verificar.side_effect = lambda _id, **_datos: eventos.append("verificacion") or resultado
                 partida.side_effect = lambda *args, **kwargs: (
                     eventos.append("partida") or SimpleNamespace(iniciar=lambda: None)
                 )
                 servicio.iniciar_nueva("cripta-01", 5)
             self.assertIs(servicio.resultado_resolubilidad, resultado)
-            verificador.return_value.verificar.assert_called_once_with("cripta-01")
+            verificador.return_value.verificar.assert_called_once_with("cripta-01", general=mock.ANY, mapa=mock.ANY)
             self.assertEqual(eventos, ["verificacion", "partida"])
         finally:
             servicio.cerrar()

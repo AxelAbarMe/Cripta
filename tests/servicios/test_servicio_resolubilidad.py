@@ -12,6 +12,7 @@ from cripta.excepciones import CriptaDatosInvalidosError, CriptaLimiteError
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
 from cripta.infraestructura.cache import CacheDisco
 from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
+from cripta.modelo.cripta_mapa import CriptaMapa
 from cripta.modelo.resolubilidad import ResultadoResolubilidad
 from cripta.servicios.servicio_resolubilidad import ServicioResolubilidad
 from tests.cliente_falso import ClienteFalso
@@ -139,6 +140,24 @@ class TestServicioResolubilidad(unittest.TestCase):
         self.assertIsInstance(res, ResultadoResolubilidad)
         self.assertTrue(res.es_resoluble)
         self.assertEqual(res.llaves_obtenidas, ("itm_llave_salida",))
+
+    def test_con_general_y_mapa_dados_no_pide_general_ni_paginas(self):
+        # FR-RES-013: con general y mapa ya armados solo se piden las llaves
+        general_json, paginas_json, llaves = crear_datos_prueba()
+        previo = ClienteFalso(general_json=general_json, paginas_json=paginas_json, llaves=llaves)
+        general = previo.obtener_general("c1")
+        mapa = CriptaMapa()
+        mapa.agregar_pagina(previo.obtener_pagina_esqueleto("c1", 1))
+        mapa.sincronizar_puertas()
+        cliente = ClienteFalso(general_json=general_json, paginas_json=paginas_json, llaves=llaves)
+        servicio = ServicioResolubilidad(cliente, ContadorSolicitudes(), None)
+
+        res = servicio.verificar("c1", general=general, mapa=mapa)
+
+        self.assertTrue(res.es_resoluble)
+        self.assertEqual(cliente.contar("obtener_general"), 0)
+        self.assertEqual(cliente.contar("obtener_pagina_esqueleto"), 0)
+        self.assertEqual(cliente.contar("obtener_llaves"), 1)
 
 
 if __name__ == "__main__":

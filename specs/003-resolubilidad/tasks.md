@@ -107,7 +107,7 @@ Depende de Fase A completa (T001–T009 en ✅).
 
 ### Pruebas de servicio — se escriben primero
 
-- [ ] T010 Escribir `tests/servicios/test_servicio_resolubilidad.py` con casos: obtiene llaves por red y persiste en caché, segunda llamada usa caché sin consumir presupuesto, presupuesto agotado antes de llaves lanza `CriptaLimiteError` sin reporte parcial, costos contradictorios en esqueleto lanzan `CriptaDatosInvalidosError`, retorna `ResultadoResolubilidad` completo sobre fixture resoluble — **Nuevo**: `tests/servicios/test_servicio_resolubilidad.py`
+- [X] T010 Escribir `tests/servicios/test_servicio_resolubilidad.py` con casos: obtiene llaves por red y persiste en caché, segunda llamada usa caché sin consumir presupuesto, presupuesto agotado antes de llaves lanza `CriptaLimiteError` sin reporte parcial, costos contradictorios en esqueleto lanzan `CriptaDatosInvalidosError`, retorna `ResultadoResolubilidad` completo sobre fixture resoluble — **Nuevo**: `tests/servicios/test_servicio_resolubilidad.py`
   - Requisitos: FR-RES-017, FR-RES-021, FR-RES-023, SC-006, SC-008
   - Comando: `py -m unittest tests.servicios.test_servicio_resolubilidad`
   - Hecho: archivo existe, `discover` lo encuentra, todos los casos fallan por `ImportError`.
@@ -116,7 +116,7 @@ Depende de Fase A completa (T001–T009 en ✅).
 
 ### Implementación del servicio
 
-- [ ] T011 Implementar `ServicioResolubilidad` en `cripta/servicios/servicio_resolubilidad.py`: recibe `cliente: ClienteCripta`, `contador: ContadorSolicitudes`, `cache_disco: CacheDisco | None = None`; método `verificar(id_cripta: str) -> ResultadoResolubilidad` que (a) obtiene datos generales y esqueleto paginado con `contador`, (b) consulta `cache_disco.leer_llaves` antes de llamar `cliente.obtener_llaves` (clave versionada `cripta.<id>.<ver>.llaves.json`), (c) si presupuesto se agota lanza `CriptaLimiteError`, (d) construye `CriptaMapa` (si lanza `CriptaDatosInvalidosError` propaga sin reporte), (e) instancia `VerificadorResolubilidad` y retorna resultado — **Nuevo**: `cripta/servicios/servicio_resolubilidad.py`
+- [X] T011 Implementar `ServicioResolubilidad` en `cripta/servicios/servicio_resolubilidad.py`: recibe `cliente: ClienteCripta`, `contador: ContadorSolicitudes`, `cache_disco: CacheDisco | None = None`; método `verificar(id_cripta: str) -> ResultadoResolubilidad` que (a) obtiene datos generales y esqueleto paginado con `contador`, (b) consulta `cache_disco.leer_llaves` antes de llamar `cliente.obtener_llaves` (clave versionada `cripta.<id>.<ver>.llaves.json`), (c) si presupuesto se agota lanza `CriptaLimiteError`, (d) construye `CriptaMapa` (si lanza `CriptaDatosInvalidosError` propaga sin reporte), (e) instancia `VerificadorResolubilidad` y retorna resultado — **Nuevo**: `cripta/servicios/servicio_resolubilidad.py`
   - Requisitos: FR-RES-017, FR-RES-021, FR-RES-023, SC-006, SC-008
   - Comando: `py -m unittest tests.servicios.test_servicio_resolubilidad`
   - Hecho: T010 pasa; sin importaciones de red en modelo; `ClienteFalso` de `tests/cliente_falso.py` suficiente para los tests.

@@ -4,6 +4,12 @@
 Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.vista.test_vista_consola -v
 """
 import unittest
+from cripta.modelo.resolubilidad import (
+    CicloDependenciaLlaves,
+    FronteraBloqueadaPuerta,
+    ResultadoResolubilidad,
+)
+from cripta.vista.vista_consola import VistaConsola
 from types import SimpleNamespace
 
 
@@ -490,6 +496,29 @@ class TestPantallaDeHistoria(unittest.TestCase):
         self.assertEqual(len(titulos), 2)
         self.assertIn("t=150", titulos[0])
         self.assertIn("#2", titulos[1])
+
+
+class TestReporteResolubilidad(unittest.TestCase):
+    def test_reporte_tiene_ancho_contrato_y_advierte_si_es_forzada(self):  # FR-RES-013, FR-RES-015
+        resultado = ResultadoResolubilidad(
+            es_resoluble=False,
+            llaves_obtenidas=(),
+            llaves_no_obtenibles=("itm_llave_salida",),
+            frontera_bloqueada=(FronteraBloqueadaPuerta(1, "E", "itm_llave_salida", 2),),
+            ubicaciones_llaves=(),
+            ciclos_dependencia=(CicloDependenciaLlaves(("itm_llave_salida", "itm_llave_salida")),),
+            motivo_no_resoluble="No se puede alcanzar la llave de salida.",
+        )
+        salida = []
+        VistaConsola(salida=salida.append).mostrar_reporte_resolubilidad(resultado, forzada=True)
+        self.assertTrue(salida)
+        self.assertTrue(all(len(linea) == 81 for linea in salida))
+        reporte = "\n".join(salida)
+        self.assertIn("Estado: NO RESOLUBLE", reporte)
+        self.assertIn("itm_llave_salida", reporte)
+        self.assertIn("inicio de la partida fue forzado", reporte)
+        self.assertIn("Frontera bloqueada", reporte)
+        self.assertIn("Dependencias circulares", reporte)
 
 
 if __name__ == "__main__":

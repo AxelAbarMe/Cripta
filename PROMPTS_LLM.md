@@ -1986,14 +1986,7 @@ $speckit-implement Completa la elección de K para la 004. Confirmo K=50 como va
 
 
 ### 2026-11-18 — OpenAI Codex (v0.170.0) (GPT-6.2-Sol)
-**Prompt:** "/speckit-implement Sigue las instrucciones de prompts/p2/03-cierre.md. No hagas commit ni push. Estoy en la rama cierre. No crees ni cambies de rama y no hagas commit ni push. No escribas fuera del repo ni crees py.cmd. Usa .\.venv\Scripts\python.exe en lugar de py para correr los comandos. Lee solo los archivos que se nombran aquí y no corras scripts de verificación amplios. Edita solo README.md (Modificado). Conserva su estructura de secciones 1 a 10 y su estilo. Redáctalo en español, sin nombres de personas y sin cifras que no estén medidas en DECISIONES.md o docs/bench. 1. Proceso y herramientas. Agrega una sección «Proceso de desarrollo con Spec Kit» con: la versión de Spec Kit v1.2.3, los agentes usados (Codex CLI 0.169.0 con GPT-6 Luna, Claude Code con Sonnet 5.5 y Antigravity CLI con Gemini), el flujo specify, clarify, plan, tasks, analyze, implement, y dónde está cada cosa: specs/NNN-.../ (spec, plan, tareas), prompts/p2/ (prompts de cada corrida), PROMPTS_LLM.md (bitácora de prompts), DECISIONES.md (decisiones de diseño con mediciones), .specify/memory/constitution.md (constitución) y docs/TRAZABILIDAD.md (requisito, escenario, tarea, código y prueba, que se agrega en el siguiente paso, enlázalo). Lista las cuatro capacidades con su carpeta: 001 terreno y cazador, 002 niebla de guerra e ir a, 003 resolubilidad y 004 línea de tiempo. 2. Comandos nuevos. Asegúrate de que la tabla de «Cómo ejecutar» incluya, cada uno con una fila y un ejemplo: --verificar <cripta> (verifica la resolubilidad sin abrir el juego y muestra el reporte), --forzar (permite iniciar una cripta no resoluble), --checkpoint-cada K y --replay ... --hasta t. Para --verificar y --forzar lee specs/003-resolubilidad/contracts/contrato_resolubilidad.md y specs/003-resolubilidad/quickstart.md y usa su texto, incluidos los códigos de salida si los definen. En «Comandos dentro de la partida» asegúrate de que estén mapa, ir a <sala>, historia <t> e historia #<k>, leyendo cripta/vista/vista_consola.py para los nombres exactos. 3. Pruebas de aceptación. En «Pruebas» explica cómo correr toda la suite (py -m unittest discover -s tests -t .) y solo las pruebas de aceptación (py -m unittest discover -s tests/aceptacion -t .), comprobando que ese segundo comando funciona con .\.venv\Scripts\python.exe. Menciona que las pruebas de rendimiento no se hacen con unittest sino con --bench. 4. --bench. Que la lista de --solo coincida con los nombres registrados en CARGAS de cripta/bench/cargas_bench.py. Si las cargas de resolubilidad (resolubilidad y resolubilidad_cota) todavía no están en CARGAS, agrégalas a la lista igualmente y dime que lo hiciste. 5. Estructura del proyecto (sección 9). Agrega scripts/revisar_prohibidos.py (auditoría de estructuras prohibidas, se corre con py -m scripts.revisar_prohibidos), docs/bench/, specs/, prompts/ y los archivos nuevos de cripta/modelo (linea_tiempo.py, conocimiento_jugador.py, ruta_conocida.py y resolubilidad.py si existe). 6. Al terminar corre .\.venv\Scripts\python.exe -m unittest discover -s tests/aceptacion -t . y dime el resultado. Si algún comando que describes no se puede comprobar porque pertenece a la 003 y aún no está en el código, dímelo en una lista. Reglas: en textos nuevos no uses ';'. Conserva CRLF. No uses sed -i. No agregues reglas del juego. Si falta algo o dudas, detente y pregunta. Al terminar dime qué cambiaste por punto y verifica con git diff que solo cambió README.md."
-
-**Prompt (resumido):** Actualizar el README con la versión de Spec Kit, los agentes, los comandos nuevos, las pruebas de aceptación, la lista de cargas del bench y la estructura del proyecto. La corrida se interrumpió antes de terminar.
-
-**Para qué se usó:** Cumplir lo que el enunciado exige del README y dejar enlazados los documentos de proceso del curso. Quedó a medias y se retomó en el paso siguiente.
-
-### 2026-11-18 — OpenAI Codex (v0.170.0) (GPT-6.2-Sol)
-**Prompt:** "/speckit-implement Sigue las instrucciones de prompts/p2/04-cierre.md. No hagas commit ni push. Estoy en la rama cierre. No crees ni cambies de rama y no hagas commit ni push. No escribas fuera del repo ni crees py.cmd. Usa .\.venv\Scripts\python.exe en lugar de py para correr los comandos. Lee solo los archivos que se nombran aquí y no corras scripts de verificación amplios. Contexto: la corrida anterior de prompts/p2/03-cierre.md se interrumpió antes de terminar. Edita solo README.md (Modificado) y no rehagas lo que ya esté bien. 1. Lee prompts/p2/03-cierre.md y compáralo con git diff README.md. Para cada uno de sus puntos 1 a 5 decide si está aplicado, a medias o ausente, y dame esa lista. Completa solo lo que falte o esté a medias. Si hay secciones duplicadas, cortadas o texto a medias de la corrida anterior, corrígelo. Conserva la estructura de secciones 1 a 10 y el estilo del README, en español, sin nombres de personas (la URL del repositorio puede quedar) y sin cifras que no estén medidas en DECISIONES.md o docs/bench. 2. Agentes. Los agentes que declara el README deben coincidir con los encabezados de PROMPTS_LLM.md (las líneas que empiezan con ### y terminan con el nombre del agente). Si el README menciona un agente que no aparece ahí, quítalo y dímelo. Si PROMPTS_LLM.md tiene uno que el README no menciona, agrégalo. 3. Versión de Spec Kit. Búscala en .specify/ (archivos de configuración o de versión). Si no la encuentras, deja la que está en el README y dímelo. 4. Comandos. Cada comando, bandera y ejemplo del README debe existir de verdad. Compruébalo leyendo cripta/__main__.py y cripta/vista/vista_consola.py. Para los de la 003 (--verificar, --forzar y sus códigos de salida) toma el texto de specs/003-resolubilidad/contracts/contrato_resolubilidad.md y de specs/003-resolubilidad/quickstart.md aunque su código aún no esté en la rama. Dame una lista aparte de todo lo que describes y no se puede comprobar en el código. 5. --bench. La lista de --solo debe coincidir con los nombres registrados en CARGAS de cripta/bench/cargas_bench.py. Si resolubilidad y resolubilidad_cota no están, agrégalas a la lista igualmente y dime que lo hiciste. 6. Corre .\.venv\Scripts\python.exe -m unittest discover -s tests/aceptacion -t . y dime el resultado. Reglas: en textos nuevos no uses ';'. Conserva CRLF. No uses sed -i. No agregues reglas del juego. Si falta algo o dudas, detente y pregunta. Al terminar dime qué cambiaste por punto y verifica con git diff que solo cambió README.md."
+**Prompt:** "$speckit-implement Sigue las instrucciones de prompts/p2/04-cierre.md. No hagas commit ni push. Estoy en la rama cierre. No crees ni cambies de rama y no hagas commit ni push. No escribas fuera del repo ni crees py.cmd. Usa .\.venv\Scripts\python.exe en lugar de py para correr los comandos. Lee solo los archivos que se nombran aquí y no corras scripts de verificación amplios. Contexto: la corrida anterior de prompts/p2/03-cierre.md se interrumpió antes de terminar. Edita solo README.md (Modificado) y no rehagas lo que ya esté bien. 1. Lee prompts/p2/03-cierre.md y compáralo con git diff README.md. Para cada uno de sus puntos 1 a 5 decide si está aplicado, a medias o ausente, y dame esa lista. Completa solo lo que falte o esté a medias. Si hay secciones duplicadas, cortadas o texto a medias de la corrida anterior, corrígelo. Conserva la estructura de secciones 1 a 10 y el estilo del README, en español, sin nombres de personas (la URL del repositorio puede quedar) y sin cifras que no estén medidas en DECISIONES.md o docs/bench. 2. Agentes. Los agentes que declara el README deben coincidir con los encabezados de PROMPTS_LLM.md (las líneas que empiezan con ### y terminan con el nombre del agente). Si el README menciona un agente que no aparece ahí, quítalo y dímelo. Si PROMPTS_LLM.md tiene uno que el README no menciona, agrégalo. 3. Versión de Spec Kit. Búscala en .specify/ (archivos de configuración o de versión). Si no la encuentras, deja la que está en el README y dímelo. 4. Comandos. Cada comando, bandera y ejemplo del README debe existir de verdad. Compruébalo leyendo cripta/__main__.py y cripta/vista/vista_consola.py. Para los de la 003 (--verificar, --forzar y sus códigos de salida) toma el texto de specs/003-resolubilidad/contracts/contrato_resolubilidad.md y de specs/003-resolubilidad/quickstart.md aunque su código aún no esté en la rama. Dame una lista aparte de todo lo que describes y no se puede comprobar en el código. 5. --bench. La lista de --solo debe coincidir con los nombres registrados en CARGAS de cripta/bench/cargas_bench.py. Si resolubilidad y resolubilidad_cota no están, agrégalas a la lista igualmente y dime que lo hiciste. 6. Corre .\.venv\Scripts\python.exe -m unittest discover -s tests/aceptacion -t . y dime el resultado. Reglas: en textos nuevos no uses ';'. Conserva CRLF. No uses sed -i. No agregues reglas del juego. Si falta algo o dudas, detente y pregunta. Al terminar dime qué cambiaste por punto y verifica con git diff que solo cambió README.md."
 
 **Prompt (resumido):** Retomar y terminar el README: comparar con lo que dejó la corrida interrumpida, completar lo faltante y comprobar agentes, versión de Spec Kit, comandos y cargas del bench contra el repositorio.
 
@@ -2007,3 +2000,258 @@ $speckit-implement Completa la elección de K para la 004. Confirmo K=50 como va
 
 **Para qué se usó:** Dejar el README listo para la entrega, coherente con la bitácora y con el código real, y con las notas de pendiente de la 003 fáciles de localizar y quitar al fusionarla.
 
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo archivos dentro de specs/003-resolubilidad/ (spec.md, plan.md y tasks.md). No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego salvo lo pedido aquí; si algo cambia el resultado observable y no está decidido, detente y pregunta.
+
+Spec primero:
+1. spec.md: agrega al final de Supuestos las decisiones del grupo pendientes de confirmar con el profesor porque el enunciado no las fija: el orden incluye todas las llaves obtenibles, se informa un ciclo representativo por grupo, y una puerta cerrada sin llave es infranqueable. Agrega también los códigos de salida de --verificar (0 si la verificación termina, sea resoluble o no; 1 por datos inválidos; 2 por error externo) como requisito FR-RES-024 con su escenario, tomando el texto de contracts/contrato_resolubilidad.md §1.1 sin cambiarlo.
+
+Plan y tareas (después de la spec):
+2. tasks.md T013 y T014: fusiónalas en una sola tarea (método abstracto en vista_base.py, vistas falsas de las pruebas e implementación en vista_consola.py) para que la suite completa no se rompa entre ambas.
+3. Unifica el ancho del reporte entre plan.md §4 y la tarea de la vista, tomando el valor de contracts/contrato_resolubilidad.md §3.
+4. Agrega, antes de las tareas de bench, una tarea de prueba (tests/servicios/test_servicio_bench.py, Nuevo o Modificado según exista en esta rama, comprobándolo) para FR-RES-020 y SC-007: el generador sintético y las cargas producen la misma salida con la misma semilla; usa el nombre test_bench_resolubilidad_reproducible del plan.
+5. Agrega una tarea que ejecute py -m cripta --bench --solo resolubilidad y py -m cripta --bench --solo resolubilidad_cota, y guarde los resultados en docs/bench/. La tarea de DECISIONES.md pasa a la sección «5.4 Resolubilidad», con alternativas, complejidad, evidencia medida y límites conocidos, y depende de esa tarea.
+6. plan.md §3.2 y §7: declara el factor O(E log V) de CriptaMapa.obtener o indica que el verificador copia las salas a listas planas en una pasada, y ajusta la complejidad total. §5.1: alinea K = 40 y V = 800 con las tres escalas crecientes que pide la tarea de la carga. Agrega el «#» a la primera línea del plan.
+7. Renumera las tareas y actualiza dependencias y trazabilidad.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/003-resolubilidad/.
+```
+
+**Prompt (resumido):** Aplicar la revisión del Pull Request de la capacidad de resolubilidad a la especificación, el plan y las tareas: supuestos del grupo, códigos de salida de --verificar, fusión de tareas de la vista, ancho del reporte, prueba de reproducibilidad del bench, tarea de mediciones, complejidad declarada y formato del plan.
+
+**Para qué se usó:** Atender los seis puntos bloqueantes y las sugerencias de la revisión antes de fusionar el PR de documentación.
+
+### 2026-11-18 — Antigravity CLI 1.5.6 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/16-implement-003-fase-a-pruebas.md. Solo T001 a T004. No sigas con T005.
+```
+(El texto completo está en prompts/p2/16-implement-003-fase-a-pruebas.md.)
+
+**Prompt (resumido):** Pruebas de dominio de la resolubilidad (T001 a T004): esqueleto con fixtures sintéticos, recorrido incremental, diagnóstico, determinismo, enemigos y comparación con la alternativa ingenua.
+
+**Para qué se usó:** Escribir primero las pruebas que fijan la API del verificador, antes de implementar el módulo de dominio.
+
+### 2026-11-18 — Antigravity CLI 1.5.10 (Claude Sonnet 4.6 Thinking)
+**Prompt:**
+```text
+/speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/17-implement-003-fase-a-nucleo.md. Solo T005 a T007. No sigas con T008.
+```
+(El texto completo está en prompts/p2/17-implement-003-fase-a-nucleo.md.)
+
+**Prompt (resumido):** Núcleo del verificador de resolubilidad (T005 a T007): clases de datos inmutables, catálogo ordenado con búsqueda binaria propia y recorrido incremental con cola y montículo.
+
+**Para qué se usó:** Implementar el dominio puro de la resolubilidad para que pasen las pruebas escritas en el paso anterior.
+
+### 2026-11-18 — Antigravity CLI 1.5.10 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/18-implement-003-fase-a-ciclos.md. Revisa lo ya escrito en cripta/modelo/resolubilidad.py y completa T008 y T009.
+```
+(El texto completo está en prompts/p2/18-implement-003-fase-a-ciclos.md.)
+
+**Prompt (resumido):** Revisión del núcleo del verificador, detección de ciclos de dependencia de llaves (T008) y cierre de la alternativa ingenua (T009).
+
+**Para qué se usó:** Continuar la Fase A después de que la ejecución anterior se cortó por límite de cupo del modelo.
+
+### 2026-11-18 — Antigravity CLI 1.5.10 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/19-implement-003-fase-b-servicio.md. Solo T010 y T011. No sigas con T012.
+```
+(El texto completo está en prompts/p2/19-implement-003-fase-b-servicio.md.)
+
+**Prompt (resumido):** Pruebas y servicio de aplicación de la resolubilidad (T010 y T011): obtención de llaves por red con caché y presupuesto, y verificación sobre el mapa construido.
+
+**Para qué se usó:** Conectar el verificador de dominio con el cliente, la caché de disco y el contador de solicitudes.
+
+### 2026-11-18 — Codex CLI v0.170.0 (GPT-6-Luna default)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/20-correcciones-003-fase-a.md. Corrige solo cripta/modelo/resolubilidad.py y tests/modelo/test_resolubilidad.py.
+```
+(El texto completo está en prompts/p2/20-correcciones-003-fase-a.md.)
+
+**Prompt (resumido):** Correcciones de la Fase A tras la revisión del Pull Request: coincidencia entre el recorrido incremental y el ingenuo, ciclo de la llave de salida y fixture consistente para el doble ciclo.
+
+**Para qué se usó:** Corregir tres defectos probados con contraejemplos antes de medir el rendimiento.
+
+
+### 2026-11-18 — Codex CLI v0.170.0 (GPT-6-Luna default)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/29-implement-003-fase-c.md. Solo T012 a T016.
+```
+(El texto completo está en prompts/p2/29-implement-003-fase-c.md.)
+
+**Prompt (resumido):** Implementación de la Fase C de la resolubilidad: opción --verificar con códigos de salida, controlador, vista, integración en servicio_partida y __main__.
+
+**Para qué se usó:** Implementar la interfaz de la verificación de resolubilidad sobre el servicio ya existente.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Hay un conflicto de merge en PROMPTS_LLM.md: main y 003-implementacion-nucleo agregaron entradas al final. Resuélvelo dejando el archivo como en main y, después, las entradas que solo están en la rama 003, en su orden, sin perder ni duplicar ninguna. Hazlo con un script de py que lea las versiones con git show main:PROMPTS_LLM.md y git show 003-implementacion-nucleo:PROMPTS_LLM.md, no a mano. Deja CRLF, sin marcadores de conflicto, y dime cuántas entradas ### tiene cada versión y cuántas el resultado. No hagas git add ni commit."
+
+**Prompt (resumido):** Resolución del conflicto de PROMPTS_LLM.md en la primera mezcla de main en la rama 003, con un script que lee ambas versiones.
+
+**Para qué se usó:** Dejar el archivo como en main y después las entradas exclusivas de la rama 003, sin perder ni duplicar ninguna.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T017 de specs/003-resolubilidad/tasks.md. Lee antes .specify/memory/constitution.md, specs/003-resolubilidad/plan.md (sección 5 y la tabla de trazabilidad), tasks.md (T017 a T020), cripta/modelo/resolubilidad.py (VerificadorResolubilidad, verificar y verificar_ingenuo_reiniciado), y en cripta/bench/cargas_bench.py las cargas ciclo_referencia y linea_tiempo y la función elegir_cripta_de_referencia. tests/servicios/test_servicio_bench.py ya existe (lo creó la 004): agrega ahí las pruebas nuevas sin tocar las existentes. Pruebas, en clases con prefijo Test y citando FR-RES-020 y SC-007: 1. test_bench_resolubilidad_reproducible: el generador _generar_cripta_encadenada(k, salas_por_segmento, semilla) da la misma cripta con la misma semilla y una distinta con otra semilla. 2. El generador arma k llaves en cadena y k * salas_por_segmento salas, y verificar() y verificar_ingenuo_reiniciado() dicen que es resoluble. 3. Con k y salas_por_segmento mínimos (1) el generador sigue funcionando. 4. Las cargas resolubilidad y resolubilidad_cota están registradas en CARGAS y corren a escala 0.01 sin red. 5. resolubilidad_cota elige la cripta con elegir_cripta_de_referencia y no tiene un id de cripta fijo en el código. No toques nada en cripta/. Las pruebas deben fallar ahora porque las cargas y el generador no existen: córrelas y dime cómo fallan. CRLF, sin ";" en comentarios. Marca T017 como [X]."
+(El texto completo está en prompts/p2/30-implement-003-t017-pruebas-cargas-resolubilidad.md.)
+
+**Prompt (resumido):** T017: pruebas nuevas del generador de cripta encadenada y de las cargas resolubilidad y resolubilidad_cota, antes del código.
+
+**Para qué se usó:** Escribir las pruebas que fijan FR-RES-020 y SC-007 y comprobar que fallan porque las cargas y el generador aún no existen.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T018, T019 y T020 de specs/003-resolubilidad/tasks.md, para que pasen las pruebas nuevas de tests/servicios/test_servicio_bench.py sin modificarlas. Edita solo cripta/bench/cargas_bench.py. No toques cripta/modelo/resolubilidad.py, porque otra persona lo está corrigiendo ahora. 1. T018: _generar_cripta_encadenada(k, salas_por_segmento, semilla) con random.Random(semilla) propio (nunca el random global) y la forma que pide la tarea: k segmentos en cadena, cada uno detrás de una puerta que exige la llave k_i, que está en una sala lateral alcanzable antes de esa puerta, y la última puerta exige la llave de salida. Decide si la llave de salida va como una ubicación más y dilo en un comentario. Para armar el CriptaMapa y las ubicaciones de llaves, mira cómo lo hacen tests/modelo/test_resolubilidad.py y cripta/servicios/servicio_resolubilidad.py, sin duplicar código que ya exista en cripta/. 2. T019: carga resolubilidad registrada en CARGAS, con k de 10, 20 y 40 y 20 salas por segmento (200, 400 y 800 salas), ajustados con max(1, int(valor * escala)). Mide verificar() y verificar_ingenuo_reiniciado() 3 veces cada uno con _medir, y reporta la aceleración con _comparar, sin cifras fijas en el código. 3. T020: carga resolubilidad_cota registrada en CARGAS, que lee el listado y los datos desde fixtures/ con ClienteOffline como ciclo_referencia, elige la cripta con elegir_cripta_de_referencia, mide solo verificar() con _medir (sin contar la lectura) y la compara con el límite de 200 ms, imprimiendo CUMPLE o FALLA. Si fixtures/ no tiene los datos de llaves que hacen falta, detente y dímelo antes de inventar nada. Sin dict ni set como índice, sin sorted, .sort, bisect, heapq ni collections. CRLF, sin ";" en comentarios. Corre las pruebas de test_servicio_bench.py, la de humo de tests/bench y la suite completa. Después corre py -m cripta --bench --solo resolubilidad resolubilidad_cota una vez y pégame la salida completa. Marca T018 a T020 como [X]. No marques T021."
+(El texto completo está en prompts/p2/31-implement-003-t018-t020-cargas-resolubilidad.md.)
+
+**Prompt (resumido):** T018 a T020: generador _generar_cripta_encadenada y cargas resolubilidad y resolubilidad_cota en cargas_bench.py.
+
+**Para qué se usó:** Hacer pasar las pruebas de T017 sin modificarlas y medir una primera corrida de las dos cargas.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Corrige _mapa_desde_conexiones en cripta/bench/cargas_bench.py: ahora arma dict a mano para simular el JSON, y la tarea T018 y la constitución no lo permiten (solo se admiten los dict que vienen de respuesta.json()). Construye directamente SalidaDTO(sala_destino, cerrada, llave, cierre_automatico=None, costo) y SalaDTO(id, nombre, norte, sur, este, oeste), asignando cada salida a su campo según la dirección, y luego PaginaEsqueletoDTO(pagina=1, total_paginas=1, salas=tuple(...)). Las conexiones por sala pueden seguir siendo listas. Sin dict ni set en ninguna de las funciones nuevas, y no cambies nada más. Corre tests.servicios.test_servicio_bench y tests.bench.test_cargas_bench, y después py -m cripta --bench --solo resolubilidad resolubilidad_cota. Pégame las salidas. CRLF, sin ";" en comentarios."
+
+**Prompt (resumido):** Corrección de _mapa_desde_conexiones para construir los DTO directamente, sin dict armados a mano.
+
+**Para qué se usó:** Cumplir T018 y la constitución, que solo admiten los dict que vienen de respuesta.json().
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:**
+```text
+Hay un merge de main en curso en 003-implementacion-nucleo con tres conflictos. Resuélvelos sin perder nada de ninguno de los dos lados:
+1. cripta/bench/cargas_bench.py: en los imports conserva from cripta.constantes import direccion_opuesta y from cripta.modelo.resolubilidad import VerificadorResolubilidad (de HEAD) y también ConocimientoJugador y siguiente_paso (de main). No repitas el import de CriptaMapa, que ya está unas líneas antes. En CARGAS deja ("resolubilidad", bench_resolubilidad) y ("resolubilidad_cota", bench_resolubilidad_cota) después de ("linea_tiempo", bench_linea_tiempo).
+2. tests/servicios/test_servicio_bench.py: conserva el import con paréntesis de main (con las funciones de niebla_rutas) y agrega from cripta.modelo.resolubilidad import VerificadorResolubilidad. No repitas ClienteOffline, que ya se importa más abajo. Actualiza el docstring del archivo para que mencione también las cargas de resolubilidad.
+3. PROMPTS_LLM.md: igual que la vez anterior, con un script de py que deje el archivo como en main y después las entradas que solo están en 003-implementacion-nucleo, en su orden, sin duplicar ninguna (compara con git show main:PROMPTS_LLM.md y git show 003-implementacion-nucleo:PROMPTS_LLM.md). Dime cuántas entradas ### tiene cada versión y el resultado.
+Deja todo en CRLF y sin marcadores de conflicto. Comprueba que no queden imports repetidos en los dos .py. Corre la suite completa con py -m unittest discover -s tests -t . y dime el resultado. No hagas git add ni commit, y no cambies nada más (el import json sin uso lo vemos después).
+```
+(El texto completo está en prompts/p2/32-merge-main-003-tres-conflictos.md.)
+
+**Prompt (resumido):** Resolución de los tres conflictos de la segunda mezcla de main: cargas_bench.py, test_servicio_bench.py y PROMPTS_LLM.md.
+
+**Para qué se usó:** Conservar los dos lados de cada conflicto, sin imports repetidos, y comprobar la suite completa.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "En PROMPTS_LLM.md, de las 7 entradas que agregaste al final, quita la de "### 2026-11-09 — Claude (claude.ai)". Es una versión vieja de una entrada que main ya tiene corregida (la copia de la 003 todavía dice "<pega aquí el resultado de Select-String>"). Deja las otras 6 como están. Comprueba que el archivo quede con 169 entradas ###, que no aparezca el texto "<pega aquí" y que siga en CRLF. No hagas git add ni commit."
+
+**Prompt (resumido):** Quitar de PROMPTS_LLM.md la entrada vieja del 2026-11-09 que la mezcla había duplicado.
+
+**Para qué se usó:** Evitar que quedara una versión antigua con texto pendiente de una entrada que main ya tenía corregida.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "En cripta/bench/cargas_bench.py comprueba si import json quedó sin ningún uso. Si es así, quítalo. No cambies nada más. Corre tests.servicios.test_servicio_bench y tests.bench.test_cargas_bench y dime el resultado. CRLF."
+
+**Prompt (resumido):** Comprobar si import json quedó sin uso en cargas_bench.py y quitarlo.
+
+**Para qué se usó:** Limpiar el import sobrante que dejó la corrección de _mapa_desde_conexiones.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T021 de specs/003-resolubilidad/tasks.md. La rama ya incluye las correcciones de resolubilidad.py. Corre py -m cripta --bench --solo resolubilidad resolubilidad_cota tres veces, cada una como proceso aparte, y guarda los resultados en docs/bench/resultados_003.md, siguiendo el estilo de docs/bench/resultados_004_linea_base.md. Incluye: el comando, la fecha, el commit (git rev-parse --short HEAD), la versión de Python, el equipo (el Equipo B de la tabla del inicio de DECISIONES.md), la salida literal de las tres corridas y una tabla con la mediana de las tres para cada escenario (incremental, ingenuo y la razón entre los dos, y la cota con CUMPLE o FALLA frente a 200 ms). Solo cifras medidas, sin interpretarlas ni inventar nada. No cambies código. CRLF y sin ";" en el texto nuevo. Marca T021 como [X] y pégame la tabla."
+
+**Prompt (resumido):** T021: tres corridas de las cargas resolubilidad y resolubilidad_cota como procesos aparte, con resultados en docs/bench/resultados_003.md.
+
+**Para qué se usó:** Registrar las mediciones de la 003 con su comando, commit, equipo y tabla de medianas, sin interpretarlas.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T024 de specs/003-resolubilidad/tasks.md. Edita solo DECISIONES.md y marca T024. Lee antes DECISIONES.md (el estilo de las secciones 5.3 y 5.5 y la tabla de equipos del inicio), specs/003-resolubilidad/spec.md, plan.md (secciones 2, 5 y 6), research.md si existe, cripta/modelo/resolubilidad.py (verificar y verificar_ingenuo_reiniciado), cripta/bench/cargas_bench.py (bench_resolubilidad, bench_resolubilidad_cota y _generar_cripta_encadenada) y docs/bench/resultados_003.md. Las cifras salen solo de resultados_003.md, sin inventar. Agrega la sección "5.4 Resolubilidad" con la estructura de las demás (Problema, Alternativas, Decisión, Complejidad, Evidencia, Límites), con enlaces a spec.md y plan.md de la 003, y si la decisión coincide con el plan. Incluye: 1. El recorrido incremental elegido frente al ingenuo que reinicia por cada llave, y la detección de ciclos de dependencia. 2. La tabla de medianas de resultados_003.md y la cota de 200 ms en la cripta de referencia (CUMPLE). 3. Que el plan esperaba una diferencia del orden de K veces y la medida es de 1.6 a 2.0 veces, aunque crece con K. Explica la causa leyendo el código: por ejemplo, cuánto del trabajo de cada verificación es fijo (catálogo, ciclos, ordenamientos) y cuántas salas visita de verdad el ingenuo en la cripta sintética, que tiene cada llave en su propio segmento. Si no lo puedes confirmar con el código o con una medición rápida, dilo como hipótesis y no como hecho. 4. Límites conocidos: una sola cripta sintética de cadena, mediana de tres corridas en un solo equipo, y lo que plan.md sección 6 marque como riesgo. Agrega 5.4 a la fila del Equipo B en la tabla del inicio. Explica en una frase cada término o notación que el profesor podría no conocer (K, V, E, recorrido incremental). CRLF y sin ";" en el texto nuevo. Dime qué cambiaste."
+(El texto completo está en prompts/p2/33-decisiones-003-t024.md.)
+
+**Prompt (resumido):** T024: sección 5.4 Resolubilidad de DECISIONES.md con la estructura de las demás secciones.
+
+**Para qué se usó:** Documentar el recorrido incremental frente al ingenuo con las cifras de resultados_003.md y los límites conocidos.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Tu medición muestra que la cripta sintética es el mejor caso del ingenuo: cada llave está en una lateral que el recorrido visita antes que la puerta, así que todo cae en unas 2 pasadas. Cambia _generar_cripta_encadenada en cripta/bench/cargas_bench.py para que en cada segmento la puerta hacia el siguiente salga de la primera sala del corredor y la sala lateral con la llave cuelgue de la última sala del corredor. Así el recorrido llega a la puerta antes de tener su llave y el ingenuo necesita una pasada por segmento. Mantén la firma, la semilla, k * salas_por_segmento salas, la llave de salida como una ubicación más y los casos mínimos (k o salas_por_segmento igual a 1). Sin dict ni set. Actualiza el comentario de la función. No toques las pruebas: deben seguir pasando. Corre tests.servicios.test_servicio_bench y tests.bench.test_cargas_bench, repite tu conteo de salas sacadas de la cola con el script temporal y dime los números de las dos versiones. No toques todavía docs/bench ni DECISIONES.md. CRLF, sin ";" en comentarios."
+
+**Prompt (resumido):** Cambio de _generar_cripta_encadenada para que la puerta salga antes de la sala de su llave.
+
+**Para qué se usó:** Evitar que la cripta sintética fuera el mejor caso del ingenuo y que necesite una pasada por segmento.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Ahora repite T021 con la cripta nueva: corre py -m cripta --bench --solo resolubilidad resolubilidad_cota tres veces como procesos aparte y reemplaza docs/bench/resultados_003.md con el mismo formato (commit actual de git rev-parse --short HEAD, fecha, Python, Equipo B, salida literal y tabla de medianas). Agrega en ese archivo una tabla con tu conteo de salas sacadas de la cola (incremental y ingenuo, con la cripta anterior y la nueva) y una frase de cómo se contó: con un script temporal fuera del repositorio que no se versiona. Luego actualiza la sección 5.4 de DECISIONES.md con las cifras nuevas: la cripta sintética pone cada llave después de su puerta para que el ingenuo necesite una pasada por segmento, la primera versión era el mejor caso del ingenuo (unas 2 pasadas, razón de 1.6 a 2.0) y por eso se cambió, y lo que antes era hipótesis ahora es medido (conteo de salas). Lo que siga sin medirse, como el peso del trabajo fijo, déjalo como hipótesis. Solo cifras de resultados_003.md. CRLF y sin ";" en el texto nuevo. Dime qué cambiaste y pégame las tablas."
+
+**Prompt (resumido):** Repetición de T021 con la cripta nueva y actualización de las cifras de la sección 5.4.
+
+**Para qué se usó:** Reemplazar resultados_003.md con la medición nueva, agregar el conteo de salas sacadas de la cola y pasar a medido lo que era hipótesis.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "En la sección 5.4 de DECISIONES.md, donde se mencionan las cifras de la primera versión de la cripta sintética (razón de 1.6 a 2.0), agrega que se midieron en el commit b3474b0 y que están en docs/bench/resultados_003.md de ese commit. Solo esa frase. CRLF, sin ";"."
+
+**Prompt (resumido):** Agregar en la 5.4 el commit donde se midieron las cifras de la primera versión de la cripta sintética.
+
+**Para qué se usó:** Dejar trazable de dónde salen las cifras de razón 1.6 a 2.0.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "En la frase que agregaste en la 5.4, cambia "se midieron en el commit b3474b0" por "se midieron con el código del commit d2b340d y están en docs/bench/resultados_003.md del commit b3474b0". Solo esa frase. CRLF, sin ";"."
+
+**Prompt (resumido):** Corregir esa frase para distinguir el commit del código y el commit del archivo de resultados.
+
+**Para qué se usó:** Citar con exactitud el código medido y el archivo donde están las cifras.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:**
+```text
+En la rama 003-implementacion-nucleo, la Fase C dejó 3 pruebas fallando porque ServicioPartida.iniciar_nueva llama a ServicioResolubilidad(...).verificar(cripta_id) antes de _armar, y ese servicio vuelve a pedir obtener_general y, sin caché en disco, vuelve a descargar todas las páginas del esqueleto. Corrígelo sin gastar solicitudes de más (FR-RES-013 y el presupuesto de solicitudes):
+1. En cripta/servicios/servicio_resolubilidad.py, agrega a verificar dos parámetros opcionales, general=None y mapa=None. Si vienen, úsalos y no pidas general ni páginas. Si no vienen (por ejemplo desde --verificar), se comporta como ahora. Las llaves siguen leyéndose de la caché en disco o, si no están, del cliente.
+2. En cripta/servicios/servicio_partida.py (iniciar_nueva), mueve la verificación a justo después de mapa = self._armar(general, version_catalogo) y antes de crear Partida, pasándole general=general y mapa=mapa.
+3. Primero agrega una prueba en tests/servicios/test_servicio_resolubilidad.py que compruebe que con general y mapa dados no se llama a obtener_general ni a obtener_pagina_esqueleto. Debe fallar antes del cambio.
+4. Después del cambio, corre las 3 que fallan: test_arranque_en_frio_cuenta_las_solicitudes_y_reporta y test_con_la_cache_caliente_solo_quedan_las_dos_verificaciones_de_version de tests/servicios/test_servicio_partida.py, y test_un_guardado_de_otro_catalogo_no_se_carga_y_la_partida_en_curso_sigue de tests/servicios/test_servicio_partida_guardado.py. Si todavía fallan, actualiza solo lo justo: en frío la lista esperada suma únicamente la solicitud de llaves, en caliente no debe sumar nada, y a los clientes falsos que no la tengan agrégales obtener_llaves que devuelva una tupla vacía. Dime exactamente qué cambiaste en cada prueba.
+Sin dict ni set como índice, CRLF, sin ";" en comentarios. Corre la suite completa con py -m unittest discover -s tests -t . y dime el resultado. Si da OK, marca T013 como [X] en specs/003-resolubilidad/tasks.md. No hagas commit.
+```
+(El texto completo está en prompts/p2/34-correccion-003-verificar-sin-repetir-solicitudes.md.)
+
+**Prompt (resumido):** Verificación de resolubilidad al iniciar partida reutilizando general y mapa, con prueba previa y ajuste de las pruebas de solicitudes.
+
+**Para qué se usó:** Corregir tres pruebas fallantes de la Fase C sin gastar solicitudes de más (FR-RES-013) y marcar T013.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Opción 1. Crea tests/datos/cripta-01/llaves.json con el mismo formato que fixtures/cripta-02/llaves.json, derivado de los datos que ya tiene cripta-01: busca en tests/datos/cripta-01/contenido/*.json, salas/ y general.json dónde están las llaves (en el suelo de una sala o en un enemigo, y la llave_salida de general.json) y arma las ubicaciones con esos datos, sin inventar ninguna. Si alguna llave que piden las puertas no aparece en el contenido, detente y dímelo. Después corre la suite completa. Si quedan fallos solo por las listas exactas de solicitudes, actualízalas: en frío se suma únicamente la solicitud de llaves y en caliente no se suma nada. Dime qué llaves pusiste, de dónde salió cada una y qué cambiaste en cada prueba. Si la suite da OK, marca T013 como [X]. CRLF en los .py, sin ";" en comentarios. No hagas commit."
+
+**Prompt (resumido):** Crear tests/datos/cripta-01/llaves.json derivado de los datos de esa cripta y ajustar las listas de solicitudes.
+
+**Para qué se usó:** Dar a la cripta congelada sus llaves sin inventar ninguna y cerrar los fallos que quedaban por la solicitud de llaves.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T022 y T023 de specs/003-resolubilidad/tasks.md, y después el README. 1. T022: corre py -m unittest discover -s tests -t . y anota el resultado en tasks.md. 2. T023: audita en los archivos de cripta/ creados o modificados por la 003 (cripta/modelo/resolubilidad.py, cripta/servicios/servicio_resolubilidad.py, cripta/servicios/servicio_partida.py, cripta/bench/cargas_bench.py, cripta/controlador/, cripta/vista/ y cripta/__main__.py) las importaciones y estructuras prohibidas por la constitución (heapq, bisect, collections, networkx, sorted, .sort, dict o set como índice, caché o tabla de búsqueda) y anota el resultado. Si encuentras algo en código de la 003, no lo corrijas: detente y dímelo. 3. README.md: lee cripta/__main__.py y specs/003-resolubilidad/contracts/ y agrega la opción --verificar <cripta> con sus códigos de salida (0, 1 y 2) y cualquier otra opción nueva de la 003 (por ejemplo --forzar, si existe), qué muestra el reporte de resolubilidad al iniciar una partida, y las cargas resolubilidad y resolubilidad_cota en la lista de --solo. Solo lo que haga el código, sin inventar. Usa Edit, CRLF y sin ";" en el texto nuevo. Marca T022 y T023 como [X] y dime qué encontraste y qué cambiaste."
+
+**Prompt (resumido):** T022 y T023: suite completa, auditoría de estructuras prohibidas y actualización del README con --verificar y las cargas nuevas.
+
+**Para qué se usó:** Anotar el resultado de la suite y de la auditoría en tasks.md y documentar lo que hace el código de la 003.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "En la lista de --solo del README agrega niebla_rutas después de ciclo_referencia, en el mismo orden que CARGAS de cripta/bench/cargas_bench.py. Revisa que la lista tenga exactamente las cargas de CARGAS, ni más ni menos, y lo mismo en la lista de "Cómo se reproduce" de DECISIONES.md. CRLF, sin ";"."
+
+**Prompt (resumido):** Agregar niebla_rutas a la lista de --solo del README y revisar que ambas listas coincidan con CARGAS.
+
+**Para qué se usó:** Que las listas de cargas del README y de Cómo se reproduce en DECISIONES.md fueran exactamente las registradas.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Registra en PROMPTS_LLM.md los prompts que te mandé hoy desde las 20:35 aproximadamente (las mezclas de main en la rama 003 y la capacidad 003), incluidas las sesiones anteriores a cada /clear. Sácalos literales de los registros de sesión de Claude Code en ~/.claude/projects/ (los .jsonl de este proyecto), no de memoria. Son, en orden: la resolución del conflicto de PROMPTS_LLM.md en la primera mezcla, T017, T018 a T020, la corrección del dict de _mapa_desde_conexiones, la resolución de los tres conflictos de la segunda mezcla, quitar la entrada vieja del 2026-11-09, quitar import json, T021, T024, el cambio del generador, la repetición de T021 con la 5.4, las dos frases del commit b3474b0, la verificación sin repetir solicitudes (general y mapa), el llaves.json de cripta-01, T022 y T023 con el README, y las listas de --solo. Incluye este mismo prompt al final. No registres mensajes que no sean prompts de trabajo (por ejemplo un /cp[y tecleado por error). Usa el mismo formato de las entradas anteriores: ### fecha — herramienta (modelo), con el modelo que diga el registro de sesión, **Prompt:** literal con sus ";" tal cual, **Prompt (resumido):** y **Para qué se usó:**. Los prompts largos van completos en prompts/p2/30-*.md, 31-*.md y así, y la entrada dice "(El texto completo está en prompts/p2/NN-....md.)". Sin nombres de personas. Agrega solo al final del archivo. CRLF y sin ";" en tu propio texto. Dime cuántas entradas agregaste y qué archivos de prompts/p2 creaste."
+(El texto completo está en prompts/p2/35-registro-prompts-003-en-prompts-llm.md.)
+
+**Prompt (resumido):** Registro en PROMPTS_LLM.md de los prompts de trabajo de la tarde, extraídos de los registros de sesión.
+
+**Para qué se usó:** Dejar documentados con texto literal los prompts de las mezclas de main y de la capacidad 003.
+
+
+### 2026-11-18 — OpenAI Codex (v0.170.0) (GPT-6.2-Sol)
+**Prompt:** "$speckit-implement Sigue las instrucciones de prompts/p2/06-cierre.md. No hagas commit ni push. Estoy en la rama cierre, en medio de un merge de origin/main sin terminar. No crees ni cambies de rama. No ejecutes ningún comando de git que cambie el estado (merge --abort, reset, checkout, switch, stash, add, commit, push). Puedes usar git status, git diff, git show, git log y git grep para leer. No escribas fuera del repo. Usa .\.venv\Scripts\python.exe en lugar de py para correr los comandos. Lee solo los archivos que se nombran aquí y no corras scripts de verificación amplios. Tres archivos están en conflicto: PROMPTS_LLM.md, README.md y cripta/controlador/controlador_cripta.py. Edita solo esos tres. Los demás archivos del merge ya están preparados y no se tocan. Redacta en español y sin nombres de personas. 1. PROMPTS_LLM.md. Tiene un solo bloque de conflicto: el lado HEAD trae las entradas del cierre y el lado origin/main trae las de la capacidad 003. Conserva ambos lados completos, sin recortar ni reordenar, y elimina solo las tres líneas de marcadores. Si una entrada aparece idéntica en ambos lados, deja una sola. Después comprueba estos tres retoques sobre las entradas del cierre y aplícalos solo si siguen pendientes: a) debe haber exactamente una entrada del 18-nov que cite prompts/p2/03-cierre.md y su encabezado debe ser Antigravity CLI (Gemini), si hay otra del mismo paso con encabezado OpenAI Codex elimínala completa, desde su encabezado hasta la línea en blanco que sigue a su Para qué se usó, b) la entrada que cita prompts/p2/04-cierre.md debe empezar su Prompt con $speckit-implement y no con /speckit-implement, c) el archivo no debe terminar con una línea en blanco sobrante. Dime cuáles ya estaban bien y cuáles corregiste. No agregues la entrada de este prompt, la registro yo. 2. README.md. El lado HEAD trae la reorganización del cierre (sección Proceso de desarrollo con Spec Kit, agentes consolidados en cuatro líneas, árbol con scripts/ y docs/, notas Pendiente de integración (capacidad 003)) y el lado origin/main trae la documentación de resolubilidad escrita por la 003. Conserva la estructura y las secciones del cierre. En todo lo que describe --verificar, --forzar, el reporte, los códigos de salida y las cargas de la 003 usa el texto de origin/main, porque ya está integrado. Quita las dos notas que empiezan con Pendiente de integración (capacidad 003). Agrega resolubilidad y resolubilidad_cota a la lista de --solo si están registradas en CARGAS de cripta/bench/cargas_bench.py. Si la línea de docs/ del árbol aún dice guías, quítalo. No dupliques secciones ni contenido: si ambos lados explican lo mismo, deja una sola versión. Sin nombres de personas y sin cifras que no estén medidas en DECISIONES.md o docs/bench. Después comprueba cada bandera y cada código de salida del README contra cripta/__main__.py y specs/003-resolubilidad/contracts/contrato_resolubilidad.md, y reporta cualquier diferencia sin cambiar código. 3. cripta/controlador/controlador_cripta.py. El conflicto es entre los comentarios sin punto y coma del cierre y la compuerta de resolubilidad de la 003. En cada zona conserva el código de origin/main y aplica a sus comentarios la regla de no usar punto y coma, reemplazándolo por coma o punto sin cambiar el significado. No cambies nada más. Si una zona tiene lógica distinta en ambos lados, no la resuelvas: muéstrame los dos lados y detente. 4. Comprobaciones de solo lectura. Confirma que en los tres archivos no queda ningún marcador de conflicto. Compara con git diff origin/main el controlador y dime que solo difiere en comentarios. Dime cuántas tareas siguen sin marcar en specs/003-resolubilidad/tasks.md y cuáles son. 5. Corre .\.venv\Scripts\python.exe -m unittest discover -s tests -t . y .\.venv\Scripts\python.exe -m scripts.revisar_prohibidos y dime los resultados. Si la auditoría marca errores o avisos en el código de la 003, solo repórtalos con ruta y línea, no los corrijas. Si una prueba falla, dime cuál y por qué, y corrígela solo si es consecuencia directa de un conflicto mal resuelto. Reglas: en textos nuevos no uses ';'. Conserva CRLF. No uses sed -i. No agregues reglas del juego. Si falta algo o dudas, detente y pregunta. Al terminar dime qué hiciste por punto y confirma con git status que ninguno de los tres archivos conserva marcadores y que no cambió ningún otro."
+
+**Prompt (resumido):** Resolver los tres conflictos del merge de main (con la capacidad 003 integrada) en la rama cierre: bitácora, README y controlador. Corregir además tres retoques pendientes de la bitácora.
+
+**Para qué se usó:** Integrar la 003 en cierre conservando todas las entradas de la bitácora, el README coherente con la verificación de resolubilidad ya implementada, y la compuerta del controlador sin perder la regla de comentarios sin punto y coma.

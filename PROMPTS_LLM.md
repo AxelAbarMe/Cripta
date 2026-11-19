@@ -1401,3 +1401,55 @@ Al terminar, dime qué cambiaste por punto y confirma que en esta corrección no
 
 **Para qué se usó:** Reforzar dos pruebas de la corrida 13 que no comprobaban lo que declaraban: la ausencia de nombres de salas no exploradas y la disposición de los controles.
 
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/14-implement-002.md. Solo T026 y T028. No sigas con T031.
+
+# Implementación 002, paso 8: comentario de viaje en partida.log (T026 y T028)
+
+Solo T026 y T028 de specs/002-niebla-ir-a/tasks.md. No sigas con T031.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-011, FR-NIE-016 y FR-NIE-017), plan.md (filas de servicio_partida.py, controlador_cripta.py, partida_log.py y servicio_replay.py de la tabla de impacto), research.md, data-model.md, quickstart.md y contracts/ antes de escribir. Lee cripta/servicios/servicio_partida.py, cripta/controlador/controlador_cripta.py (el bucle del viaje), cripta/infraestructura/partida_log.py, cripta/servicios/servicio_replay.py, tests/infraestructura/test_partida_log.py, tests/controlador/test_controlador_cripta.py y tests/servicios/test_servicio_replay.py. Comprueba con Test-Path que cada ruta existe y que su estado Nuevo o Modificado es correcto antes de editarla.
+2. Si necesitas un nombre nuevo que los documentos no definan, propón el mínimo siguiendo los patrones del código existente, en español, y anótalo en tu resumen con archivo y motivo. Solo detente y pregunta si algo cambia lo que el jugador observa o una regla de spec.md.
+3. Sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Errores de programación heredan de IndexError o ValueError. CriptaError es solo para errores externos de disco o archivos.
+4. No modifiques pruebas existentes, solo agrega. No toques cripta/modelo/, cripta/vista/ ni cripta/bench/. Si un defecto de esas capas lo exige, detente y explícalo. No crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". Comentarios cortos: cabecera de máximo 5 líneas y 1 o 2 líneas por método.
+5. Pruebas con valor: cada caso comprueba valores concretos, incluye un control positivo cuando afirma una ausencia, no asigna atributos privados si existe una acción real, y cita en su docstring el FR-NIE y el escenario que cubre.
+6. Marca cada casilla [X] en tasks.md cuando su tarea esté terminada y verificada.
+
+Contexto de diseño, ya decidido en plan.md y tasks.md:
+- Una orden ir_a válida ejecuta cada paso como una acción ordinaria mover mediante ServicioPartida.ejecutar(Accion("mover")). Cada paso aceptado ya deja su línea de movimiento en partida.log, y los turnos de los enemigos no producen líneas.
+- FR-NIE-016: antes del primer paso se escribe un único comentario que empieza con # y registra la orden. El comentario no es una acción: el lector de partida.log lo trata como metadato y el replay lo omite y reproduce solo las acciones.
+- ServicioPartida recibe un método nuevo que escribe ese comentario (el nombre lo propone la implementación). ControladorCripta lo llama una sola vez, antes del primer paso, y solo si la ruta tiene al menos un paso. Una orden rechazada o sin efecto (destino no explorado, destino actual o sin ruta) no escribe nada. Una acción individual del jugador nunca lleva comentario.
+- Si spec.md o contracts/ definen el texto del comentario, úsalo exacto. Si no lo definen, propón el mínimo que identifique la sala destino y repórtalo.
+- La lectura de archivos partida.log de la Parte I no debe romperse.
+
+Puntos de control:
+- T026: agrega primero las pruebas. En tests/infraestructura/test_partida_log.py: el comentario se escribe antes del primer movimiento y una sola vez, una acción individual no lo lleva, no se escribe comentario si no hay pasos, y el replay de un archivo con comentario reproduce solo acciones y llega al mismo estado. En tests/controlador/test_controlador_cripta.py: con un servicio que registra sus llamadas, una sola llamada al método nuevo antes del primer paso y ninguna cuando la orden se rechaza. Antes de implementar, corre py -m unittest tests.infraestructura.test_partida_log tests.controlador.test_controlador_cripta y muestra por qué fallan, que debe ser por lo que aún no existe y no por errores de sintaxis ni nombres mal escritos. Si el sandbox bloquea py.exe, pide aprobación para correr ese comando antes de continuar y no implementes hasta mostrar el rojo.
+- T028: implementa el método nuevo en cripta/servicios/servicio_partida.py, su llamada en cripta/controlador/controlador_cripta.py, y el tratamiento del comentario como metadato no accionable en cripta/infraestructura/partida_log.py y cripta/servicios/servicio_replay.py, sin instanciar la vista. Deben pasar las pruebas de T026. Corre py -m unittest tests.infraestructura.test_partida_log tests.servicios.test_servicio_replay tests.controlador.test_controlador_cripta y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, reporta cuántas pruebas pasan, qué hiciste por tarea, los nombres nuevos, el texto exacto del comentario y de dónde salió, y confirma que no cambió ningún archivo fuera de cripta/servicios/, cripta/controlador/, cripta/infraestructura/partida_log.py, tests/ y tasks.md.
+```
+
+**Prompt (resumido):** Pruebas y implementación del comentario único de viaje en partida.log (T026 y T028): método nuevo en el servicio de partida, una sola llamada del controlador antes del primer paso, y tratamiento del comentario como metadato por el lector y el replay.
+
+**Para qué se usó:** Que una orden «ir a» deje en partida.log un solo comentario antes del primer movimiento, sin registrar nada cuando la orden se rechaza, y que el replay reproduzca solo las acciones.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo tests/controlador/test_controlador_cripta.py, tests/infraestructura/test_partida_log.py y tests/servicios/test_servicio_replay.py. Solo si el punto 5 demuestra un defecto, puedes tocar también cripta/servicios/servicio_replay.py o cripta/infraestructura/partida_log.py con el cambio mínimo. No toques otros archivos, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a. Redacta en español. Ajusta solo las pruebas que agregó la corrida anterior (TestComentarioViaje, TestComentarioViajeControlador y test_comentario_de_viaje_no_altera_replay) y no modifiques las pruebas existentes. No marques ni desmarques ninguna casilla. Los .py van en CRLF. En comentarios, docstrings y textos nuevos no uses ";". Si algo cambia el resultado observable o exige tocar otro archivo, detente y pregunta.
+1. tests/controlador/test_controlador_cripta.py, test_comentario_se_registra_una_vez_antes_del_primer_paso: la ruta tiene un solo paso, así que no distingue una llamada por viaje de una llamada por paso. Agrega un caso con una ruta de al menos 3 pasos y comprueba que el orden es una llamada al comentario, el primer paso y los pasos siguientes sin más comentarios, por ejemplo [("comentario", destino), ("paso", ...), ("paso", ...), ("paso", ...)]. Prepara la partida con acciones reales cuando existan y no asignes atributos privados del modelo salvo que no haya otra forma, en cuyo caso dilo.
+2. Agrega en tests/controlador/test_controlador_cripta.py una prueba de integración con el servicio real y su bitácora real, sin sustituir registrar_comentario_viaje: tras una orden ir_a con al menos 2 pasos, partida.log tiene el encabezado, luego una única línea "# ir a N" y después exactamente una línea de movimiento por paso, sin líneas de turnos de enemigos. Tras una orden rechazada (destino inexistente) y tras una orden al destino actual, el archivo contiene solo el encabezado. Si montar el servicio con bitácora exige tocar otro archivo, detente y dímelo.
+3. tests/infraestructura/test_partida_log.py, test_sin_pasos_no_escribe_comentario: no ejecuta nada y ya pasaba antes de implementar, así que no prueba lo que declara, y compara contra un JSON escrito a mano que depende del orden de las claves. Elimínala, porque la cubre la prueba del punto 2. Las otras dos pruebas de TestComentarioViaje se quedan.
+4. tests/servicios/test_servicio_replay.py, test_comentario_de_viaje_no_altera_replay: la última aserción compara la sala de una partida consigo misma. Reemplázala por comparar el estado final del replay del log con comentario contra el del replay del log sin comentario, con los datos que ResultadoReplay ya expone.
+5. Números de línea: ServicioReplay numera las acciones con enumerate(..., start=2) suponiendo una línea del log por acción, pero ahora el log puede traer comentarios. Primero agrega en tests/servicios/test_servicio_replay.py una prueba con un log que tenga "# ir a 2" y después una acción inválida y comprueba que el número de línea reportado es la línea real del archivo. Corre solo esa prueba y muestra si falla y por qué. Si falla, corrígelo con el cambio mínimo en los archivos permitidos sin cambiar la firma ni el resultado de LectorBitacoraPartida.leer() que usan las pruebas existentes. Si no falla, dilo y deja la prueba como control. Si el arreglo exige cambiar esa firma, detente y pregúntame.
+6. Corre py -m unittest tests.infraestructura.test_partida_log tests.servicios.test_servicio_replay tests.controlador.test_controlador_cripta y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, dime qué cambiaste por punto y confirma qué archivos editaste en esta corrección y que ningún otro cambió.
+```
+
+**Prompt (resumido):** Corrección de las pruebas del comentario de viaje: ruta de varios pasos, integración con el servicio y la bitácora reales, eliminación de una prueba vacía, comparación real del replay y verificación de los números de línea con comentarios.
+
+**Para qué se usó:** Reforzar las pruebas de T026 que no demostraban que el comentario se escribe una sola vez por viaje ni su efecto en partida.log, y comprobar que el replay informa la línea correcta cuando el log trae comentarios.

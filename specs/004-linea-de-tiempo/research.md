@@ -54,7 +54,7 @@
 
 ## Mediciones requeridas
 
-**Decisión**: No fijar cifras ni K predeterminado antes de medir. Ejecutar `py -m cripta --bench --solo linea_tiempo --escala 1` con K=100, 500, 1000 y sin checkpoints. Usar semilla explícita con `random.Random(semilla)` y escoger la cripta de referencia dinámicamente por mayor total de salas.
+**Decisión**: No fijar cifras ni K predeterminado antes de medir. Ejecutar `py -m cripta --bench --solo linea_tiempo --escala 1` con K=50, 100, 500, 1000 y sin puntos periódicos. Usar semilla explícita con `random.Random(semilla)` y escoger la cripta de referencia dinámicamente por mayor total de salas. Repetir la misma carga en una partida independiente por escenario para observar el costo real de registro y ciclo. Compartir las posiciones de consulta e incluir el estado inmediatamente anterior a los puntos de control.
 
 **Razón**: FR-LIN-014 deja el valor de K a la medición del grupo y FR-LIN-018 fija el objetivo de consulta. La tabla del plan enumera también la alternativa de cambios invertibles y la búsqueda lineal.
 

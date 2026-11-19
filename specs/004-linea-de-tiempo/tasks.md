@@ -12,7 +12,7 @@
 - En la Fase B, la proyección que usa `Partida.vista()`, `SalidaVista` o `EnemigoVista` lleva «Depende de 001». La proyección histórica del conocimiento y sus costos lleva «Depende de 002».
 - En la Fase C, solo las tareas que persisten/restauran el conocimiento del jugador llevan «Depende de 002». La línea, checkpoints y cambio de versión binaria propios de 004 no llevan esa etiqueta.
 - En la Fase D, el resumen histórico de enemigos y salidas lleva «Depende de 001»; la consulta del conocimiento lleva «Depende de 002».
-- La Fase E compara K=100, 500, 1000 y sin checkpoints; no presupone cifras ni fija K predeterminado. La cripta de referencia se elige por el mayor total de salas entre fixtures, sin id fijo. La elección frente a `CRIPTA_REFERENCIA` queda pendiente del grupo.
+- La Fase E compara K=50, 100, 500, 1000 y sin puntos periódicos; no presupone cifras ni fija K predeterminado. La cripta de referencia se elige por el mayor total de salas entre fixtures, sin id fijo. La elección frente a `CRIPTA_REFERENCIA` queda pendiente del grupo.
 - El Pull Request de 004 no puede fusionarse antes de 001 y 002. Antes de integrarlo, incorporar `main` con merge y resolver la integración manteniendo un único cambio de versión del formato binario.
 - El registro de este comando en `PROMPTS_LLM.md` se realiza fuera de estas tareas.
 
@@ -74,7 +74,7 @@
 
 **Objetivo**: Medir alternativas y escalas sin cifras preasignadas, con semilla propia y cripta de referencia elegida por el mayor total de salas de los fixtures.
 
-**Prueba independiente**: comando exacto de benchmark; salida reproducible con al menos 5 000 acciones, los cuatro escenarios de K y todas las alternativas indicadas.
+**Prueba independiente**: comando exacto de benchmark; salida reproducible con al menos 5 000 acciones, los cinco escenarios de K con cadencia verificada, corridas independientes y consultas comunes y todas las alternativas indicadas.
 
 - [X] T027 Crear `tests/servicios/test_servicio_bench.py` (Nuevo si no existe tras fusionar la 002) para registrar/ejecutar `linea_tiempo` sin vista y verificar la forma del reporte, determinismo y ausencia de valores inventados. FR-LIN-014, FR-LIN-018, SC-LIN-003, SC-LIN-004. Validar con `py -m unittest tests.servicios.test_servicio_bench`; hecho cuando el caso detecta la carga y verifica semilla, escala y campos de medición.
 - [X] T028 Implementar la carga `linea_tiempo` en `cripta/bench/cargas_bench.py` (Modificado) con `random.Random(semilla)` propia, al menos 5 000 acciones y cripta elegida dinámicamente por máximo total de salas entre fixtures; no fijar id ni decidir sobre `CRIPTA_REFERENCIA`. FR-LIN-014, FR-LIN-018, SC-LIN-003. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando carga determinista informa semilla, cantidad de acciones, salas y resultados sin fijar K de producto.
@@ -82,6 +82,8 @@
 - [X] T030 Extender `cripta/bench/cargas_bench.py` (Modificado) para comparar re-simulación con inversión de cambios serializables, sin convertir closures de pergamino en registro histórico. FR-LIN-015, FR-LIN-016, SC-LIN-004. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando compara registro, memoria y consulta equivalente de ambas alternativas.
 - [X] T031 Extender `cripta/bench/cargas_bench.py` (Modificado) para comparar búsqueda binaria manual y lineal de checkpoint y de límite temporal a acción, reportando latencia e inspecciones; la lineal existe solo en benchmark. FR-LIN-001, FR-LIN-002, FR-LIN-015, FR-LIN-018, SC-LIN-003. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando ambas búsquedas reciben entradas equivalentes y el producto usa la binaria manual.
 - [X] T032 Extender `cripta/bench/cargas_bench.py` (Modificado) para comparar truncamiento desde el final con escaneo/filtrado y restauración con la ruta que prepara salas frente a la vía materializada sin `precarga.preparar_sala`; reportar procesamiento y E/S por consulta. FR-LIN-005, FR-LIN-007, FR-LIN-015, SC-LIN-002. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando las alternativas comparadas son observables y la consulta elegida no prepara salas.
+- [X] T041 Preparar la línea base de T033 en `cripta/bench/cargas_bench.py` y `tests/servicios/test_servicio_bench.py` (Modificados). Medir K=50, 100, 500, 1000 y sin puntos periódicos en partidas independientes con la misma carga. Verificar posiciones de los puntos y consultar los mismos casos, incluidos los estados justo antes de un punto. Informar cantidad de puntos, memoria, registro, mediana y máximo observado de consulta y peor ciclo. Conservar la salida íntegra a escala 1. FR-LIN-013, FR-LIN-014, FR-LIN-015, FR-LIN-016, FR-LIN-018, SC-LIN-003, SC-LIN-004. Validar con `py -m unittest tests.servicios.test_servicio_bench` y `py -m cripta --bench --solo linea_tiempo --escala 1`.
+  La corrida a escala 1 completó 5 000 acciones por escenario y verificó 100, 50, 10, 5 y 0 puntos periódicos. [Captura íntegra de la línea base](../../docs/bench/resultados_004_linea_base.md).
 - [ ] T033 Registrar la salida observada del benchmark y proponer K predeterminado en `specs/004-linea-de-tiempo/tasks.md` (Modificado) únicamente después de ejecutar todas las mediciones y justificarlo; no elegir si faltan resultados del grupo. FR-LIN-014, FR-LIN-018, SC-LIN-003. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando la justificación cita resultados realmente obtenidos y verifica <50 ms, sin anticipar cifras.
 
 ## Fase F: Cierre
@@ -109,7 +111,7 @@
 - Fase B: T006–T009 son pruebas en archivos distintos y pueden prepararse en paralelo; la reconstrucción T010/T011 antecede a T012. T013 y T014 esperan a la integración de sus capacidades respectivas.
 - Fase C: T015 y T016 son pruebas independientes sobre el mismo archivo y se secuencian para evitar conflicto; T017–T019 siguen el orden de pruebas y modelo.
 - Fase D: T020, T021, T023 y T025 pueden prepararse en paralelo; sus implementaciones esperan a las pruebas correspondientes.
-- Fase E: T027 precede la carga T028; T029–T032 modifican la misma carga y se ejecutan en secuencia. T033 espera las mediciones.
+- Fase E: T027 precede la carga T028; T029–T032 modifican la misma carga y se ejecutan en secuencia. T041 amplía y verifica las mediciones antes de T033.
 - Fase F: T034 precede T035; T036 requiere las pruebas y dependencias integradas. T037–T040 son cierre secuencial.
 
 ## Estrategia de entrega

@@ -82,13 +82,13 @@ El subsistema de benchmark nuevo es `linea_tiempo`; comando exacto:
 py -m cripta --bench --solo linea_tiempo --escala 1
 ```
 
-La carga usará una `random.Random(semilla)` local, una partida sintética determinista de al menos 5 000 acciones, y una cripta de referencia obtenida dinámicamente del fixture con más salas. No codificará ids ni datos de cripta. Reportará entorno, semilla, acciones, salas y salidas contadas, K, memoria estimada de acciones/checkpoints/cambios, mediana y máximo de consulta, y cumplimiento de 50 ms.
+La carga usará una `random.Random(semilla)` local, una partida sintética determinista de al menos 5 000 acciones, y una cripta de referencia obtenida dinámicamente del fixture con más salas. No codificará ids ni datos de cripta. Reportará entorno, semilla, acciones, salas, salidas y, por escenario, cantidad de puntos periódicos, memoria estimada de acciones, ajustes y puntos, costo medio de registro, mediana y máximo observado de consulta, y peor ciclo observado entre decisiones.
 
 La medición de memoria incluye la proyección de conocimiento persistida declarada por 002, también los costos conocidos de salida. El benchmark comparará restaurar salas por la vía actual que llama a `precarga.preparar_sala` frente a la vía elegida, que reutiliza el contenido estático materializado y restaura solo el estado dinámico sin esa llamada; reportará E/S y tiempo de consulta. También medirá búsqueda lineal frente a binaria para convertir t en límite de acción.
 
 Comparaciones obligatorias:
 
-1. K=100, K=500, K=1000 y sin checkpoints; reportar memoria y consulta para cada uno. Son valores experimentales del benchmark, no valores predeterminados del producto.
+1. K=50, 100, 500, 1000 y sin puntos periódicos. Jugar una corrida por escenario con la misma semilla, fixture y carga. Los puntos se crean durante el registro normal de la acción y el escenario sin puntos periódicos reconstruye desde el estado inicial. Medir el registro y el ciclo en sus propias corridas, con la instrumentación de inversión en una corrida aparte. Usar una sola muestra de consultas por acción e instante para todos los escenarios, con el primer y el último múltiplo disponible de cada K como números de acción de frontera. La consulta por acción en ese múltiplo examina el estado inmediatamente anterior al punto.
 2. Re-simular desde checkpoint frente a reconstruir hacia atrás con cambios serializables, midiendo costo de registrar, memoria y consultas equivalentes. La alternativa de inversión se implementará solo dentro de la carga comparativa si se decide descartarla, sin convertir el historial de pergamino a copias completas.
 3. Búsqueda binaria manual frente a búsqueda lineal para convertir t en límite de acción; la búsqueda binaria es la elegida por O(log N) sobre instantes que no decrecen en la línea vigente.
 4. Recorte por truncamiento desde el final frente a escaneo y filtrado (alternativa descartada), midiendo cantidad de registros procesados.
@@ -182,7 +182,7 @@ tests/
 | FR-LIN-011 | `GuardadoBinario` | Rechazo de versión antigua sin tocar archivo; B-LIN-006. |
 | FR-LIN-012 | Carga/CLI | No ofrecer ruta de migración; B-LIN-006. |
 | FR-LIN-013 | `Partida`, configuración | No más de un checkpoint cada K acciones; probar K=1 y K>N. |
-| FR-LIN-014 | `--bench linea_tiempo` | Comparar K=100/500/1000 y sin checkpoints; justificar default con resultados del grupo. |
+| FR-LIN-014 | `--bench linea_tiempo` | Comparar K=50/100/500/1000 y sin puntos periódicos; justificar el valor predeterminado con resultados del grupo. |
 | FR-LIN-015 | Localización/reconstrucción | Contar máximo K acciones aplicadas/deshechas; benchmark a 5 000 acciones. |
 | FR-LIN-016 | Registro/checkpoints | Memoria acciones+cambios+checkpoints, sin snapshot por acción; SC-LIN-004. |
 | FR-LIN-017 | `EstadoRNG` | Checkpoint restaura estado aleatorio y reproduce mismas decisiones; B-LIN-003. |

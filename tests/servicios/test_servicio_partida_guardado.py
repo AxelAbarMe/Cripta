@@ -421,5 +421,60 @@ class PruebaConocimientoGuardado(unittest.TestCase):
         self.assertEqual(restaurada._conocimiento.proyectar(), previo)
 
 
+    def test_conocimiento_binario_guardado_y_cargado_coincide_y_permite_ir_a_e_historia(self):
+        # FR-NIE-006, SC-NIE-005: guardar/cargar en binario conserva el conocimiento completo:
+        # estados de sala, observaciones de puertas y costos de salida. La partida cargada
+        # calcula la misma ruta con ir_a y recupera el mismo mapa conocido para un instante anterior.
+        carpeta = tempfile.TemporaryDirectory()
+        self.addCleanup(carpeta.cleanup)
+        ruta = Path(carpeta.name) / "niebla.bin"
+
+        # Juego original: recoger antorcha (accion 1), encender (accion 2) y moverse (accion 3).
+        # Al mover con antorcha: sala destino explorada y vecinas avistadas; puerta observada y recordada.
+        a = armar()
+        self.addCleanup(a.cerrar)
+        iniciar(a)
+        self.assertTrue(a.ejecutar(A("recoger", "itm_antorcha")).aceptada)   # accion 1
+        self.assertTrue(a.ejecutar(A("usar", 0)).aceptada)                   # accion 2: antorcha encendida
+        sala_origen = a.partida.vista().sala_id
+        t_antes_de_mover = a.partida.vista().tiempo                          # instante justo antes del movimiento
+        self.assertTrue(a.ejecutar(A("mover", "N")).aceptada)                # accion 3: entrar a sala vecina
+        sala_destino = a.partida.vista().sala_id
+        conocimiento_original = a.partida._conocimiento.proyectar()
+
+        # Verificar escenario de niebla: exploradas, avistadas y puerta observada (no «no_observada»)
+        estados = [s.estado for s in conocimiento_original]
+        self.assertIn("explorada", estados)
+        self.assertIn("avistada", estados)
+        sala_origen_vista = next(s for s in conocimiento_original if s.id_sala == sala_origen)
+        puertas_observadas = [sal.estado_puerta for sal in sala_origen_vista.salidas if sal.estado_puerta != "no_observada"]
+        self.assertTrue(len(puertas_observadas) > 0)
+
+        # Ruta calculada con ir_a desde la posicion actual hacia el origen
+        paso_a = a.partida.siguiente_paso(sala_origen)
+        self.assertIsNotNone(paso_a.direccion)
+
+        # Mapa conocido antes del movimiento (dos acciones vigentes antes: accion 3 es la siguiente)
+        historia_antes_a = a.partida.consultar_accion(3)
+
+        # Guardar en binario con ServicioPartida y cargar en servicio nuevo
+        a.guardar(ruta)
+        b = armar()
+        self.addCleanup(b.cerrar)
+        b.cargar(ruta)
+
+        # 1. El conocimiento (estados de sala, puertas y costos) coincide exactamente
+        conocimiento_b = b.partida._conocimiento.proyectar()
+        self.assertEqual(conocimiento_b, conocimiento_original)
+
+        # 2. ir_a calcula la misma ruta: mismo primer paso hacia el origen
+        paso_b = b.partida.siguiente_paso(sala_origen)
+        self.assertEqual(paso_b.direccion, paso_a.direccion)
+
+        # 3. historia del instante anterior al movimiento muestra el mismo mapa conocido
+        historia_antes_b = b.partida.consultar_accion(3)
+        self.assertEqual(historia_antes_b.mapa_conocido, historia_antes_a.mapa_conocido)
+
+
 if __name__ == "__main__":
     unittest.main()

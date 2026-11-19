@@ -1025,7 +1025,7 @@ Las equivalencias de las alternativas fueron verdaderas en las tres corridas. Lo
 
 - El margen de producción al límite de 5 ms es estrecho: el peor máximo observado fue 4.834 ms. La función de producción proyecta el conocimiento y reconstruye las aristas entrantes en cada llamada (`cripta/modelo/ruta_conocida.py`); que esa preparación domine el tiempo es una hipótesis que no se midió por separado.
 - En la revelación, R es la cantidad de entradas aleatorias con reemplazo, no R salas nuevas. Solo se midió un tamaño de mapa, cripta-06. Se midió el cálculo del primer paso y no un viaje completo dentro de una partida real.
-- El guardado binario del conocimiento depende de la 004 y T040 sigue pendiente; hasta completar esa integración, cargar una partida de archivo no conserva el mapa explorado.
+- El guardado binario del conocimiento dependía de la 004 (ya fusionada en main); T040 está completa y la carga desde archivo conserva el mapa explorado correctamente.
 - Al entrar a una sala se observan todas sus puertas. Por eso, en la sala actual no hay puertas sin observar y `Partida.vista()` presenta cada una según su estado observado, abierta o cerrada.
 - El grupo decidió considerar abierta al explorar su sala una salida que no tenga puerta cerrable. Esta decisión está pendiente de confirmación con el profesor.
 - Los costos de las salidas conocidas ocupan memoria proporcional a las salidas representadas.

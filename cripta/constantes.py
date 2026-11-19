@@ -72,4 +72,4 @@ def direccion_opuesta(direccion: str) -> str:
 VELOCIDAD_MINIMA = 1   # ninguna velocidad (por efectos) puede bajar de este valor
 
 # === LINEA DE TIEMPO ===
-CHECKPOINT_CADA_DEFECTO = 100   # valor provisional de K, se justifica con el bench de la línea de tiempo
+CHECKPOINT_CADA_DEFECTO = 50

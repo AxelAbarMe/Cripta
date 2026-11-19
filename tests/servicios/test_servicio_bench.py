@@ -7,10 +7,12 @@ import functools
 import io
 import re
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 from cripta.bench import cargas_bench
-from cripta.bench.cargas_bench import CARGAS, Resultado
+from cripta.bench.cargas_bench import CARGAS, DIRECTORIO_FIXTURES_BENCH, Resultado
+from cripta.infraestructura.cliente_offline import ClienteOffline
 from cripta.controlador.controlador_cripta import ControladorCripta
 from cripta.servicios.servicio_bench import ServicioBench, ejecutar_bench_cli
 from cripta.vista.vista_consola import VistaConsola
@@ -187,6 +189,132 @@ class TestConteosDeterministas(unittest.TestCase):
             with self.subTest(escenario=etiqueta):
                 self.assertEqual(len(_resultados_de(etiqueta, _correr(1))),
                                  len(_resultados_de(etiqueta, _correr(2))))
+
+
+class TestCriptaDeReferenciaComun(unittest.TestCase):
+    def test_elige_la_cripta_con_mas_salas(self):  # AGENTS.md 7, P2 5.6
+        criptas = [SimpleNamespace(id="cripta-a", salas=40), SimpleNamespace(id="cripta-b", salas=300),
+                   SimpleNamespace(id="cripta-c", salas=120)]
+        self.assertEqual(cargas_bench.elegir_cripta_de_referencia(criptas).id, "cripta-b")
+
+    def test_el_empate_de_salas_lo_decide_el_menor_id(self):  # AGENTS.md 7, P2 5.6
+        criptas = [SimpleNamespace(id="cripta-z", salas=300), SimpleNamespace(id="cripta-m", salas=300),
+                   SimpleNamespace(id="cripta-x", salas=10)]
+        self.assertEqual(cargas_bench.elegir_cripta_de_referencia(criptas).id, "cripta-m")
+
+    def test_el_orden_del_listado_no_cambia_la_eleccion(self):  # AGENTS.md 7
+        criptas = [SimpleNamespace(id="cripta-b", salas=7), SimpleNamespace(id="cripta-a", salas=7)]
+        self.assertEqual(cargas_bench.elegir_cripta_de_referencia(criptas).id,
+                         cargas_bench.elegir_cripta_de_referencia(list(reversed(criptas))).id)
+
+    def test_la_de_los_fixtures_es_la_de_mayor_numero_de_salas(self):  # AGENTS.md 7, P2 5.6
+        listado = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH)).listar_criptas()
+        elegida = cargas_bench.cripta_de_referencia()
+        self.assertEqual(elegida.salas, max(cripta.salas for cripta in listado))
+
+    def test_el_codigo_ya_no_fija_una_cripta_concreta(self):  # AGENTS.md 7
+        self.assertFalse(hasattr(cargas_bench, "CRIPTA_REFERENCIA"))
+
+    def test_ciclo_referencia_informa_la_cripta_elegida(self):  # P2 5.6
+        resultados = cargas_bench.bench_ciclo_referencia(ESCALA_MINIMA, corridas=1)
+        self.assertTrue(resultados[0].caso.startswith(f"{cargas_bench.cripta_de_referencia().id},"))
+
+    def test_las_dos_cargas_usan_la_misma_funcion_de_eleccion(self):  # AGENTS.md 7, P2 5.6
+        with mock.patch.object(cargas_bench, "elegir_cripta_de_referencia",
+                               wraps=cargas_bench.elegir_cripta_de_referencia) as espia:
+            cargas_bench.bench_ciclo_referencia(ESCALA_MINIMA, corridas=1)
+            tras_ciclo = espia.call_count
+            _funcion()(ESCALA_MINIMA)
+            tras_linea = espia.call_count
+        self.assertGreaterEqual(tras_ciclo, 1)
+        self.assertGreater(tras_linea, tras_ciclo)
+
+
+CARGA_CAZADORES = "historial_cazadores"
+
+
+def _funcion_cazadores():
+    # La función tal como la registra CARGAS: la prueba falla con un motivo claro si falta
+    for nombre, funcion in CARGAS:
+        if nombre == CARGA_CAZADORES:
+            return funcion
+    raise AssertionError(f"La carga {CARGA_CAZADORES!r} no está registrada en CARGAS")
+
+
+@functools.lru_cache(maxsize=None)
+def _correr_cazadores(_corrida):
+    with _sin_vista():
+        return _funcion_cazadores()(ESCALA_MINIMA)
+
+
+def _inversas_y_reversion(resultados):
+    inversas = [r for r in resultados if "operaciones inversas" in r.caso]
+    reversion = [r for r in resultados if "revertir" in r.caso]
+    return inversas, reversion
+
+
+class TestHistorialConCazadores(unittest.TestCase):
+    def test_esta_registrada_una_sola_vez_en_cargas(self):  # P2 5.6
+        nombres = [nombre for nombre, _ in CARGAS]
+        self.assertEqual(nombres.count(CARGA_CAZADORES), 1)
+
+    def test_los_resultados_son_del_subsistema_y_hay_dos_casos(self):  # P2 5.6
+        resultados = _correr_cazadores(1)
+        for resultado in resultados:
+            self.assertIsInstance(resultado, Resultado)
+            self.assertEqual(resultado.subsistema, CARGA_CAZADORES)
+        inversas, reversion = _inversas_y_reversion(resultados)
+        self.assertEqual((len(inversas), len(reversion)), (1, 1))
+
+    def test_corre_sin_instanciar_la_vista(self):  # P2 5.6, P2 6
+        _correr_cazadores(1)
+
+    def test_informa_la_cripta_los_cazadores_activos_y_las_acciones(self):  # P2 5.6
+        inversas, _ = _inversas_y_reversion(_correr_cazadores(1))
+        caso = inversas[0].caso
+        self.assertGreater(int(re.search(r"(\d+) cazadores activos", caso).group(1)), 0)
+        self.assertGreater(int(re.search(r"(\d+) acciones", caso).group(1)), 0)
+        self.assertIn(cargas_bench.cripta_de_referencia().id, caso)
+
+    def test_las_inversas_por_accion_traen_mediana_y_maximo(self):  # P2 5.6
+        inversas, _ = _inversas_y_reversion(_correr_cazadores(1))
+        encontrado = re.search(r"mediana (\d+) y máximo (\d+)", inversas[0].nota)
+        mediana, maximo = int(encontrado.group(1)), int(encontrado.group(2))
+        self.assertGreaterEqual(mediana, 1)
+        self.assertGreaterEqual(maximo, mediana)
+
+    def test_el_tiempo_de_revertir_trae_mediana_y_maximo(self):  # P2 5.6
+        _, reversion = _inversas_y_reversion(_correr_cazadores(1))
+        encontrado = re.search(r"mediana ([\d.]+) µs y máximo ([\d.]+) µs", reversion[0].nota)
+        self.assertGreater(float(encontrado.group(1)), 0)
+        self.assertGreaterEqual(float(encontrado.group(2)), float(encontrado.group(1)))
+
+    def test_se_revierte_cada_accion_medida(self):  # P2 5.6
+        inversas, reversion = _inversas_y_reversion(_correr_cazadores(1))
+        acciones = int(re.search(r"(\d+) acciones", inversas[0].caso).group(1))
+        self.assertEqual(reversion[0].operaciones, acciones)
+        self.assertGreater(reversion[0].segundos, 0)
+
+    def test_se_compara_con_la_carga_sintetica_de_la_parte_1(self):  # P2 5.6
+        _, reversion = _inversas_y_reversion(_correr_cazadores(1))
+        self.assertIn("sintética", reversion[0].nota)
+        self.assertIn("6 inversas", reversion[0].nota)
+        self.assertRegex(reversion[0].nota, r"por inversa")
+
+    def test_los_conteos_son_deterministas(self):  # P2 5.6
+        primera, _ = _inversas_y_reversion(_correr_cazadores(1))
+        with _sin_vista():
+            segunda, _ = _inversas_y_reversion(_funcion_cazadores()(ESCALA_MINIMA))
+        self.assertEqual((primera[0].caso, primera[0].nota), (segunda[0].caso, segunda[0].nota))
+
+    def test_el_caso_no_lleva_tiempos_medidos(self):  # P2 5.6
+        for resultado in _correr_cazadores(1):
+            self.assertNotRegex(resultado.caso, r"\d\s*(ms|µs|s)\b")
+
+    def test_el_servicio_la_acepta_en_solo(self):  # P2 5.6
+        with _sin_vista():
+            salida = ServicioBench(escala=ESCALA_MINIMA).ejecutar([CARGA_CAZADORES])
+        self.assertEqual(list(salida), [CARGA_CAZADORES])
 
 
 if __name__ == "__main__":

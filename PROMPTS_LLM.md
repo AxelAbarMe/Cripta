@@ -1229,3 +1229,16 @@ Sigue las instrucciones de prompts/p2/17-implement-003-fase-a-nucleo.md. Solo T0
 **Prompt (resumido):** Núcleo del verificador de resolubilidad (T005 a T007): clases de datos inmutables, catálogo ordenado con búsqueda binaria propia y recorrido incremental con cola y montículo.
 
 **Para qué se usó:** Implementar el dominio puro de la resolubilidad para que pasen las pruebas escritas en el paso anterior.
+
+### 2026-11-18 — Antigravity CLI 1.5.10 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/18-implement-003-fase-a-ciclos.md. Revisa lo ya escrito en cripta/modelo/resolubilidad.py y completa T008 y T009.
+```
+(El texto completo está en prompts/p2/18-implement-003-fase-a-ciclos.md.)
+
+**Prompt (resumido):** Revisión del núcleo del verificador, detección de ciclos de dependencia de llaves (T008) y cierre de la alternativa ingenua (T009).
+
+**Para qué se usó:** Continuar la Fase A después de que la ejecución anterior se cortó por límite de cupo del modelo.

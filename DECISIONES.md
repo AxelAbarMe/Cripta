@@ -1062,7 +1062,7 @@ Antes de jugar hay que saber si la cripta se puede completar: obtener la llave d
 ### Decisión
 
 
-Se mantienen las decisiones del plan. `VerificadorResolubilidad.verificar` hace un solo recorrido por anchura sobre listas contiguas indexadas por entero (`visitada`, `llave_obtenida`, `puertas_pendientes`, `llaves_en_sala`). Cuando la cola se vacía y hay llaves candidatas, extrae la de menor id del montículo y encola las salas destino de sus puertas pendientes. La cripta es resoluble solo si se obtuvo la llave de salida y se cruzó, hacia la sala de salida, una puerta que la exige. Si no lo es, calcula la frontera bloqueada, la ubicación de cada llave no obtenida y los ciclos de dependencia. La frontera y los ciclos se ordenan con un merge sort propio sobre sus campos, sin `sorted()`. El modelo no toca red, archivos ni vista.
+Se mantienen las decisiones del plan. `VerificadorResolubilidad.verificar` hace un solo recorrido por anchura sobre listas contiguas indexadas por entero (`visitada`, `llave_obtenida`, `puertas_pendientes`, `llaves_en_sala`). Cuando la cola se vacía y hay llaves candidatas, extrae la de menor id del montículo y encola las salas destino de sus puertas pendientes. La cripta es resoluble solo si se obtuvo la llave de salida y se cruzó, hacia la sala de salida, una puerta que la exige. Si no lo es, calcula la frontera bloqueada, la ubicación de cada llave no obtenida y los ciclos de dependencia. La frontera y los ciclos se ordenan con un merge sort propio sobre sus campos, sin `sorted()`. El modelo no toca red, archivos ni vista. La entrada por la llave de salida se cuenta aunque la sala de salida ya haya sido alcanzada por otra ruta.
 
 
 ### Análisis de complejidad
@@ -1074,7 +1074,7 @@ El plan da O(E log V + K log K) para el recorrido incremental, con memoria O(V +
 ### Evidencia empírica
 
 
-Comando `py -m cripta --bench --solo resolubilidad resolubilidad_cota`. Equipo B (Intel Core Ultra 7, Windows, Python 3.14.6), tres corridas, cada una en un proceso aparte, commit 6114646. Las cifras son medianas de las tres corridas tomadas de [resultados_003.md](docs/bench/resultados_003.md). La razón es la mediana de las tres razones impresas por cada corrida.
+Comando `py -m cripta --bench --solo resolubilidad resolubilidad_cota`. Equipo B (Intel Core Ultra 7, Windows, Python 3.14.6), tres corridas, cada una en un proceso aparte, commit 6114646. Las cifras se midieron con el código de ese commit, que ya incluye las correcciones del verificador y la cripta sintética nueva, y el archivo docs/bench/resultados_003.md se guardó en el commit 21996d9. Las cifras son medianas de las tres corridas tomadas de [resultados_003.md](docs/bench/resultados_003.md). La razón es la mediana de las tres razones impresas por cada corrida.
 
 
 La cripta sintética pone la puerta de cada segmento en la primera sala del corredor y su llave en una sala lateral al final, es decir, cada llave queda después de su puerta. Así el recorrido llega a la puerta sin tener la llave y el ingenuo necesita volver a empezar para cruzarla. La primera versión de la carga ponía la llave antes que la puerta, que es el mejor caso del ingenuo, y por eso se cambió (ver más abajo).
@@ -1124,7 +1124,7 @@ La decisión no cambia y la evidencia la refuerza: el incremental fue más rápi
 - Solo se midió una cripta sintética de cadena, con 20 salas por segmento y una llave por segmento, y está construida para que el ingenuo necesite reiniciar en cada segmento. Con otra forma la ventaja puede ser mucho menor, como mostró la primera versión de la carga (razón de 1.6 a 2.0). Las criptas publicadas no se midieron con el ingenuo.
 - Cada cifra es la mediana de tres corridas en un solo equipo (Equipo B), y las medianas de tiempo no se comparan con las de los equipos A o C. Las razones sí son más estables, pero tampoco se midieron en otro equipo.
 - La cota de 200 ms se midió solo en cripta-06 (300 salas). No se midió con una cripta más grande ni en red viva, y la medición no incluye el tiempo de leer fixtures ni de construir el mapa.
-- La detección de ciclos no está medida: las criptas de `--bench` son resolubles, así que ese camino no corre en las cargas. Su costo es el del plan, sin evidencia propia.
+- La detección de ciclos no está medida: las criptas de `--bench` son resolubles, así que ese camino no corre en las cargas. Su costo es el del plan, sin evidencia propia. El caso del Apéndice B con la llave de salida dentro de la sala de salida (ciclo itm_llave_salida -> itm_llave_salida) sí está cubierto por pruebas en tests/modelo/test_resolubilidad.py (las de sufijo _ApendiceB).
 - Riesgos del plan (sección 6). Los arreglos `visitada` y `llaves_en_sala` miden `max_sala_id + 1`, así que ids de sala muy dispersos gastarían memoria innecesaria (el API numera las salas desde 1 de forma correlativa, y el diseño asume V hasta unas 1000). Con más de 100 000 llaves distintas el ordenamiento inicial O(K log K) tendría un costo que solo `--bench` podría confirmar y que no se midió. El algoritmo reporta un solo ciclo representativo por grupo de llaves, como pide FR-RES-012, y no todos los ciclos posibles.
 - Además, la búsqueda binaria de `CriptaMapa.obtener` agrega el factor log V a cada salida examinada. El plan (sección 7) mantiene `CriptaMapa` sin cambios y no se midió el efecto de reemplazarla por referencias directas.
 

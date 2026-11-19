@@ -239,6 +239,24 @@ class TestOrdenes(BaseControlador):
             self.assertEqual(len(archivo.readlines()), lineas)
 
 
+    def test_avisar_motivo_viaje_cubre_cuatro_motivos_y_desconocido(self):
+        """FR-NIE-009, FR-NIE-010: avisos ante motivos que impiden iniciar el viaje."""
+        vista = VistaFalsa()
+        controlador = self.preparar_controlador(vista)
+        casos = (
+            ("destino_inexistente", "La sala de destino no existe."),
+            ("destino_no_explorado", "La sala de destino no está explorada."),
+            ("sala_actual", "Ya estás en esa sala."),
+            ("sin_ruta", "No hay una ruta conocida hasta esa sala."),
+            ("motivo_desconocido", "No se puede iniciar el viaje."),
+            (None, "No se puede iniciar el viaje."),
+        )
+        for motivo, mensaje_esperado in casos:
+            vista.avisos.clear()
+            controlador._avisar_motivo_viaje(motivo)
+            self.assertEqual(vista.avisos, [mensaje_esperado])
+
+
     def test_consultar_mapa_pide_proyeccion_y_la_entrega_a_vista(self):
         """FR-NIE-007 y FR-NIE-008: mapa sin acción ni modificación del historial."""
         vista = VistaFalsa()

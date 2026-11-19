@@ -221,13 +221,17 @@ class ControladorCripta:
 
     def _avisar_motivo_viaje(self, motivo: str | None) -> None:
         """Traduce las validaciones sin ejecutar pasos ni registrar la orden."""
-        mensajes = {
-            "destino_inexistente": "La sala de destino no existe.",
-            "destino_no_explorado": "La sala de destino no está explorada.",
-            "sala_actual": "Ya estás en esa sala.",
-            "sin_ruta": "No hay una ruta conocida hasta esa sala.",
-        }
-        self._vista.mostrar_aviso(mensajes.get(motivo, "No se puede iniciar el viaje."))
+        if motivo == "destino_inexistente":
+            mensaje = "La sala de destino no existe."
+        elif motivo == "destino_no_explorado":
+            mensaje = "La sala de destino no está explorada."
+        elif motivo == "sala_actual":
+            mensaje = "Ya estás en esa sala."
+        elif motivo == "sin_ruta":
+            mensaje = "No hay una ruta conocida hasta esa sala."
+        else:
+            mensaje = "No se puede iniciar el viaje."
+        self._vista.mostrar_aviso(mensaje)
 
 
     def _retroceder(self, cantidad: int, vista) -> bool:

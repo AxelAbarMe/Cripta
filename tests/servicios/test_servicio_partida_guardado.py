@@ -430,7 +430,7 @@ class PruebaConocimientoGuardado(unittest.TestCase):
         ruta = Path(carpeta.name) / "niebla.bin"
 
         # Juego original: recoger antorcha (accion 1), encender (accion 2) y moverse (accion 3).
-        # Al mover con antorcha: sala destino explorada y vecinas avistadas; puerta observada y recordada.
+        # Al mover con antorcha: sala destino explorada y vecinas avistadas, puerta observada y recordada.
         a = armar()
         self.addCleanup(a.cerrar)
         iniciar(a)

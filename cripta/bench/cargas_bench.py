@@ -1016,25 +1016,7 @@ SEMILLA_NIEBLA = 20261118
 
 def _elegir_fixture_referencia():
     """Carga el fixture íntegro de mayor tamaño sin fijar el identificador."""
-    candidatos = []
-    for carpeta in DIRECTORIO_FIXTURES_BENCH.iterdir():
-        general_ruta = carpeta / "general.json"
-        version_ruta = carpeta / "version.json"
-        if not carpeta.is_dir() or not general_ruta.is_file() or not version_ruta.is_file():
-            continue
-        with general_ruta.open(encoding="utf-8") as archivo:
-            general = json.load(archivo)
-        total = general.get("salas_total")
-        if isinstance(total, int) and (not candidatos or total > candidatos[0][0]):
-            candidatos = [(total, carpeta.name)]
-        elif isinstance(total, int) and total == candidatos[0][0]:
-            candidatos.append((total, carpeta.name))
-    if not candidatos:
-        raise ValueError("No hay fixtures completos de criptas para niebla_rutas")
-    elegido = candidatos[0][1]
-    for _total, identificador in candidatos[1:]:
-        if identificador < elegido:
-            elegido = identificador
+    elegido = cripta_de_referencia().id
     cliente = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))
     general = cliente.obtener_general(elegido)
     version = cliente.obtener_version_cripta(elegido)

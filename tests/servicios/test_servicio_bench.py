@@ -9,6 +9,7 @@ import re
 import unittest
 from unittest import mock
 
+from cripta.bench import cargas_bench
 from cripta.bench.cargas_bench import CARGAS, Resultado
 from cripta.controlador.controlador_cripta import ControladorCripta
 from cripta.servicios.servicio_bench import ServicioBench, ejecutar_bench_cli
@@ -16,8 +17,8 @@ from cripta.vista.vista_consola import VistaConsola
 
 ESCALA_MINIMA = 0.01
 CARGA = "linea_tiempo"
-ESCENARIOS = (("K=100", r"\bK=100\b"), ("K=500", r"\bK=500\b"), ("K=1000", r"\bK=1000\b"),
-              ("sin checkpoints", r"\bsin checkpoints\b"))   # K=100 no debe confundirse con K=1000
+ESCENARIOS = (("K=50", 50), ("K=100", 100), ("K=500", 500), ("K=1000", 1000),
+              ("sin puntos periódicos", None))
 
 
 def _funcion():
@@ -57,8 +58,8 @@ def _correr_en_la_linea_de_comandos():
     return codigo, salida.getvalue()
 
 
-def _resultados_de(etiqueta, patron, resultados):
-    return [r for r in resultados if re.search(patron, r.caso)]
+def _resultados_de(etiqueta, resultados):
+    return [r for r in resultados if r.caso.startswith(f"{etiqueta}:")]
 
 
 class TestRegistroDeLaCarga(unittest.TestCase):
@@ -92,19 +93,19 @@ class TestRegistroDeLaCarga(unittest.TestCase):
 
 
 class TestEscenariosDeK(unittest.TestCase):
-    def test_reporta_K_100_500_1000_y_sin_checkpoints(self):  # FR-LIN-014, SC-LIN-003
+    def test_reporta_los_cinco_escenarios(self):  # FR-LIN-014, SC-LIN-003
         resultados = _correr(1)
-        for etiqueta, patron in ESCENARIOS:
+        for etiqueta, _ in ESCENARIOS:
             with self.subTest(escenario=etiqueta):
-                self.assertGreater(len(_resultados_de(etiqueta, patron, resultados)), 0)
+                self.assertEqual(len(_resultados_de(etiqueta, resultados)), 1)
 
     def test_cada_escenario_informa_memoria_y_la_consulta_con_mediana_y_maximo(self):  # FR-LIN-016, FR-LIN-018, SC-LIN-004
         resultados = _correr(1)
-        for etiqueta, patron in ESCENARIOS:
+        for etiqueta, _ in ESCENARIOS:
             with self.subTest(escenario=etiqueta):
-                propios = _resultados_de(etiqueta, patron, resultados)
+                propios = _resultados_de(etiqueta, resultados)
                 notas = " ".join(r.nota for r in propios)
-                for campo in ("memoria", "mediana", "máximo"):
+                for campo in ("memoria", "registro medio", "mediana", "máximo observado", "peor ciclo"):
                     self.assertIn(campo, notas)
                 for resultado in propios:
                     self.assertGreaterEqual(resultado.segundos, 0)
@@ -126,6 +127,39 @@ class TestEscenariosDeK(unittest.TestCase):
         for etiqueta, _ in ESCENARIOS:
             self.assertIn(etiqueta, texto)
             self.assertIn(etiqueta, markdown)
+
+    def test_cadencia_real_y_misma_carga_y_consultas_en_cada_corrida(self):  # FR-LIN-013, FR-LIN-014, FR-LIN-015, FR-LIN-018
+        escenarios = []
+        acciones = 1050
+
+        def observar(etiqueta, corrida, posiciones):
+            escenarios.append((etiqueta, corrida.partida, posiciones))
+            return Resultado(CARGA, etiqueta, 0, len(posiciones))
+
+        with mock.patch.object(cargas_bench, "_acciones_de_la_carga", return_value=acciones), \
+                mock.patch.object(cargas_bench, "_resultado_de_escenario", side_effect=observar):
+            _funcion()(ESCALA_MINIMA)
+
+        self.assertEqual([etiqueta for etiqueta, _, _ in escenarios], [etiqueta for etiqueta, _ in ESCENARIOS])
+        _, partida_base, consultas = escenarios[0]
+        referencia = partida_base.linea_tiempo()
+        self.assertTrue(any(tipo == "instante" for tipo, _ in consultas))
+        for indice, ((_, k), (etiqueta, partida, posiciones)) in enumerate(zip(ESCENARIOS, escenarios)):
+            with self.subTest(escenario=etiqueta):
+                for _, previa, _ in escenarios[:indice]:
+                    self.assertIsNot(partida, previa)
+                linea = partida.linea_tiempo()
+                self.assertIs(posiciones, consultas)
+                self.assertEqual(linea._acciones, referencia._acciones)
+                self.assertEqual(linea._tiempos, referencia._tiempos)
+                esperados = [] if k is None else list(range(k, acciones + 1, k))
+                self.assertEqual([punto.numero_acciones for punto in linea._puntos], esperados)
+                self.assertEqual([punto.estado[0].acciones_jugador for punto in linea._puntos], esperados)
+                if esperados:
+                    for numero in (esperados[0], esperados[-1]):
+                        self.assertIn(("accion", numero), consultas)
+                        previo = linea.buscar_checkpoint(numero - 1)
+                        self.assertEqual(previo.numero_acciones if previo else 0, numero - k)
 
 
 class TestConteosDeterministas(unittest.TestCase):
@@ -149,10 +183,10 @@ class TestConteosDeterministas(unittest.TestCase):
             self.assertNotRegex(resultado.caso, r"\d\s*(ms|µs|s)\b")
 
     def test_la_misma_escala_da_el_mismo_numero_de_resultados_por_escenario(self):  # FR-LIN-018
-        for etiqueta, patron in ESCENARIOS:
+        for etiqueta, _ in ESCENARIOS:
             with self.subTest(escenario=etiqueta):
-                self.assertEqual(len(_resultados_de(etiqueta, patron, _correr(1))),
-                                 len(_resultados_de(etiqueta, patron, _correr(2))))
+                self.assertEqual(len(_resultados_de(etiqueta, _correr(1))),
+                                 len(_resultados_de(etiqueta, _correr(2))))
 
 
 if __name__ == "__main__":

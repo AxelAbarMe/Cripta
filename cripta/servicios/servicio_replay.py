@@ -4,6 +4,7 @@ Si el log es parcial, las versiones difieren o una acción no se acepta, lo repo
 Lee el log con infraestructura/partida_log.py y reconstruye cada acción con Accion.desde_dict().
 '''
 from dataclasses import dataclass
+from pathlib import Path
 
 from cripta.infraestructura.partida_log import LectorBitacoraPartida, diferencias_de_version
 from cripta.modelo.accion import Accion
@@ -51,6 +52,7 @@ class ServicioReplay:
         """Lanza CriptaBitacoraError si el log no existe o está dañado; los errores de red salen tal cual."""
         lector = LectorBitacoraPartida(ruta)
         encabezado, acciones = lector.leer()
+        numeros_linea = self._numeros_linea_acciones(ruta)
         cabecera = (f"Cripta {encabezado['id_cripta']} (versión {encabezado['version_cripta']}), "
                     f"catálogo {encabezado['version_catalogo']}, semilla {encabezado['semilla']}")
         avisos = ("la última línea del log estaba incompleta y se ignoró",) if lector.ultima_linea_incompleta else ()
@@ -64,16 +66,17 @@ class ServicioReplay:
             diferencias = diferencias_de_version(encabezado, servicio.datos_generales.version, servicio.version_catalogo)
             if diferencias:
                 return self._sin_reproducir(cabecera, avisos, len(acciones), diferencias)
-            return self._reproducir_acciones(cabecera, avisos, acciones)
+            return self._reproducir_acciones(cabecera, avisos, acciones, numeros_linea)
         finally:
             servicio.cerrar()
 
-    def _reproducir_acciones(self, cabecera, avisos, acciones) -> ResultadoReplay:
+    def _reproducir_acciones(self, cabecera, avisos, acciones, numeros_linea) -> ResultadoReplay:
         servicio = self._servicio
         problemas = []
         pasos = []
         reproducidas = 0
-        for numero, datos in enumerate(acciones, start=2):   # número de línea del log: la 1 es el encabezado
+        for indice, datos in enumerate(acciones):
+            numero = numeros_linea[indice]
             try:
                 accion = Accion.desde_dict(datos)
                 resultado = servicio.ejecutar(accion)
@@ -89,6 +92,20 @@ class ServicioReplay:
             cabecera, not problemas, tuple(problemas), avisos, reproducidas, len(acciones),
             servicio.partida.desenlace(), servicio.partida.puntaje(), servicio.reporte_final(), tuple(pasos),
         )
+
+    @staticmethod
+    def _numeros_linea_acciones(ruta):
+        numeros = []
+        encontro_encabezado = False
+        with Path(ruta).open(encoding="utf-8") as archivo:
+            for numero, linea in enumerate(archivo, start=1):
+                if not linea.strip() or linea.lstrip().startswith("#"):
+                    continue
+                if not encontro_encabezado:
+                    encontro_encabezado = True
+                    continue
+                numeros.append(numero)
+        return numeros
 
     def _describir_paso(self, numero, accion, resultado) -> str:
         # Salida de solo lectura: texto plano, sin vista ni entrada del usuario (6)

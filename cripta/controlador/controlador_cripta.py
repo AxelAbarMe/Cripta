@@ -160,6 +160,11 @@ class ControladorCripta:
         if paso.direccion is None:
             self._avisar_motivo_viaje(paso.motivo)
             return False
+        registrar_comentario = getattr(self._servicio, "registrar_comentario_viaje", None)
+        if registrar_comentario is not None:
+            ok, _ = self._intentar(registrar_comentario, destino)
+            if not ok:
+                return False
         while True:
             estado_paso = self._ejecutar_paso_viaje(destino, paso.direccion)
             if estado_paso is not None:

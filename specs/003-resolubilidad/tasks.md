@@ -174,7 +174,7 @@ Depende de Fase A completa (el verificador ya funciona); puede solaparse con Fas
 
 ---
 
-- [ ] T017 Escribir `tests/servicios/test_servicio_bench.py` para comprobar que el generador sintético y las cargas producen la misma salida con la misma semilla, usando `test_bench_resolubilidad_reproducible` definido en el plan — **Nuevo**: `tests/servicios/test_servicio_bench.py`
+- [X] T017 Escribir `tests/servicios/test_servicio_bench.py` para comprobar que el generador sintético y las cargas producen la misma salida con la misma semilla, usando `test_bench_resolubilidad_reproducible` definido en el plan — **Nuevo**: `tests/servicios/test_servicio_bench.py`
   - Requisitos: FR-RES-020, SC-007
   - Comando: `py -m unittest tests.servicios.test_servicio_bench`
   - Hecho: el test verifica igualdad reproducible para el generador y las cargas con semilla fija.

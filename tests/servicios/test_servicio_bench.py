@@ -4,6 +4,7 @@ Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.servicios.
 """
 import contextlib
 import functools
+import inspect
 import io
 import re
 import unittest
@@ -13,6 +14,7 @@ from unittest import mock
 from cripta.bench import cargas_bench
 from cripta.bench.cargas_bench import CARGAS, DIRECTORIO_FIXTURES_BENCH, Resultado
 from cripta.infraestructura.cliente_offline import ClienteOffline
+from cripta.modelo.resolubilidad import VerificadorResolubilidad
 from cripta.controlador.controlador_cripta import ControladorCripta
 from cripta.servicios.servicio_bench import ServicioBench, ejecutar_bench_cli
 from cripta.vista.vista_consola import VistaConsola
@@ -315,6 +317,97 @@ class TestHistorialConCazadores(unittest.TestCase):
         with _sin_vista():
             salida = ServicioBench(escala=ESCALA_MINIMA).ejecutar([CARGA_CAZADORES])
         self.assertEqual(list(salida), [CARGA_CAZADORES])
+
+
+SEMILLA_A = 20260928
+SEMILLA_B = 7
+CARGA_RESOLUBILIDAD = "resolubilidad"
+CARGA_COTA = "resolubilidad_cota"
+
+
+def _generar(k, salas_por_segmento, semilla):
+    # Falla con un motivo claro si el generador aún no existe
+    generador = getattr(cargas_bench, "_generar_cripta_encadenada", None)
+    if generador is None:
+        raise AssertionError("cargas_bench no define _generar_cripta_encadenada")
+    return generador(k, salas_por_segmento, semilla)
+
+
+def _huella(cripta):
+    # Todo lo observable de la cripta como listas, para compararla sin depender de la identidad de objetos
+    mapa, sala_inicial, sala_salida, llave_salida, llaves = cripta
+    conexiones = []
+    for sala in mapa.todas_las_salas():
+        for direccion, destino in mapa.vecinos(sala.id):
+            conexiones.append((sala.id, direccion, destino, mapa.datos_de_puerta(sala.id, direccion),
+                               mapa.costo_de_conexion(sala.id, direccion)))
+    return conexiones, sala_inicial, sala_salida, llave_salida, [(u.id, u.sala, u.enemigo) for u in llaves]
+
+
+def _funcion_de(nombre):
+    for registrado, funcion in CARGAS:
+        if registrado == nombre:
+            return funcion
+    raise AssertionError(f"La carga {nombre!r} no está registrada en CARGAS")
+
+
+class TestGeneradorEncadenado(unittest.TestCase):
+    def test_bench_resolubilidad_reproducible(self):  # FR-RES-020, SC-007
+        primera = _huella(_generar(5, 4, SEMILLA_A))
+        segunda = _huella(_generar(5, 4, SEMILLA_A))
+        otra = _huella(_generar(5, 4, SEMILLA_B))
+        self.assertEqual(primera, segunda)
+        self.assertNotEqual(primera, otra)
+
+    def test_arma_k_llaves_y_k_por_salas_por_segmento_salas(self):  # FR-RES-020, SC-007
+        for k, por_segmento in ((3, 2), (5, 4), (10, 20)):
+            with self.subTest(k=k, salas_por_segmento=por_segmento):
+                mapa, _, _, _, llaves = _generar(k, por_segmento, SEMILLA_A)
+                self.assertEqual(len(mapa.todas_las_salas()), k * por_segmento)
+                self.assertGreaterEqual(len(llaves), k)
+
+    def test_la_cripta_generada_es_resoluble_con_ambos_recorridos(self):  # FR-RES-020, SC-007
+        for k, por_segmento in ((3, 2), (8, 5)):
+            with self.subTest(k=k, salas_por_segmento=por_segmento):
+                mapa, inicial, salida, llave_salida, llaves = _generar(k, por_segmento, SEMILLA_A)
+                verificador = VerificadorResolubilidad(mapa, inicial, salida, llave_salida, llaves)
+                self.assertTrue(verificador.verificar().es_resoluble)
+                self.assertTrue(verificador.verificar_ingenuo_reiniciado().es_resoluble)
+
+    def test_con_k_y_salas_por_segmento_minimos_sigue_funcionando(self):  # FR-RES-020, SC-007
+        mapa, inicial, salida, llave_salida, llaves = _generar(1, 1, SEMILLA_A)
+        self.assertGreaterEqual(len(mapa.todas_las_salas()), 1)
+        self.assertGreaterEqual(len(llaves), 1)
+        verificador = VerificadorResolubilidad(mapa, inicial, salida, llave_salida, llaves)
+        self.assertTrue(verificador.verificar().es_resoluble)
+        self.assertTrue(verificador.verificar_ingenuo_reiniciado().es_resoluble)
+
+
+class TestCargasDeResolubilidad(unittest.TestCase):
+    def test_estan_registradas_una_sola_vez_en_cargas(self):  # FR-RES-020, SC-007
+        nombres = [nombre for nombre, _ in CARGAS]
+        for carga in (CARGA_RESOLUBILIDAD, CARGA_COTA):
+            with self.subTest(carga=carga):
+                self.assertEqual(nombres.count(carga), 1)
+
+    def test_corren_a_escala_minima_sin_red_y_sin_vista(self):  # FR-RES-020, SC-007
+        for carga in (CARGA_RESOLUBILIDAD, CARGA_COTA):
+            with self.subTest(carga=carga), _sin_vista():
+                resultados = _funcion_de(carga)(ESCALA_MINIMA)
+                self.assertGreater(len(resultados), 0)
+                for resultado in resultados:
+                    self.assertIsInstance(resultado, Resultado)
+
+    def test_la_cota_elige_la_cripta_con_la_funcion_de_eleccion(self):  # FR-RES-020, SC-007
+        with mock.patch.object(cargas_bench, "elegir_cripta_de_referencia",
+                               wraps=cargas_bench.elegir_cripta_de_referencia) as espia:
+            _funcion_de(CARGA_COTA)(ESCALA_MINIMA)
+        self.assertGreaterEqual(espia.call_count, 1)
+
+    def test_la_cota_no_fija_el_id_de_una_cripta(self):  # FR-RES-020, SC-007
+        fuente = inspect.getsource(_funcion_de(CARGA_COTA))
+        for cripta in ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH)).listar_criptas():
+            self.assertNotIn(cripta.id, fuente)
 
 
 if __name__ == "__main__":

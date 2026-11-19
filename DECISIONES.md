@@ -7,7 +7,7 @@
 **Términos.** *µs* y *ms* son millonésimas y milésimas de segundo. *Mediana*: el valor del medio de varias corridas (no la afecta una corrida atípica). *Peor caso*: la corrida o el ciclo más lento de un conjunto. *O(...)* describe cómo crece el costo con el tamaño: O(1) no crece, O(log n) crece muy despacio, O(n) crece en proporción. *n* es la cantidad de elementos de la estructura que se está midiendo; las demás letras se definen en cada sección. *Lote*: una sola solicitud al API que lleva hasta 10 elementos. *Alternativa descartada*: la opción que se midió contra la elegida para justificar la decisión.
 
 
-**Cómo se reproduce.** `python -m cripta --bench` corre todas las cargas; `python -m cripta --bench --solo <carga> --escala <factor>` corre una (cargas: agenda, cache, disco, inventario, historial, historial_cazadores, ordenamiento, guardado, ciclo, partida, solicitudes, ruta_cazador, invalidacion, ciclo_referencia, niebla_rutas, linea_tiempo). Los conteos de solicitudes no dependen del equipo; los tiempos sí, por eso se reportan medianas de varias corridas y el equipo usado.
+**Cómo se reproduce.** `python -m cripta --bench` corre todas las cargas; `python -m cripta --bench --solo <carga> --escala <factor>` corre una (cargas: agenda, cache, disco, inventario, historial, historial_cazadores, ordenamiento, guardado, ciclo, partida, solicitudes, ruta_cazador, invalidacion, ciclo_referencia, niebla_rutas, linea_tiempo, resolubilidad, resolubilidad_cota). Los conteos de solicitudes no dependen del equipo; los tiempos sí, por eso se reportan medianas de varias corridas y el equipo usado.
 
 
 **Equipos de medición.**

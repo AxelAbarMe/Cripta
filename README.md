@@ -39,6 +39,8 @@ Todos los comandos se escriben **desde la carpeta raíz del proyecto**. `-m crip
 | `py -m cripta --checkpoint-cada 50` | Cada cuántas acciones se guarda un punto de control de la línea de tiempo (por defecto 50, debe ser un entero mayor o igual a 1). Un valor inválido se rechaza al iniciar, con su motivo, y la partida no inicia. |
 | `py -m cripta --replay datos/partida.log` | Reproduce una partida guardada, sin interfaz (sección 5). |
 | `py -m cripta --replay datos/partida.log --hasta 150` | Reproduce la bitácora completa y además muestra el estado de la partida en el instante 150 (sección 5). |
+| `py -m cripta --verificar cripta-02` | Verifica si la cripta se puede ganar, sin iniciar una partida y sin interfaz (sección 4.1). |
+| `py -m cripta --forzar` | Permite iniciar una partida aunque la cripta elegida no sea resoluble (sección 4.1). |
 | `py -m cripta --bench` | Corre las mediciones de rendimiento, sin interfaz (sección 6). |
 | `py -m cripta --help` | Muestra la ayuda de las banderas. |
 
@@ -82,6 +84,24 @@ Se escribe el comando y se pulsa Enter. Mayúsculas y minúsculas dan igual. Los
 `historia` muestra siete grupos de datos: el reloj, la sala, la vida y las estadísticas, el inventario, los efectos activos, los enemigos de la sala con su vida y el mapa conocido en ese momento. Se rechaza, con su motivo y sin ningún efecto, un instante posterior al reloj actual, un número de acción que no existe (cero, o mayor que la cantidad de acciones vigentes) o un argumento mal escrito. Después de usar un pergamino, las acciones que revirtió ya no se pueden consultar.
 
 Cada acción tiene un costo de tiempo (mover, atacar y esperar cuestan más que recoger o soltar) y los enemigos actúan según ese mismo reloj. La pantalla muestra la sala, sus salidas, los enemigos, los objetos del suelo, la vida, los efectos activos, el inventario, un minimapa y los últimos 20 mensajes. Al terminar (victoria o derrota) se puede escribir un nombre para la tabla de puntajes.
+
+### 4.1 Resolubilidad de la cripta (`--verificar` y `--forzar`)
+
+Una cripta es **resoluble** cuando se puede obtener la llave de la salida y llegar a la sala de salida respetando las puertas que piden llave. El programa lo comprueba antes de jugar.
+
+**Al iniciar una partida** se muestra el reporte de resolubilidad de la cripta elegida, dentro de un recuadro:
+
+- Si es **resoluble**: indica `Estado: RESOLUBLE` y la secuencia en que se obtienen las llaves. Después la partida arranca con normalidad.
+- Si **no es resoluble**: indica `Estado: NO RESOLUBLE`, el motivo, las llaves no obtenibles, las puertas bloqueadas (sala de origen, dirección, sala de destino y la llave que piden) y, si las hay, las dependencias circulares entre llaves. Sin `--forzar` la partida no inicia y se vuelve al menú. Con `--forzar` se agrega al reporte la línea `ADVERTENCIA: el inicio de la partida fue forzado.` y la partida inicia.
+
+**Verificar sin jugar.** `--verificar` recibe el id de la cripta, imprime el mismo reporte y termina, sin crear la interfaz del juego. Se puede combinar con `--offline`:
+
+```
+py -m cripta --verificar cripta-02
+py -m cripta --offline --verificar cripta-02
+```
+
+**Código de salida de `--verificar`:** `0` la verificación terminó (la cripta puede ser resoluble o no, el reporte lo dice) · `1` los datos de la cripta son inválidos (se explica el motivo) · `2` error externo (red, presupuesto de solicitudes agotado, archivo dañado, etc.).
 
 ## 5. Reproducir una partida (`--replay`)
 
@@ -134,7 +154,7 @@ py -m cripta --bench --escala 5 --markdown resultados.md
 
 Corre **cargas sintéticas** (datos generados con una semilla fija, sin red ni interfaz) que miden cada subsistema y, cuando corresponde, también la alternativa descartada, para comparar. Son la evidencia citada en el Documento de Decisiones.
 
-- `--solo` corre solo las cargas nombradas: `agenda`, `cache`, `disco`, `inventario`, `historial`, `historial_cazadores`, `ordenamiento`, `guardado`, `ciclo`, `partida`, `solicitudes`, `ruta_cazador`, `invalidacion`, `ciclo_referencia`, `linea_tiempo`.
+- `--solo` corre solo las cargas nombradas: `agenda`, `cache`, `disco`, `inventario`, `historial`, `historial_cazadores`, `ordenamiento`, `guardado`, `ciclo`, `partida`, `solicitudes`, `ruta_cazador`, `invalidacion`, `ciclo_referencia`, `niebla_rutas`, `linea_tiempo`, `resolubilidad`, `resolubilidad_cota`.
 - `--escala X` multiplica el tamaño de las cargas (por defecto 1; con 5 las mediciones son más finas pero tardan más).
 - `--markdown ARCHIVO` además escribe la tabla de resultados en ese archivo.
 

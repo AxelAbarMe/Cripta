@@ -212,18 +212,20 @@ Depende de Fases A–D completas.
 ---
 
 
-- [ ] T022 [P] Ejecutar la suite completa (pruebas de la Parte I y nuevas) y verificar que todas terminan en `OK` — Sin archivos nuevos
+- [X] T022 [P] Ejecutar la suite completa (pruebas de la Parte I y nuevas) y verificar que todas terminan en `OK` — Sin archivos nuevos
   - Requisitos: Principio VIII de la Constitución
   - Comando: `py -m unittest discover -s tests -t .`
   - Hecho: salida `Ran N tests ... OK`, con N igual o mayor al total que tenía main antes de esta rama (sin errores ni fallos en ninguna prueba preexistente).
+  - Resultado (2026-11-18): `Ran 728 tests in 54.874s` y `OK`, sin errores ni fallos.
 
-- [ ] T023 [P] Auditar importaciones prohibidas con `Select-String` en todos los archivos `.py` de `cripta/` y `tests/`: verificar ausencia de `import heapq`, `import bisect`, `from collections`, `import networkx`, y ausencia de `.sort(` / `sorted(` en módulos evaluados — Sin archivos nuevos
+- [X] T023 [P] Auditar importaciones prohibidas con `Select-String` en todos los archivos `.py` de `cripta/` y `tests/`: verificar ausencia de `import heapq`, `import bisect`, `from collections`, `import networkx`, y ausencia de `.sort(` / `sorted(` en módulos evaluados — Sin archivos nuevos
   - Requisitos: Principio I de la Constitución
   - Comando:
     ```powershell
     Select-String -Path (Get-ChildItem cripta,tests -Recurse -Filter *.py).FullName -Pattern "heapq|bisect|collections|networkx|sorted\(|\.sort\("
     ```
   - Hecho: no aparece ninguna importación prohibida; cada `sorted(` o `.sort(` que aparezca se revisa a mano y solo se permite fuera de los ordenamientos evaluados; el uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request.
+  - Resultado (2026-11-18): auditados `modelo/resolubilidad.py`, `servicios/servicio_resolubilidad.py`, `servicios/servicio_partida.py`, `controlador/`, `vista/`, `__main__.py` y la sección 12 de `bench/cargas_bench.py`. No hay heapq, bisect, collections, networkx, sorted, .sort, defaultdict, Counter ni lru_cache. No hay dict ni set como índice, caché o tabla de búsqueda. La única coincidencia es `a_dict()` en `servicio_partida.py` línea 122, un método de la Parte I que no es una estructura. `cargas_bench.py` importa `HeapMinimo` de `cripta.estructuras`, que es la estructura propia del proyecto.
 
 - [X] T024 Redactar la sección `5.4 Resolubilidad` en `DECISIONES.md` (en la raíz del repositorio): documentar alternativas consideradas, complejidad, evidencia medida en T021 y límites conocidos según plan §6 — **Modificado**: `DECISIONES.md`
   - Depende de: T021

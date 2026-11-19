@@ -1531,3 +1531,108 @@ Al terminar, dime qué cambiaste por punto, la explicación del punto 2 y confir
 
 **Para qué se usó:** Que la medición de FR-NIE-018 represente el peor caso de un mapa conectado y que las alternativas descartadas se comparen en igualdad de condiciones antes de la medición oficial.
 
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/16-implement-002.md. Solo T037, T038, T039 y T041. No marques T040.
+
+# Implementación 002, paso 10: cierre de la capacidad (T037, T038, T039 y T041)
+
+Solo T037, T038, T039 y T041 de specs/002-niebla-ir-a/tasks.md. No marques T040, que depende de la 004.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-018, SC-NIE-002, SC-NIE-004 y los supuestos de decisión del grupo), plan.md, research.md, quickstart.md y las tareas T037 a T041. Lee DECISIONES.md completo para seguir su estilo y su sección «Cómo leer este documento», con las secciones 5.1, 5.2 y 5.6 de la capacidad 001 como modelo, y los tres archivos docs/bench/resultados_002_a.md, _b.md y _c.md. Comprueba con Test-Path que existen.
+2. Solo editas DECISIONES.md (CRLF), specs/002-niebla-ir-a/tasks.md (LF) y, para el punto 6, specs/002-niebla-ir-a/plan.md (CRLF). No toques código ni pruebas. No crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Edita con tu herramienta de edición, no con sed -i. En el texto nuevo no uses ";".
+3. Todas las cifras salen de los tres archivos de resultados o de los datos de este prompt. No inventes ni redondees de más. Usa la mediana de las tres corridas y cita las tres.
+4. Si algo cambia lo que dicen spec.md o plan.md, o falta información, detente y pregunta.
+
+Tareas:
+- T037: la medición la hizo el grupo y su salida está en los tres archivos de resultados. Comprueba que las tres dicen CUMPLE el límite de 5 ms y marca T037 como [X].
+- T038: corre py -m unittest discover -s tests -t . y reporta cuántas pruebas pasan. Marca T038 como [X] solo si todas pasan.
+- T039: ejecuta los tres comandos de auditoría de T039 y analiza cada coincidencia por su contexto para descartar falsos positivos. Si hay un uso prohibido real, detente y repórtalo sin corregir. Marca T039 como [X] solo si no hay usos prohibidos reales ni vista instanciada en replay o bench.
+- T041: añade a DECISIONES.md solo la sección «5.3 Niebla de guerra e «ir a»», entre la 5.2 y la 5.6, con la estructura de la Parte I (Problema, Alternativas consideradas, Decisión, Análisis de complejidad, Evidencia empírica, Límites conocidos). Enlaza a specs/002-niebla-ir-a/spec.md y plan.md y di si la decisión final coincide con la del plan.md original y, si no, qué medición lo motivó. Marca T041 como [X].
+- Punto 6: servicio_bench.py no cambió porque ServicioBench ya ejecuta las cargas registradas en CARGAS de cargas_bench.py. Ajusta el texto de T036 en tasks.md (sin cambiar su casilla) y la fila de servicio_bench.py de la tabla de impacto de plan.md para que digan Sin cambios y por qué.
+- En «Cómo leer este documento» agrega niebla_rutas a la lista de cargas y la sección 5.3 a la fila del Equipo B de la tabla de equipos, y añade una frase que diga que las cifras de la sección 5.3 se midieron con Python 3.14.7, sin cambiar la versión que ya figura para las otras secciones.
+
+Datos para la sección 5.3 (Equipo B, Intel Core Ultra 7, 16 GB, Windows, Python 3.14.7):
+- Comando: py -m cripta --bench --solo niebla_rutas --escala 1, tres corridas guardadas en docs/bench/resultados_002_a.md, _b.md y _c.md. Cripta de referencia: cripta-06, elegida por el mayor total de salas sin fijar su id en el código, con 300 salas y 760 salidas. El harness abre las 28 puertas cerradas de su propia instancia del mapa para tener el peor caso conectado y usa 12 consultas con ruta, elegidas al azar con semilla 20261118. Cada consulta se mide tres veces por alternativa. Las cifras son por cálculo del primer paso de «ir a».
+- Ruta de producción (heap con costos guardados): medianas por cálculo de las tres corridas 3.100, 3.038 y 3.095 ms, mediana 3.095 ms. Máximos por cálculo 4.834, 3.799 y 4.599 ms, mediana 4.599 ms. El peor máximo fue 4.834 ms, a 0.166 ms del límite. CUMPLE 5 ms en las tres corridas.
+- Selección lineal manual: medianas 5.013, 4.799 y 4.758 ms, mediana 4.799 ms, 1.55 veces más lenta que producción. Máximos 7.142, 6.122 y 5.284 ms, mediana 6.122 ms.
+- Heap del harness con costos guardados: medianas 3.205, 3.069 y 3.062 ms, mediana 3.069 ms. Máximos 4.503, 3.709 y 3.398 ms, mediana 3.709 ms.
+- Heap del harness con consulta a CriptaMapa.costo_de_conexion: medianas 4.287, 4.217 y 4.194 ms, mediana 4.217 ms, 1.37 veces más lento que con costos guardados. Máximos 5.398, 4.906 y 7.101 ms, mediana 5.398 ms, con un máximo que supera 5 ms. Las tres variantes dan el mismo primer paso que la ruta de producción.
+- Revelación por entrada, mediana de las tres corridas. R=10: incremental 0.032 ms (máximo 0.053) y pasada ingenua 0.360 ms (máximo 0.417), 11.3 veces más lenta. R=50: incremental 0.028 ms (máximo 0.052) y pasada ingenua 0.362 ms (máximo 0.563), 12.9 veces. R=200: incremental 0.016 ms (máximo 0.068) y pasada ingenua 0.366 ms (máximo 0.577), 22.9 veces. Estados equivalentes en todas.
+- Reversión con 20 entradas y 409 inversas: registrar y revertir por inversas 0.800 ms (máximo 0.878) y copiar y restaurar la copia completa 1.185 ms (máximo 1.197), 1.48 veces más lenta. Estados equivalentes.
+
+Contenido de la sección 5.3, sin reglas nuevas:
+- Problema: operaciones reales con su frecuencia. Cada entrada a una sala observa sus puertas y revela vecinas si hay antorcha. Cada paso de «ir a» calcula un primer paso con solo el conocimiento del jugador. El pergamino revierte la entrada y sus cambios de conocimiento.
+- Alternativas, al menos dos por subproblema: representación del conocimiento (listas contiguas por id, elegida, frente a recalcular desde el mapa real en cada consulta); revelación (incremental, elegida, frente a pasada completa); reversión (inversas puntuales por celda, elegida, frente a copia completa del conocimiento); ruta (búsqueda propia con HeapMinimo desde el destino, elegida, frente a selección lineal y frente a reutilizar BuscadorRutas de la 001, descartada porque calcula sobre el mapa real, poda por rango de cazadores y guarda una caché pensada para sus eventos); costo de la salida (guardado en el conocimiento, elegido, frente a CriptaMapa.costo_de_conexion).
+- Decisión y complejidad según plan.md: revelación O(R), búsqueda con heap O((V+E) log V), selección lineal O(V al cuadrado más E). Di que la decisión final coincide con la de plan.md y que la hipótesis de research.md de que la selección lineal podría ganar en mapas pequeños no se cumplió con las 300 salas conectadas de cripta-06.
+- Evidencia: las tablas con las medianas de las tres corridas, con enlace a los tres archivos de resultados. Cuenta con honestidad que una primera versión de la carga usaba pares de salas vecinas con las puertas cerradas, que partían el mapa en regiones diminutas, y que se corrigió abriendo las puertas del harness y eligiendo pares al azar con ruta, para medir el peor caso.
+- Límites conocidos: el margen del límite de 5 ms es estrecho, con 4.834 ms en la peor corrida. La función de producción proyecta el conocimiento y reconstruye las aristas entrantes en cada llamada, y que esa preparación domine el tiempo es una hipótesis sin medir. En la revelación, R es la cantidad de entradas al azar con reemplazo y no R salas nuevas, y solo se mide un tamaño de mapa. Se mide el cálculo del paso y no un viaje completo en una partida real. El guardado binario del conocimiento depende de la 004 y T040 sigue pendiente, así que hasta entonces cargar una partida de archivo no conserva el mapa explorado. Partida.vista() muestra como cerrada una puerta no observada, algo que no debería darse en la sala actual. La salida sin puerta cerrable se considera abierta al revelarse la sala, decisión del grupo pendiente de confirmar con el profesor. Los costos de salida del conocimiento ocupan memoria proporcional a las salidas.
+
+Al terminar, dime qué cambiaste por punto, cuántas pruebas pasan, el resultado de la auditoría con sus falsos positivos descartados, y confirma con git diff que solo cambiaron DECISIONES.md, tasks.md y plan.md, y que en tasks.md solo cambiaron las casillas de T037, T038, T039 y T041 y el texto de T036.
+```
+
+**Prompt (resumido):** Cierre de la capacidad de niebla de guerra e «ir a»: marca de la medición oficial, suite completa, auditoría de usos prohibidos y sección 5.3 de DECISIONES.md con las cifras medidas, más el ajuste del texto sobre servicio_bench.py.
+
+**Para qué se usó:** Dejar documentadas las decisiones, las alternativas descartadas y los resultados medidos de la capacidad, y cerrar las tareas de la Fase F que no dependen de la 004.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Retoma la corrida 16 de la capacidad 002, que se detuvo en T039 sin cambiar ningún archivo. Este mensaje reemplaza lo que prompts/p2/16-implement-002.md diga distinto y no necesitas releer ese prompt. Solo T037, T038, T039 y T041 de specs/002-niebla-ir-a/tasks.md. No marques T040, que depende de la 004.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-018, SC-NIE-002, SC-NIE-004 y los supuestos de decisión del grupo), plan.md, research.md, quickstart.md y las tareas T037 a T041. Lee DECISIONES.md completo para seguir su estilo y su sección «Cómo leer este documento», con las secciones 5.1, 5.2 y 5.6 de la capacidad 001 como modelo, y los tres archivos docs/bench/resultados_002_a.md, resultados_002_b.md y resultados_002_c.md. Comprueba con Test-Path que existen. Para describir el método de la medición puedes leer cripta/bench/cargas_bench.py, sin editarlo.
+2. Solo editas DECISIONES.md, specs/002-niebla-ir-a/tasks.md y specs/002-niebla-ir-a/plan.md, respetando los finales de línea de cada archivo. No toques código, pruebas, PROMPTS_LLM.md ni la carpeta prompts. No crees ni cambies de rama y no hagas commit ni push. Edita con tu herramienta de edición, no con sed -i. En el texto nuevo no uses ";".
+3. Todas las cifras salen exclusivamente de los tres archivos de resultados. Calcula tú la mediana de las tres corridas de cada cifra y cita las tres. No uses cifras de memoria ni redondees de más. Al final entrega una tabla con cada cifra que usaste en la sección 5.3 (alternativa, valor de cada corrida y mediana de las tres) para que el grupo la revise.
+4. Si algo cambia lo que dicen spec.md o plan.md, o falta información, detente y pregunta.
+5. Si py.exe devuelve acceso denegado, solicita autorización para ejecutarlo fuera del sandbox, como en las corridas anteriores. No des por pasada ninguna prueba que no hayas corrido.
+
+Tareas:
+- T037: la medición la hizo el grupo y su salida está en los tres archivos de resultados. Comprueba que las tres dicen CUMPLE el límite de 5 ms y marca T037 como [X].
+- T038: corre py -m unittest discover -s tests -t . y reporta cuántas pruebas pasan. El grupo ya la corrió y dio 385 en OK. Marca T038 como [X] solo si todas pasan.
+- T039: ejecuta los tres comandos de auditoría de T039 y analiza cada coincidencia por su contexto. Decisión del grupo sobre cripta/servicios/servicio_bench.py: es código de la 001 ya aprobado y fusionado, esta rama no lo modifica y no se corrige aquí. La constitución prohíbe dict, set y sorted en los problemas evaluados, y ese archivo los usa para validar nombres de subsistemas de la línea de comandos, ordenar un mensaje de error y devolver el contenedor del reporte, que no son un índice, una caché ni un ordenamiento de un problema evaluado. Lista cada coincidencia de ese archivo con su línea y la razón por la que no aplica, y no la corrijas. Si aparece una coincidencia real en conocimiento_jugador.py, ruta_conocida.py o cargas_bench.py, o una vista instanciada en replay o bench, detente y repórtalo sin corregir. Marca T039 como [X] solo si no hay usos prohibidos reales en los archivos de la 002 ni vista instanciada en replay o bench.
+- T041: añade a DECISIONES.md solo la sección «5.3 Niebla de guerra e «ir a»», entre la 5.2 y la 5.6, con la estructura de la Parte I (Problema, Alternativas consideradas, Decisión, Análisis de complejidad, Evidencia empírica, Límites conocidos). Enlaza a specs/002-niebla-ir-a/spec.md y plan.md y di si la decisión final coincide con la del plan.md original y, si no, qué medición lo motivó. Marca T041 como [X].
+- Punto 6: servicio_bench.py no cambió porque ServicioBench ya ejecuta las cargas registradas en CARGAS de cargas_bench.py. Ajusta el texto de T036 en tasks.md, sin cambiar su casilla, y la fila de servicio_bench.py de la tabla de impacto de plan.md para que digan Sin cambios y por qué.
+- En «Cómo leer este documento»: agrega niebla_rutas a la lista de cargas. En la tabla de equipos agrega 5.3 a la columna «Se usó en» de la fila del Equipo A y no cambies su columna de Python. Añade una frase que diga que las cifras de la sección 5.3 se midieron en el Equipo A con Python 3.14.7, a diferencia de la versión que figura en su fila.
+
+Datos verificados para la sección 5.3 (Equipo A: Ryzen 5 5600GT, 32 GB, Windows, Python 3.14.7):
+- Comando: py -m cripta --bench --solo niebla_rutas --escala 1, tres corridas guardadas en docs/bench/resultados_002_a.md, resultados_002_b.md y resultados_002_c.md.
+- Cripta de referencia: cripta-06, elegida por el mayor total de salas sin fijar su id en el código, con 300 salas y 760 salidas. El harness abre las 28 puertas cerradas de su propia instancia del mapa para tener el peor caso conectado, prueba 12 pares y los 12 tienen ruta, elegidos al azar con semilla 20261118. Cuántas veces se mide cada consulta por alternativa lo tomas de cargas_bench.py y solo lo escribes si el código lo confirma.
+- Las cifras de ruta son por cálculo del primer paso de «ir a». Todas las cifras que cite la sección salen de los tres archivos de resultados y se reportan como mediana de las tres corridas, con su máximo.
+- La ruta de producción es un heap con costos guardados. El peor máximo por cálculo de producción entre las tres corridas fue 4.834 ms, a 0.166 ms del límite de 5 ms, y cumple en las tres.
+
+Contenido de la sección 5.3, sin reglas nuevas:
+- Problema: operaciones reales con su frecuencia. Cada entrada a una sala observa sus puertas y revela vecinas si hay antorcha. Cada paso de «ir a» calcula un primer paso con solo el conocimiento del jugador. El pergamino revierte la entrada y sus cambios de conocimiento.
+- Alternativas, al menos dos por subproblema: representación del conocimiento (listas contiguas por id, elegida, frente a recalcular desde el mapa real en cada consulta). Revelación (incremental, elegida, frente a pasada completa). Reversión (inversas puntuales por celda, elegida, frente a copia completa del conocimiento). Ruta (búsqueda propia con HeapMinimo desde el destino, elegida, frente a selección lineal y frente a reutilizar BuscadorRutas de la 001, descartada porque calcula sobre el mapa real, poda por rango de cazadores y guarda una caché pensada para sus eventos). Costo de la salida (guardado en el conocimiento, elegido, frente a CriptaMapa.costo_de_conexion).
+- Decisión y complejidad según plan.md: revelación O(R), búsqueda con heap O((V+E) log V), selección lineal O(V al cuadrado más E). Di si la decisión final coincide con la de plan.md y si la hipótesis de research.md de que la selección lineal podría ganar en mapas pequeños se cumplió o no con las 300 salas conectadas de cripta-06, según las cifras de los archivos.
+- Evidencia: tablas con las medianas y los máximos de las tres corridas para la ruta de producción, la selección lineal, el heap del harness con costos guardados, el heap del harness con consulta a CriptaMapa.costo_de_conexion, la revelación incremental frente a la pasada ingenua en cada tamaño R que midan los archivos y la reversión por inversas frente a la copia completa, con las razones calculadas desde las medianas y enlaces a los tres archivos de resultados. Si algún máximo supera 5 ms, dilo. Cuenta con honestidad que una primera versión de la carga usaba pares de salas vecinas con las puertas cerradas, que partían el mapa en regiones diminutas, y que se corrigió abriendo las puertas del harness y eligiendo pares al azar con ruta, para medir el peor caso.
+- Límites conocidos: el margen del límite de 5 ms es estrecho. La función de producción proyecta el conocimiento y reconstruye las aristas entrantes en cada llamada, y que esa preparación domine el tiempo es una hipótesis sin medir. En la revelación, R es la cantidad de entradas al azar con reemplazo y no R salas nuevas, y solo se mide un tamaño de mapa. Se mide el cálculo del paso y no un viaje completo en una partida real. El guardado binario del conocimiento depende de la 004 y T040 sigue pendiente, así que hasta entonces cargar una partida de archivo no conserva el mapa explorado. Partida.vista() muestra como cerrada una puerta no observada, algo que no debería darse en la sala actual. La salida sin puerta cerrable se considera abierta al revelarse la sala, decisión del grupo pendiente de confirmar con el profesor. Los costos de salida del conocimiento ocupan memoria proporcional a las salidas. Comprueba cada uno de estos límites contra el código y los documentos actuales, y si alguno ya no es cierto, ajústalo o quítalo y dilo en tu resumen.
+
+Al terminar, dime qué cambiaste por punto, cuántas pruebas pasan, el resultado de la auditoría con cada coincidencia de servicio_bench.py y su razón, la tabla de cifras de la regla 3, y confirma con git diff que solo cambiaron DECISIONES.md, tasks.md y plan.md, y que en tasks.md solo cambiaron las casillas de T037, T038, T039 y T041 y el texto de T036.
+```
+
+**Prompt (resumido):** Reanudación de la corrida 16 con cifras tomadas solo de los archivos de resultados, atribución al Equipo A con Python 3.14.7, tratamiento de los hallazgos de servicio_bench.py como código de la 001 ya aprobado y solicitud de autorización para ejecutar py fuera del sandbox.
+
+**Para qué se usó:** Completar el cierre de la capacidad (T037, T038, T039 y T041) después de que la primera ejecución se detuviera en T039 sin cambios, corrigiendo el equipo de medición y evitando cifras copiadas de un resumen.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Ajuste final de la sección 5.3 de DECISIONES.md de la capacidad 002. Solo editas DECISIONES.md, respetando sus finales de línea CRLF. No toques otros archivos, no marques ni desmarques casillas de tasks.md, no cambies de rama y no hagas commit ni push. No uses ";" en el texto nuevo. No corras la suite, es solo documentación.
+1. En «Análisis de complejidad» elimina la última oración, la que dice que las consultas observadas y los valores de V y E se describen con la evidencia y no son nuevas reglas.
+2. En «Límites conocidos» reescribe con redacción clara el punto sobre Partida.vista(), después de comprobar en cripta/modelo/partida.py y cripta/modelo/resultado_partida.py cómo se presenta hoy una puerta no observada en la sala actual. Si en la sala actual todas las puertas ya se observan al entrar y ese caso no ocurre, quita el punto o redáctalo como el límite real que exista. Separa en un punto propio la decisión del grupo sobre la salida sin puerta cerrable, que se considera abierta al explorar su sala y está pendiente de confirmar con el profesor.
+3. Comprueba en cripta/bench/cargas_bench.py cuántos cálculos se miden por consulta y por alternativa. Corrige el texto de la sección 5.3 solo si el código dice otra cosa.
+Al terminar, dime qué cambiaste por punto y confirma con git diff que solo cambió DECISIONES.md.
+```
+
+**Prompt (resumido):** Ajuste final de la sección 5.3 de DECISIONES.md: quitar una frase residual, aclarar el límite sobre Partida.vista() y separar la decisión del grupo sobre la salida sin puerta cerrable, y comprobar el número de cálculos por consulta contra el código.
+
+**Para qué se usó:** Corregir tres defectos de redacción y de precisión detectados en la revisión de la sección 5.3 antes de cerrar la capacidad.

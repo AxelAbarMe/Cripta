@@ -1933,6 +1933,8 @@ def _mapa_desde_conexiones(conexiones) -> CriptaMapa:
 
 def _generar_cripta_encadenada(k: int, salas_por_segmento: int, semilla: int):
     """Cripta de k segmentos en cadena, cada uno tras una puerta cerrada que exige la llave del segmento.
+    La puerta sale de la primera sala del corredor y la llave está en una lateral al final del corredor.
+    Así el recorrido llega a la puerta antes de tener su llave y el ingenuo necesita una pasada por segmento.
     La llave de salida es una ubicación más (como en llaves.json del API) y abre la última puerta.
     Devuelve (mapa, sala_inicial, sala_salida, llave_salida, ubicaciones de llaves)."""
     azar = random.Random(semilla)
@@ -1957,13 +1959,13 @@ def _generar_cripta_encadenada(k: int, salas_por_segmento: int, semilla: int):
             _unir_salas(conexiones, sala, "E", sala + 1, azar)
         ultima_del_corredor = base + en_corredor
         if lateral:
-            _unir_salas(conexiones, base + 1 + azar.randrange(en_corredor), "N", lateral, azar)
+            _unir_salas(conexiones, ultima_del_corredor, "E", lateral, azar)
             sala_llave = lateral
         else:
-            sala_llave = base + 1 + azar.randrange(en_corredor)
+            sala_llave = ultima_del_corredor
         ubicaciones.append(LlaveUbicacionDTO(ids[i], sala_llave, None))
         destino = total if ultimo else base + salas_por_segmento + 1
-        _unir_salas(conexiones, ultima_del_corredor, "E", destino, azar, ids[i])
+        _unir_salas(conexiones, base + 1, "S", destino, azar, ids[i])
     return _mapa_desde_conexiones(conexiones), 1, total, LLAVE_SALIDA_SINTETICA, tuple(ubicaciones)
 
 

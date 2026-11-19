@@ -1,0 +1,10 @@
+/speckit-implement Solo T028, T029, T030, T031 y T032 de specs/004-linea-de-tiempo/tasks.md, para que pasen las pruebas de tests/servicios/test_servicio_bench.py sin modificarlas. Implementa la carga linea_tiempo en cripta/bench/cargas_bench.py y regístrala en CARGAS y en servicio_bench.py.
+
+Indicaciones:
+1. La partida de medición usa la cripta de referencia de fixtures/ (la misma constante CRIPTA_REFERENCIA que usa ciclo_referencia) con una semilla fija y un random.Random propio para elegir los pasos. Para que el jugador sobreviva miles de acciones, súbele la vida máxima en los datos generales ANTES de iniciar la partida (por ejemplo cargando los datos de la cripta en un cliente falso con la vida modificada), nunca después, porque la reconstrucción parte del estado inicial y daría otra partida.
+2. A escala 1 son al menos 5 000 acciones del jugador. Con escalas menores la cantidad baja proporcionalmente, con un mínimo pequeño para que la prueba de humo sea rápida.
+3. Para K=100, 500, 1000 y sin checkpoints, reporta la memoria de la línea (acciones, ajustes y checkpoints), la mediana y el máximo del tiempo de consulta sobre consultas en posiciones elegidas con la semilla, y si cumple el límite de 50 ms (P2 §6.1). Reporta también el peor tiempo de una acción que crea un checkpoint, comparado con el límite de 20 ms por ciclo.
+4. Compara las alternativas descartadas que piden las tareas: re-simular frente a reconstruir hacia atrás (T030), búsqueda binaria frente a lineal del checkpoint y del límite temporal (T031), y recorte desde el final frente a escaneo y filtrado (T032). Para la memoria usa una estimación honesta y di en la nota cómo se calcula.
+5. Llama a gc.collect() antes de cada corrida medida, como las demás cargas. Sin dict ni set como índice, sin sorted, bisect ni collections. CRLF, sin ";" en comentarios.
+
+Corre la prueba de la carga, la de humo de tests/bench y la suite completa. Después corre py -m cripta --bench --solo linea_tiempo una vez y pégame la salida completa. No elijas todavía el K por defecto (eso es T033). Marca T027 a T032 como [X] en tasks.md.

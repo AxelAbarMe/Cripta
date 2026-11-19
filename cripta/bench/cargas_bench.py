@@ -9,12 +9,19 @@ import copy
 import gc
 import os
 import random
+import sys
 import tempfile
 import time
-from dataclasses import dataclass
+from contextlib import contextmanager
+from dataclasses import dataclass, fields, is_dataclass, replace
 from pathlib import Path
 
+from cripta.constantes import direccion_opuesta
 from cripta.dto.entidad_dto import entidad_desde_json
+from cripta.dto.llave_ubicacion_dto import LlaveUbicacionDTO
+from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
+from cripta.dto.sala_dto import SalaDTO
+from cripta.dto.salida_dto import SalidaDTO
 from cripta.estructuras.lista_doble_enlazada import ListaDobleEnlazada
 from cripta.estructuras.ordenamiento_selector import elegir_algoritmo, ordenar_auto
 from cripta.estructuras.ordenamientos import Ordenamiento
@@ -34,8 +41,13 @@ from cripta.modelo.accion import Accion
 from cripta.modelo.buscador_rutas import BuscadorRutas
 from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.historial_retroceso import HistorialRetroceso
+from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
+from cripta.modelo.linea_tiempo import LineaTiempo
+from cripta.modelo.cripta_mapa import CriptaMapa
+from cripta.modelo.partida import Partida
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
+from cripta.modelo.resolubilidad import VerificadorResolubilidad
 from cripta.servicios.servicio_partida import ServicioPartida
 
 SEMILLA_BENCH = 20260928
@@ -587,10 +599,19 @@ VELOCIDAD_CAZADOR_INVALIDACION = 25
 PUERTAS_INESTABLES = 5
 PERIODO_CIERRE_TICKS = 15
 TICK_REAPERTURA = 7
-CRIPTA_REFERENCIA = "cripta-06"
 PASOS_CALENTAMIENTO_REFERENCIA = 150
 LIMITE_CICLO_MS = 20.0
 DIRECTORIO_FIXTURES_BENCH = Path(__file__).resolve().parents[2] / "fixtures"
+
+
+def elegir_cripta_de_referencia(criptas):
+    """La cripta con más salas del listado. Un empate lo decide el menor id. Ningún id está fijado en el código."""
+    return min(criptas, key=lambda cripta: (-cripta.salas, cripta.id))
+
+
+def cripta_de_referencia():
+    """La cripta de referencia de las cargas con partida real, elegida entre las de fixtures."""
+    return elegir_cripta_de_referencia(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH)).listar_criptas())
 
 
 class _Medidor:
@@ -684,17 +705,25 @@ def _envolver_consulta_de_costos(mapa) -> _Medidor:
     return medidor
 
 
-def _dar_paso_aleatorio(partida, mapa, azar, prohibido: int) -> None:
-    """Mueve al jugador por una salida abierta al azar, o espera si no puede moverse."""
+def _paso_aleatorio_aceptado(partida, mapa, azar, prohibido: int):
+    """Mueve al jugador por una salida abierta al azar, o espera si no puede moverse. Devuelve la acción ejecutada."""
     origen = partida._jugador.sala_actual
     opciones = [d for d, destino in mapa.vecinos(origen)
                 if destino != prohibido and mapa.puerta_transitable(origen, d)]
     if opciones:
         inicio = azar.randrange(len(opciones))
         for k in range(len(opciones)):
-            if partida.ejecutar_accion(Accion("mover", opciones[(inicio + k) % len(opciones)])).aceptada:
-                return
-    partida.ejecutar_accion(Accion("esperar"))
+            accion = Accion("mover", opciones[(inicio + k) % len(opciones)])
+            if partida.ejecutar_accion(accion).aceptada:
+                return accion
+    accion = Accion("esperar")
+    partida.ejecutar_accion(accion)
+    return accion
+
+
+def _dar_paso_aleatorio(partida, mapa, azar, prohibido: int) -> None:
+    """Mueve al jugador por una salida abierta al azar, o espera si no puede moverse."""
+    _paso_aleatorio_aceptado(partida, mapa, azar, prohibido)
 
 
 def _tiempos_de_pasos(partida, mapa, azar, ciclos: int, prohibido: int):
@@ -864,7 +893,7 @@ def _correr_referencia(ciclos: int, calentamiento: int):
     """Una corrida sobre la cripta de referencia. Devuelve tiempos, activos y perseguidores por ciclo."""
     servicio = ServicioPartida(ClienteGeneral(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))),
                                ContadorSolicitudes(), asincrono=False)
-    servicio.iniciar_nueva(CRIPTA_REFERENCIA, semilla=SEMILLA_BENCH)
+    servicio.iniciar_nueva(cripta_de_referencia().id, semilla=SEMILLA_BENCH)
     partida = servicio.partida
     mapa = partida._mapa
     partida._jugador.vida_max = partida._jugador.vida = 10 ** 9
@@ -915,12 +944,670 @@ def bench_ciclo_referencia(escala: float = 1.0, corridas: int = 3):
     cumple = "CUMPLE" if peor * 1000 < LIMITE_CICLO_MS else "NO CUMPLE"
     detalle = ", ".join(_ms(p) for p in peores)
     return [Resultado(
-        "ciclo_referencia", f"{CRIPTA_REFERENCIA}, {activos} cazadores activos al medir, "
+        "ciclo_referencia", f"{cripta_de_referencia().id}, {activos} cazadores activos al medir, "
                             f"en persecución por ciclo: promedio {sum(en_rango) / len(en_rango):.1f} y máximo {max(en_rango)}, "
                             f"{ciclos} ciclos x {corridas} corridas",
         peor, 1,
         f"ciclo típico {_ms(_mediana(medianas))} ms, peor caso {_ms(peor)} ms (peor de cada corrida: {detalle} ms) "
         f"-> {cumple} el límite de {LIMITE_CICLO_MS:.0f} ms")]
+
+
+def bench_historial_cazadores(escala: float = 1.0):
+    """Costo del retroceso con cazadores activos (P2 5.6) sobre la cripta de referencia, frente a la carga historial.
+    Cada acción se ejecuta, se revierte con la acción pergamino real y se vuelve a ejecutar."""
+    acciones = max(60, int(500 * escala))
+    calentamiento = max(60, int(PASOS_CALENTAMIENTO_REFERENCIA * escala))
+    cripta = cripta_de_referencia()
+    servicio = ServicioPartida(ClienteGeneral(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))),
+                               ContadorSolicitudes(), asincrono=False)
+    servicio.iniciar_nueva(cripta.id, semilla=SEMILLA_BENCH)
+    try:
+        partida = servicio.partida
+        mapa = partida._mapa
+        partida._jugador.vida_max = partida._jugador.vida = 10 ** 9
+        prohibido = servicio.datos_generales.sala_salida
+        azar = random.Random(SEMILLA_CARGAS_TERRENO)
+        _activar_cazadores_reales(partida, mapa)
+        cazadores = len(_cazadores_activos(mapa))
+        for _ in range(calentamiento):
+            _dar_paso_aleatorio(partida, mapa, azar, prohibido)
+        ficha = servicio._catalogo.obtener("itm_pergamino_retroceso")
+        historial = partida._historial
+        inversas, tiempos = [], []
+        deshacer = historial.deshacer_ultimo_intervalo
+
+        def deshacer_contando():
+            cantidad = deshacer()
+            inversas.append(cantidad)
+            return cantidad
+
+        historial.deshacer_ultimo_intervalo = deshacer_contando
+        try:
+            gc.collect()
+            for numero in range(acciones):
+                accion = _paso_aleatorio_aceptado(partida, mapa, azar, prohibido)
+                partida._jugador.inventario.recoger(ObjetoInventario(f"pergamino-bench-{numero}", ficha))
+                inicio = time.perf_counter()
+                revertida = partida.ejecutar_accion(Accion("pergamino"))
+                tiempos.append(time.perf_counter() - inicio)
+                if not revertida.aceptada or not partida.ejecutar_accion(accion).aceptada:
+                    raise ValueError(f"No se pudo revertir y repetir la acción {numero + 1} de la medición")
+        finally:
+            del historial.deshacer_ultimo_intervalo
+    finally:
+        servicio.cerrar()
+    sintetica = bench_historial(escala)
+    registrar = next(r for r in sintetica if r.caso.startswith("registrar acción (6 inversas)"))
+    deshacer_sintetico = next(r for r in sintetica if r.caso.startswith("deshacer 5 acciones"))
+    deshacer_us = deshacer_sintetico.micros_por_operacion
+    medio_us = _mediana(tiempos) * 1e6
+    por_inversa = sum(tiempos) * 1e6 / sum(inversas)
+    contexto = f"{cripta.id}, {cazadores} cazadores activos al medir, {acciones} acciones"
+    return [
+        Resultado("historial_cazadores", f"{contexto}: operaciones inversas por acción", 0.0, 1,
+                  f"mediana {_mediana(inversas)} y máximo {max(inversas)} inversas por acción, mínimo {min(inversas)}. "
+                  f"La carga sintética historial usa 6 inversas por acción y no tiene cazadores", es_razon=True),
+        Resultado("historial_cazadores", f"{contexto}: revertir el último intervalo como el pergamino",
+                  sum(tiempos), acciones,
+                  f"tiempo de la acción pergamino completa: mediana {medio_us:.1f} µs y máximo {max(tiempos) * 1e6:.1f} µs, "
+                  f"{por_inversa:.2f} µs por inversa en promedio. Carga sintética historial (6 inversas por acción, "
+                  f"sin cazadores): deshacer {deshacer_us:.2f} µs por acción, {deshacer_us / 6:.2f} µs por inversa, "
+                  f"registrar {registrar.micros_por_operacion:.2f} µs por acción. "
+                  f"Con cazadores la mediana de revertir es {medio_us / deshacer_us:.1f}x la sintética")]
+
+
+# ================================== 11. LÍNEA DE TIEMPO (capacidad 004, FR-LIN-014 a FR-LIN-018)
+SEMILLA_LINEA_TIEMPO = 20261117
+ACCIONES_LINEA_COMPLETA = 5000        # a escala 1 (FR-LIN-018)
+ACCIONES_LINEA_MINIMAS = 250          # con escalas pequeñas, para que la prueba de humo sea rápida
+CONSULTAS_LINEA_COMPLETA = 16         # consultas aleatorias a escala 1, más las de frontera
+CONSULTAS_LINEA_MINIMAS = 4
+VIDA_MAXIMA_LINEA = 10 ** 9           # se fija en los datos generales ANTES de iniciar: la reconstrucción parte del estado inicial
+LIMITE_CONSULTA_MS = 50.0             # P2 §6.1
+K_COMPARACION_LINEA = 100
+ESCENARIOS_K_LINEA = (("K=50", 50), ("K=100", 100), ("K=500", 500), ("K=1000", 1000),
+                     ("sin puntos periódicos", None))
+ESTIMACION_MEMORIA = ("estimación de memoria: suma de sys.getsizeof de cada objeto que se alcanza desde la línea, "
+                      "sin descontar lo que comparten (cota superior)")
+
+
+class _ClienteMedido:
+    """Cliente de fixtures que cuenta sus llamadas y sube la vida máxima del jugador en los datos generales."""
+
+    def __init__(self, base, vida_maxima: int):
+        self._base = base
+        self._vida_maxima = vida_maxima
+        self.llamadas = 0
+
+    def __getattr__(self, nombre):
+        metodo = getattr(self._base, nombre)
+
+        def llamar(*argumentos):
+            self.llamadas += 1
+            resultado = metodo(*argumentos)
+            if nombre == "obtener_general":
+                resultado = replace(resultado, jugador=replace(resultado.jugador, vida_max=self._vida_maxima))
+            return resultado
+        return llamar
+
+
+class _CorridaLinea:
+    """Una partida de medición ya jugada: la partida, lo que costó cada acción y los registros para la inversión."""
+
+    def __init__(self):
+        self.cliente = None
+        self.servicio = None
+        self.partida = None
+        self.tiempos = []              # segundos de cada acción del jugador
+        self.registro = 0.0            # segundos en anotar acciones y checkpoints en la línea
+        self.registros_inversion = []  # por acción, los valores anteriores de lo que cambió
+        self.segundos_inversion = 0.0  # lo que cuesta calcular esos registros
+        self.foto_final = None
+        self.salas = 0
+        self.salidas = 0
+
+
+def _foto_basica(partida):
+    # Lo visible del estado en una lista mutable, para la alternativa de inversión
+    jugador, sala = partida._jugador, partida._sala_actual()
+    inventario = tuple((o.instancia_id, getattr(o.ficha, "id", "")) for o in jugador.inventario.objetos_en_orden())
+    enemigos = tuple((e.instancia, e.vida, e.vida_max) for e in partida._enemigos_vista(sala))
+    return [sala.id, jugador.vida, jugador.vida_max, jugador.ataque_efectivo, jugador.defensa_efectiva,
+            jugador.velocidad, inventario, partida._efectos_activos(), enemigos]
+
+
+def _foto_de_resumen(resumen):
+    # La misma lista armada desde un ResumenHistorico
+    inventario = tuple((o.instancia_id, o.ficha_id) for o in resumen.inventario)
+    enemigos = tuple((e.instancia, e.vida, e.vida_max) for e in resumen.enemigos)
+    return [resumen.sala_id, resumen.vida, resumen.vida_max, resumen.ataque, resumen.defensa, resumen.velocidad,
+            inventario, resumen.efectos_activos, enemigos]
+
+
+def _cambios_entre(antes, despues):
+    # Pares (posición, valor anterior) de lo que cambió: es lo único que guarda la alternativa de inversión
+    return tuple((i, antes[i]) for i in range(len(antes)) if antes[i] != despues[i])
+
+
+def _foto_antes_de_la_accion(foto_final, registros, k):
+    # Deshace desde la última acción hasta la k para quedar justo antes de ella
+    foto = list(foto_final)
+    for j in range(len(registros) - 1, k - 2, -1):
+        for posicion, anterior in registros[j]:
+            foto[posicion] = anterior
+    return foto
+
+
+def _tamano_profundo(objeto) -> int:
+    # Bytes de un objeto y de todo lo que contiene: tuplas, listas, dataclasses y objetos con __slots__
+    total = sys.getsizeof(objeto)
+    if isinstance(objeto, (tuple, list)):
+        for elemento in objeto:
+            total += _tamano_profundo(elemento)
+    elif is_dataclass(objeto) and not isinstance(objeto, type):
+        for campo in fields(objeto):
+            total += _tamano_profundo(getattr(objeto, campo.name))
+    elif hasattr(objeto, "__slots__"):
+        for nombre in objeto.__slots__:
+            if hasattr(objeto, nombre):
+                total += _tamano_profundo(getattr(objeto, nombre))
+    return total
+
+
+def _kib(bytes_: int) -> str:
+    return f"{bytes_ / 1024:.1f}"
+
+
+def _acciones_de_la_carga(escala: float) -> int:
+    return max(ACCIONES_LINEA_MINIMAS, int(ACCIONES_LINEA_COMPLETA * escala))
+
+
+def _consultas_de_la_carga(escala: float) -> int:
+    return max(CONSULTAS_LINEA_MINIMAS, int(CONSULTAS_LINEA_COMPLETA * escala))
+
+
+@contextmanager
+def _jugar_linea(acciones: int, k: int | None, id_cripta: str, medir_inversion: bool = False):
+    """Juega una partida con puntos de control creados durante las acciones medidas."""
+    corrida = _CorridaLinea()
+    corrida.cliente = _ClienteMedido(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH)), VIDA_MAXIMA_LINEA)
+    frecuencia = acciones + 1 if k is None else k
+    corrida.servicio = ServicioPartida(ClienteGeneral(corrida.cliente), ContadorSolicitudes(),
+                                       asincrono=False, checkpoint_cada=frecuencia)
+    try:
+        corrida.servicio.iniciar_nueva(id_cripta, semilla=SEMILLA_LINEA_TIEMPO)
+        partida = corrida.partida = corrida.servicio.partida
+        mapa = partida._mapa
+        corrida.salas = len(mapa)
+        corrida.salidas = sum(len(mapa.vecinos(sala.id)) for sala in mapa.todas_las_salas())
+        registrar = partida._registrar_en_linea
+        ejecutar = partida.ejecutar_accion
+
+        def registrar_midiendo(*argumentos):
+            inicio = time.perf_counter()
+            registrar(*argumentos)
+            corrida.registro += time.perf_counter() - inicio
+
+        def ejecutar_midiendo(accion):
+            inicio = time.perf_counter()
+            resultado = ejecutar(accion)
+            duracion = time.perf_counter() - inicio
+            if resultado.aceptada:
+                corrida.tiempos.append(duracion)
+            return resultado
+
+        partida._registrar_en_linea = registrar_midiendo
+        partida.ejecutar_accion = ejecutar_midiendo
+        prohibido = corrida.servicio.datos_generales.sala_salida
+        azar = random.Random(SEMILLA_LINEA_TIEMPO)
+        antes = _foto_basica(partida) if medir_inversion else None
+        try:
+            gc.collect()
+            for _ in range(acciones):
+                _dar_paso_aleatorio(partida, mapa, azar, prohibido)
+                if medir_inversion:
+                    inicio = time.perf_counter()
+                    despues = _foto_basica(partida)
+                    corrida.registros_inversion.append(_cambios_entre(antes, despues))
+                    corrida.segundos_inversion += time.perf_counter() - inicio
+                    antes = despues
+        finally:
+            del partida._registrar_en_linea
+            del partida.ejecutar_accion
+        corrida.foto_final = antes
+        linea = partida.linea_tiempo()
+        if len(linea) != acciones or len(corrida.tiempos) != acciones:
+            raise ValueError(f"La partida de medición registró {len(linea)} acciones y "
+                             f"{len(corrida.tiempos)} ciclos de los {acciones} esperados")
+        _verificar_cadencia(linea, k)
+        yield corrida
+    finally:
+        corrida.servicio.cerrar()
+
+
+def _verificar_cadencia(linea: LineaTiempo, k: int | None) -> None:
+    posiciones = [punto.numero_acciones for punto in linea._puntos]
+    esperadas = [] if k is None else list(range(k, len(linea) + 1, k))
+    if posiciones != esperadas:
+        raise ValueError(f"Cadencia de puntos incorrecta para K={k}: {posiciones}, se esperaba {esperadas}")
+
+
+def _posiciones_de_consulta(acciones: int, reloj: int, cantidad: int):
+    """Muestra pseudoaleatoria y estados inmediatamente anteriores a puntos de control."""
+    azar = random.Random(SEMILLA_LINEA_TIEMPO + 1)
+    posiciones = []
+    for i in range(cantidad):
+        posiciones.append(("accion", azar.randint(1, acciones)) if i % 2 == 0 else ("instante", azar.randint(0, reloj)))
+    for _, k in ESCENARIOS_K_LINEA:
+        if k is not None and k <= acciones:
+            for numero in (k, acciones // k * k):
+                posicion = ("accion", numero)
+                if posicion not in posiciones:
+                    posiciones.append(posicion)
+    return posiciones
+
+
+def _tiempos_de_consulta(partida, posiciones):
+    tiempos = []
+    gc.collect()
+    for tipo, valor in posiciones:
+        inicio = time.perf_counter()
+        if tipo == "accion":
+            partida.consultar_accion(valor)
+        else:
+            partida.consultar_instante(valor)
+        tiempos.append(time.perf_counter() - inicio)
+    return tiempos
+
+
+def _memoria_de_la_linea(linea: LineaTiempo):
+    # (acciones, ajustes, checkpoints) en bytes, con la estimación de _tamano_profundo
+    acciones = _tamano_profundo(linea._acciones) + _tamano_profundo(linea._tiempos)
+    ajustes = _tamano_profundo(linea._ajustes_posicion) + _tamano_profundo(linea._ajustes_instancias)
+    return acciones, ajustes, _tamano_profundo(linea._puntos)
+
+
+def _resultado_de_escenario(etiqueta, corrida, posiciones):
+    partida = corrida.partida
+    linea = partida.linea_tiempo()
+    tiempos = _tiempos_de_consulta(partida, posiciones)
+    ordenar_auto(tiempos)
+    cantidad = len(tiempos)
+    mediana = (tiempos[(cantidad - 1) // 2] + tiempos[cantidad // 2]) / 2
+    peor_consulta = tiempos[-1]
+    peor_ciclo = max(corrida.tiempos)
+    acciones, ajustes, puntos = _memoria_de_la_linea(linea)
+    cumple_consulta = "CUMPLE" if peor_consulta * 1000 < LIMITE_CONSULTA_MS else "NO CUMPLE"
+    cumple_ciclo = "CUMPLE" if peor_ciclo * 1000 < LIMITE_CICLO_MS else "NO CUMPLE"
+    nota = (f"memoria de la línea {_kib(acciones + ajustes + puntos)} KiB (acciones {_kib(acciones)}, "
+            f"ajustes {_kib(ajustes)}, puntos {_kib(puntos)}). "
+            f"registro medio {corrida.registro / len(linea) * 1e6:.1f} µs/acción, incluida la captura cuando toca. "
+            f"Consulta: mediana {_ms(mediana)} ms, máximo observado {_ms(peor_consulta)} ms -> "
+            f"{cumple_consulta} el límite de {LIMITE_CONSULTA_MS:.0f} ms (P2 §6.1). "
+            f"peor ciclo {_ms(peor_ciclo)} ms -> {cumple_ciclo} el límite de {LIMITE_CICLO_MS:.0f} ms. "
+            f"{ESTIMACION_MEMORIA}")
+    return Resultado("linea_tiempo", f"{etiqueta}: {len(linea)} acciones, {linea.cantidad_checkpoints()} puntos periódicos, "
+                                     f"{cantidad} consultas", sum(tiempos), cantidad, nota)
+
+
+def _comparar_inversion(corrida, linea, posiciones):
+    """T030: re-simular desde un checkpoint (elegida) frente a deshacer cambios serializables desde el final (descartada)."""
+    partida, n = corrida.partida, len(linea)
+    por_accion = [valor for tipo, valor in posiciones if tipo == "accion"]
+    tiempos_resimular = _tiempos_de_consulta(partida, [("accion", k) for k in por_accion])
+    tiempos_inversion, coinciden = [], 0
+    gc.collect()
+    for k in por_accion:
+        inicio = time.perf_counter()
+        foto = _foto_antes_de_la_accion(corrida.foto_final, corrida.registros_inversion, k)
+        tiempos_inversion.append(time.perf_counter() - inicio)
+        if foto == _foto_de_resumen(partida.consultar_accion(k)):
+            coinciden += 1
+    acciones, ajustes, puntos = _memoria_de_la_linea(linea)
+    memoria_resimular = acciones + ajustes + puntos
+    memoria_inversion = _tamano_profundo(corrida.registros_inversion) + _tamano_profundo(corrida.foto_final)
+    reg_resimular = corrida.registro / n
+    reg_inversion = corrida.segundos_inversion / n
+    return [
+        Resultado("linea_tiempo", f"re-simular desde checkpoint (elegida): {n} acciones, {len(por_accion)} consultas por acción",
+                  _mediana(tiempos_resimular), len(por_accion),
+                  f"registrar {reg_resimular * 1e6:.1f} µs por acción (incluye crear los checkpoints), memoria "
+                  f"{_kib(memoria_resimular)} KiB, consulta mediana {_ms(_mediana(tiempos_resimular))} ms y máximo "
+                  f"{_ms(max(tiempos_resimular))} ms. Reconstruye el estado completo, con azar y agenda"),
+        Resultado("linea_tiempo", f"reconstruir hacia atrás con cambios serializables (descartada): {n} acciones, "
+                                  f"{len(por_accion)} consultas por acción",
+                  _mediana(tiempos_inversion), len(por_accion),
+                  f"registrar {reg_inversion * 1e6:.1f} µs por acción, memoria {_kib(memoria_inversion)} KiB, consulta "
+                  f"mediana {_ms(_mediana(tiempos_inversion))} ms y máximo {_ms(max(tiempos_inversion))} ms (deshace "
+                  f"desde el final, así que el costo crece con las acciones que faltan). Modelo de cota inferior: "
+                  f"solo registra los 9 campos visibles (sala, vida, estadísticas, inventario, efectos y enemigos de la sala), "
+                  f"no el azar, la agenda ni el mapa conocido. Coincide con la re-simulación en {coinciden} de {len(por_accion)} "
+                  f"consultas. {ESTIMACION_MEMORIA}")]
+
+
+def _comparar_busquedas(corrida, linea):
+    """T031: búsqueda binaria manual (elegida) frente a lineal (descartada) del límite temporal y del checkpoint."""
+    n = len(linea)
+    reloj = corrida.partida.vista().tiempo
+    azar = random.Random(SEMILLA_LINEA_TIEMPO + 2)
+    consultas = 400
+    instantes = [azar.randint(0, reloj) for _ in range(consultas)]
+    numeros = [azar.randint(1, n) for _ in range(consultas)]
+    tiempos_de_acciones = linea._tiempos
+    puntos = linea._puntos
+
+    def binaria_instante():
+        inspecciones, resultados = 0, []
+        for t in instantes:
+            resultados.append(linea.contar_hasta_instante(t, True))
+            inspecciones += linea.inspecciones_ultima_busqueda
+        return inspecciones, resultados
+
+    def lineal_instante():
+        inspecciones, resultados = 0, []
+        for t in instantes:
+            cuenta = 0
+            for valor in tiempos_de_acciones:
+                inspecciones += 1
+                if valor > t:
+                    break
+                cuenta += 1
+            resultados.append(cuenta)
+        return inspecciones, resultados
+
+    def binaria_checkpoint():
+        inspecciones, resultados = 0, []
+        for k in numeros:
+            punto = linea.buscar_checkpoint(k)
+            inspecciones += linea.inspecciones_ultima_busqueda
+            resultados.append(None if punto is None else punto.numero_acciones)
+        return inspecciones, resultados
+
+    def lineal_checkpoint():
+        inspecciones, resultados = 0, []
+        for k in numeros:
+            elegido = None
+            for punto in puntos:
+                inspecciones += 1
+                if punto.numero_acciones > k:
+                    break
+                elegido = punto.numero_acciones
+            resultados.append(elegido)
+        return inspecciones, resultados
+
+    salida = []
+    for nombre, elegida, descartada, tamano in (("límite temporal a acción", binaria_instante, lineal_instante, n),
+                                                 ("checkpoint anterior", binaria_checkpoint, lineal_checkpoint,
+                                                  len(puntos))):
+        gc.collect()
+        insp_b, res_b = elegida()
+        insp_l, res_l = descartada()
+        t_b, t_l = _medir(elegida), _medir(descartada)
+        igual = "mismo resultado en las consultas" if res_b == res_l else "RESULTADOS DISTINTOS"
+        salida.append(Resultado(
+            "linea_tiempo", f"búsqueda {nombre}: binaria manual (elegida) frente a lineal (descartada), "
+                            f"{tamano} elementos, {consultas} consultas", t_b, consultas,
+            f"binaria {t_b / consultas * 1e6:.2f} µs por consulta con {insp_b / consultas:.1f} inspecciones en promedio; "
+            f"lineal {t_l / consultas * 1e6:.2f} µs con {insp_l / consultas:.1f}; {_comparar('lineal', t_l, 'binaria', t_b)}; "
+            f"{igual}. La binaria cuenta la llamada al método y la lineal es un bucle directo sobre la lista"))
+    return salida
+
+
+def _clonar_linea(base: LineaTiempo) -> LineaTiempo:
+    clon = LineaTiempo(base.frecuencia)
+    clon._acciones = base._acciones.copy()
+    clon._tiempos = base._tiempos.copy()
+    clon._puntos = base._puntos.copy()
+    clon._ajustes_posicion = base._ajustes_posicion.copy()
+    clon._ajustes_instancias = base._ajustes_instancias.copy()
+    return clon
+
+
+def _truncar_filtrando(linea: LineaTiempo, limite: int) -> int:
+    """ALTERNATIVA DESCARTADA: recorre todas las acciones y checkpoints y conserva los que no pasan del límite.
+    Devuelve cuántos registros examinó."""
+    examinados = 0
+    acciones, tiempos, puntos = [], [], []
+    for indice in range(len(linea._acciones)):
+        examinados += 1
+        if indice < limite:
+            acciones.append(linea._acciones[indice])
+            tiempos.append(linea._tiempos[indice])
+    for punto in linea._puntos:
+        examinados += 1
+        if punto.numero_acciones <= limite:
+            puntos.append(punto)
+    linea._acciones, linea._tiempos, linea._puntos = acciones, tiempos, puntos
+    return examinados
+
+
+def _comparar_recorte(base: LineaTiempo):
+    """T032: recortar desde el final (elegida) frente a escanear y filtrar (descartada), como hace el pergamino."""
+    n = len(base)
+    repeticiones = 30
+    segundos_elegida = segundos_descartada = 0.0
+    examinados = quitados = 0
+    for _ in range(repeticiones):
+        linea = _clonar_linea(base)
+        antes = len(linea._acciones) + linea.cantidad_checkpoints()
+        gc.collect()
+        inicio = time.perf_counter()
+        linea.truncar(n - 1)
+        segundos_elegida += time.perf_counter() - inicio
+        quitados = antes - len(linea._acciones) - linea.cantidad_checkpoints()
+        linea = _clonar_linea(base)
+        gc.collect()
+        inicio = time.perf_counter()
+        examinados = _truncar_filtrando(linea, n - 1)
+        segundos_descartada += time.perf_counter() - inicio
+    return Resultado(
+        "linea_tiempo", f"recorte por pergamino: desde el final (elegida) frente a escaneo y filtrado (descartada), "
+                        f"{n} acciones, {repeticiones} repeticiones", segundos_elegida, repeticiones,
+        f"desde el final {segundos_elegida / repeticiones * 1e6:.2f} µs y {quitados} registros procesados por recorte; "
+        f"escaneo y filtrado {segundos_descartada / repeticiones * 1e6:.2f} µs y {examinados} registros examinados; "
+        f"{_comparar('el filtrado', segundos_descartada, 'el recorte desde el final', segundos_elegida)}")
+
+
+def _comparar_restauracion(corrida, linea):
+    """T032: restaurar el estado de un checkpoint con la ruta que prepara salas (descartada) frente a la vía
+    materializada sin precarga (elegida). La E/S se mide como llamadas al cliente de fixtures."""
+    partida = corrida.partida
+    punto = linea.buscar_checkpoint(len(linea) // 2)
+    if punto is None:
+        punto = linea.buscar_checkpoint(len(linea))
+    if punto is None:
+        return Resultado("linea_tiempo", "restauración de un checkpoint: sin checkpoints en esta escala", 0.0, 1,
+                         "no hay un checkpoint desde el cual restaurar")
+    estado = punto.estado[0]
+    con_contenido = sum(1 for sala in estado.salas if sala.contenido_cargado)
+    repeticiones = 5
+    tiempos_materializada, tiempos_con_precarga = [], []
+    llamadas_materializada = llamadas_con_precarga = 0
+    for _ in range(repeticiones):
+        gc.collect()
+        antes = corrida.cliente.llamadas
+        inicio = time.perf_counter()
+        partida._crear_aislada(punto.estado)
+        tiempos_materializada.append(time.perf_counter() - inicio)
+        llamadas_materializada += corrida.cliente.llamadas - antes
+
+        servicio = ServicioPartida(ClienteGeneral(corrida.cliente), ContadorSolicitudes(), asincrono=False)
+        general, version = corrida.servicio.datos_generales, corrida.servicio.version_catalogo
+        mapa = servicio._armar(general, version)     # el esqueleto se carga fuera de la medición
+        gc.collect()
+        antes = corrida.cliente.llamadas
+        inicio = time.perf_counter()
+        copia = Partida(general, mapa, servicio._catalogo, servicio._precarga, estado.semilla)
+        with copia._historial.sin_registrar():
+            copia._restaurar(estado)                 # restaurar_sala llama a preparar_sala en cada sala con contenido
+        tiempos_con_precarga.append(time.perf_counter() - inicio)
+        llamadas_con_precarga += corrida.cliente.llamadas - antes
+        servicio.cerrar()
+    t_m, t_p = _mediana(tiempos_materializada), _mediana(tiempos_con_precarga)
+    return Resultado(
+        "linea_tiempo", f"restauración de un checkpoint: vía materializada (elegida) frente a preparar salas (descartada), "
+                        f"{con_contenido} salas con contenido, {repeticiones} repeticiones", t_m, repeticiones,
+        f"materializada {_ms(t_m)} ms y {llamadas_materializada / repeticiones:.1f} llamadas al cliente por consulta; "
+        f"con preparar_sala {_ms(t_p)} ms y {llamadas_con_precarga / repeticiones:.1f} llamadas "
+        f"({con_contenido} llamadas a preparar_sala); {_comparar('preparar salas', t_p, 'la vía materializada', t_m)}. "
+        f"Cada llamada al cliente de fixtures lee un archivo: es la E/S de la consulta")
+
+
+def bench_linea_tiempo(escala: float = 1.0):
+    """Mide la línea de tiempo con cinco corridas comparables y conserva las alternativas de la fase E."""
+    acciones = _acciones_de_la_carga(escala)
+    referencia = cripta_de_referencia()
+    base = None
+    resultados = []
+    for etiqueta, k in ESCENARIOS_K_LINEA:
+        with _jugar_linea(acciones, k, referencia.id) as corrida:
+            linea = corrida.partida.linea_tiempo()
+            reloj = corrida.partida._reloj.tiempo_actual
+            carga = (linea._acciones, linea._tiempos, reloj)
+            if base is None:
+                base = carga
+                posiciones = _posiciones_de_consulta(acciones, reloj, _consultas_de_la_carga(escala))
+                resultados.append(Resultado(
+                    "linea_tiempo", f"{referencia.id}, semilla {SEMILLA_LINEA_TIEMPO}, {acciones} acciones, "
+                                    f"{corrida.salas} salas, {corrida.salidas} salidas",
+                    sum(corrida.tiempos), acciones,
+                    f"tiempo acumulado de ciclos de {etiqueta}. Cinco partidas independientes con la misma semilla "
+                    f"y carga. Vida máxima {VIDA_MAXIMA_LINEA} "
+                    f"fijada antes de iniciar. {len(posiciones)} consultas comunes por acción e instante, "
+                    "incluidos estados inmediatamente anteriores a puntos de control"))
+            elif carga != base:
+                raise ValueError(f"La corrida {etiqueta} generó acciones o instantes distintos a la primera")
+            resultados.append(_resultado_de_escenario(etiqueta, corrida, posiciones))
+
+    with _jugar_linea(acciones, K_COMPARACION_LINEA, referencia.id, medir_inversion=True) as corrida:
+        linea = corrida.partida.linea_tiempo()
+        resultados += _comparar_inversion(corrida, linea, posiciones)
+        resultados += _comparar_busquedas(corrida, linea)
+        resultados.append(_comparar_recorte(linea))
+        resultados.append(_comparar_restauracion(corrida, linea))
+    return resultados
+
+
+# ================================== 12. RESOLUBILIDAD (capacidad 003, FR-RES-020, SC-001, SC-007)
+LLAVE_SALIDA_SINTETICA = "itm_llave_salida"
+SALAS_POR_SEGMENTO_RESOLUBILIDAD = 20
+LLAVES_RESOLUBILIDAD = (10, 20, 40)
+REPETICIONES_RESOLUBILIDAD = 3
+LIMITE_RESOLUBILIDAD_MS = 200.0
+COSTO_MIN_RESOLUBILIDAD = 20
+COSTO_MAX_RESOLUBILIDAD = 490
+
+
+def _unir_salas(conexiones, origen, direccion, destino, azar, llave=None):
+    """Agrega la conexión en los dos sentidos con un costo del azar. Con llave, la puerta queda cerrada."""
+    costo = azar.randint(COSTO_MIN_RESOLUBILIDAD, COSTO_MAX_RESOLUBILIDAD)
+    conexiones[origen].append((direccion, destino, llave, costo))
+    conexiones[destino].append((direccion_opuesta(direccion), origen, llave, costo))
+
+
+def _mapa_desde_conexiones(conexiones) -> CriptaMapa:
+    """Arma el CriptaMapa con una página de esqueleto construida directamente con los DTO."""
+    salas = []
+    for sala in range(1, len(conexiones)):
+        norte = sur = este = oeste = None
+        for direccion, destino, llave, costo in conexiones[sala]:
+            salida = SalidaDTO(destino, llave is not None, llave, None, costo)
+            if direccion == "N":
+                norte = salida
+            elif direccion == "S":
+                sur = salida
+            elif direccion == "E":
+                este = salida
+            else:
+                oeste = salida
+        salas.append(SalaDTO(sala, f"Sala {sala}", norte, sur, este, oeste))
+    mapa = CriptaMapa()
+    mapa.agregar_pagina(PaginaEsqueletoDTO(pagina=1, total_paginas=1, salas=tuple(salas)))
+    mapa.sincronizar_puertas()
+    return mapa
+
+
+def _generar_cripta_encadenada(k: int, salas_por_segmento: int, semilla: int):
+    """Cripta de k segmentos en cadena, cada uno tras una puerta cerrada que exige la llave del segmento.
+    La llave de salida es una ubicación más (como en llaves.json del API) y abre la última puerta.
+    Devuelve (mapa, sala_inicial, sala_salida, llave_salida, ubicaciones de llaves)."""
+    azar = random.Random(semilla)
+    if k * salas_por_segmento == 1:
+        salas_por_segmento = 2          # con una sola sala no hay puerta de salida, el mínimo viable son dos
+    total = k * salas_por_segmento
+    conexiones = [[] for _ in range(total + 1)]
+    ids = [f"itm_llave_{i:04d}" for i in range(k)]
+    ids[k - 1] = LLAVE_SALIDA_SINTETICA
+    if salas_por_segmento == 1 and k >= 2:
+        ids[k - 2] = LLAVE_SALIDA_SINTETICA          # la última sala es la salida y su puerta es la del segmento anterior
+    ubicaciones = []
+    for i in range(k):
+        base = i * salas_por_segmento
+        ultimo = i == k - 1
+        utiles = salas_por_segmento - 1 if ultimo else salas_por_segmento
+        if utiles == 0:
+            continue
+        lateral = base + utiles if utiles >= 2 else 0
+        en_corredor = utiles - 1 if lateral else utiles
+        for sala in range(base + 1, base + en_corredor):
+            _unir_salas(conexiones, sala, "E", sala + 1, azar)
+        ultima_del_corredor = base + en_corredor
+        if lateral:
+            _unir_salas(conexiones, base + 1 + azar.randrange(en_corredor), "N", lateral, azar)
+            sala_llave = lateral
+        else:
+            sala_llave = base + 1 + azar.randrange(en_corredor)
+        ubicaciones.append(LlaveUbicacionDTO(ids[i], sala_llave, None))
+        destino = total if ultimo else base + salas_por_segmento + 1
+        _unir_salas(conexiones, ultima_del_corredor, "E", destino, azar, ids[i])
+    return _mapa_desde_conexiones(conexiones), 1, total, LLAVE_SALIDA_SINTETICA, tuple(ubicaciones)
+
+
+def _verificador_de(cripta) -> VerificadorResolubilidad:
+    mapa, sala_inicial, sala_salida, llave_salida, ubicaciones = cripta
+    return VerificadorResolubilidad(mapa, sala_inicial, sala_salida, llave_salida, ubicaciones)
+
+
+def bench_resolubilidad(escala: float = 1.0):
+    """Recorrido incremental (elegida) frente a reiniciar el recorrido por cada llave (descartada)."""
+    resultados = []
+    por_segmento = max(1, int(SALAS_POR_SEGMENTO_RESOLUBILIDAD * escala))
+    for base in LLAVES_RESOLUBILIDAD:
+        k = max(1, int(base * escala))
+        verificador = _verificador_de(_generar_cripta_encadenada(k, por_segmento, SEMILLA_BENCH))
+        if not verificador.verificar().es_resoluble:
+            raise ValueError(f"La cripta sintética de {k} llaves debería ser resoluble")
+        t_incremental = _medir(verificador.verificar, REPETICIONES_RESOLUBILIDAD)
+        t_ingenuo = _medir(verificador.verificar_ingenuo_reiniciado, REPETICIONES_RESOLUBILIDAD)
+        salas = k * por_segmento
+        resultados.append(Resultado("resolubilidad", f"{k} llaves encadenadas, {salas} salas: recorrido incremental (elegida)",
+                                    t_incremental, 1))
+        resultados.append(Resultado("resolubilidad", f"{k} llaves encadenadas, {salas} salas: recorrido ingenuo reiniciado (descartada)",
+                                    t_ingenuo, 1, _comparar("recorrido_ingenuo_reiniciado", t_ingenuo,
+                                                            "recorrido_incremental", t_incremental)))
+    return resultados
+
+
+def _cripta_publicada(cliente, id_cripta: str):
+    """Lee de fixtures lo que necesita el verificador, sin pasar por el servicio para poder medir solo la verificación."""
+    general = cliente.obtener_general(id_cripta)
+    mapa = CriptaMapa()
+    for pagina in range(1, general.paginas + 1):
+        mapa.agregar_pagina(cliente.obtener_pagina_esqueleto(id_cripta, pagina))
+    mapa.sincronizar_puertas()
+    llaves = tuple(cliente.obtener_llaves(id_cripta))
+    return mapa, general.sala_inicial, general.sala_salida, general.llave_salida, llaves
+
+
+def bench_resolubilidad_cota(escala: float = 1.0):
+    """Verificación de la cripta publicada con más salas contra el límite de 200 ms (SC-001)."""
+    cliente = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))
+    elegida = elegir_cripta_de_referencia(cliente.listar_criptas())
+    verificador = _verificador_de(_cripta_publicada(cliente, elegida.id))
+    segundos = _medir(verificador.verificar, REPETICIONES_RESOLUBILIDAD)
+    cumple = "CUMPLE" if segundos * 1000 < LIMITE_RESOLUBILIDAD_MS else "FALLA"
+    return [Resultado("resolubilidad_cota", f"verificación {elegida.id} ({elegida.salas} salas)", segundos, 1,
+                      f"{_ms(segundos)} ms (límite {LIMITE_RESOLUBILIDAD_MS:.1f} ms: {cumple})")]
 
 
 CARGAS = (
@@ -929,6 +1616,7 @@ CARGAS = (
     ("disco", bench_recuperacion_disco),
     ("inventario", bench_inventario),
     ("historial", bench_historial),
+    ("historial_cazadores", bench_historial_cazadores),
     ("ordenamiento", bench_ordenamiento),
     ("guardado", bench_guardado),
     ("ciclo", bench_ciclo_eventos),
@@ -937,4 +1625,7 @@ CARGAS = (
     ("ruta_cazador", bench_ruta_cazador),
     ("invalidacion", bench_invalidacion),
     ("ciclo_referencia", bench_ciclo_referencia),
+    ("linea_tiempo", bench_linea_tiempo),
+    ("resolubilidad", bench_resolubilidad),
+    ("resolubilidad_cota", bench_resolubilidad_cota),
 )

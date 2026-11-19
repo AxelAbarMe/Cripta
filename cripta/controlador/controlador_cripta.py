@@ -19,7 +19,8 @@ class Orden:
     mover/abrir: "N","S","E","O"; atacar/recoger: posición en vista.enemigos / vista.objetos_suelo;
     ordenar: "peso","valor" o "nombre"; el resto no lleva.
     Tipos: mover, abrir, atacar, esperar, recoger, usar, equipar, soltar, pergamino,
-    siguiente, anterior, ordenar, guardar, cargar, salir.
+    siguiente, anterior, ordenar, guardar, cargar, historia, salir.
+    historia lleva el texto escrito tras la palabra ("150", "#3", o None): el controlador lo interpreta y rechaza.
     '''
     tipo: str
     argumento: str | int | None = None
@@ -134,6 +135,8 @@ class ControladorCripta:
             self._guardar()
         elif orden.tipo == "cargar":
             self._cargar()
+        elif orden.tipo == "historia":
+            self._consultar_historia(orden.argumento)
         elif orden.tipo == "pergamino":
             return self._retroceder(orden.argumento or 1, vista)
         else:
@@ -254,6 +257,29 @@ class ControladorCripta:
         ok, objetos = self._intentar(lambda: self._servicio.partida.inventario_ordenado(criterio))
         if ok:
             self._vista.mostrar_inventario_ordenado(criterio, objetos)
+
+    # ---------------------------------------------------------- historia
+    def _consultar_historia(self, texto) -> None:
+        # historia <t> o historia #<k>: no consume tiempo ni cambia nada. Un rechazo se avisa con su motivo.
+        texto = "" if texto is None else str(texto).strip()
+        cuerpo = texto[1:] if texto.startswith("#") else texto
+        if not (cuerpo.isascii() and cuerpo.isdigit()):
+            self._vista.mostrar_aviso(
+                f"Uso: historia <t> con un instante entero o historia #<k> con una acción desde 1 (se recibió {texto!r}).")
+            return
+        numero = int(cuerpo)
+        accion = texto.startswith("#")
+        referencia = f"#{numero}" if accion else f"t={numero}"
+        try:
+            partida = self._servicio.partida
+            resumen = partida.consultar_accion(numero) if accion else partida.consultar_instante(numero)
+        except (ValueError, IndexError) as error:
+            self._vista.mostrar_aviso(str(error))
+            return
+        except _ERRORES as error:
+            self._vista.mostrar_error(str(error))
+            return
+        self._vista.mostrar_historia(resumen, referencia)
 
     # ---------------------------------------------------- guardar y cargar
     def _guardar(self) -> None:

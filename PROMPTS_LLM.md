@@ -463,6 +463,55 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 
 **Para qué se usó:** Agregar llaves.json al script y documentar los campos nuevos. El script se ejecutó a mano para cripta-02 a cripta-06.
 
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-specify Sigue las instrucciones de prompts/p2/02-specify-004.md. SPECIFY_FEATURE_DIRECTORY=specs/004-linea-de-tiempo. [...] Solo crea o modifica archivos dentro de specs/004-linea-de-tiempo/. No agregues reglas del juego que no estén en el prompt ni en docs/CONTEXTO_CRIPTA2.md."
+
+**Prompt (resumido):** Generar la especificación de la línea de tiempo con puntos de control, con los escenarios del Apéndice B y la coordinación con niebla de guerra y formato binario.
+
+**Para qué se usó:** Obtener el borrador de specs/004-linea-de-tiempo/spec.md.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-clarify Sigue las instrucciones de prompts/p2/03-clarify-004.md. [...] Modifica solo specs/004-linea-de-tiempo/spec.md. Las respuestas a cada pregunta las doy yo; no decidas reglas del juego."
+
+**Prompt (resumido):** Aclarar ambigüedades de la línea de tiempo: numeración de «historia #k», pergamino, eventos simultáneos, rechazos, formato guardado y valor de K.
+
+**Para qué se usó:** Generar las aclaraciones de spec.md que se mantuvieron ambiguas.
+
+### 2026-11-15 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/004-linea-de-tiempo/spec.md y checklists/requirements.md: agrega el escenario de historia tras un pergamino, la precisión de que la consulta no va a partida.log, una historia de guardar y cargar con el caso del archivo de la Parte I y un criterio de éxito de persistencia; no fijes K ni resuelvas el marcador de FR-LIN-012."
+
+**Prompt (resumido):** Completar la cobertura de los escenarios del Apéndice B y de la persistencia en la especificación de la línea de tiempo.
+
+**Para qué se usó:** Cerrar dos escenarios del Apéndice B que solo estaban como casos límite y añadir historia y criterio para guardar y cargar.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-clarify Sigue las instrucciones de prompts/p2/03-clarify-004.md. [...] Modifica solo specs/004-linea-de-tiempo/spec.md. Las respuestas a cada pregunta las doy yo; no decidas reglas del juego."
+
+**Prompt (resumido):** Aclarar ambigüedades de la línea de tiempo: numeración de «historia #k», acciones que cuentan, instante coincidente con una decisión, pergamino y archivo de la Parte I.
+
+**Para qué se usó:** Obtener cinco aclaraciones registradas en la Sesión 2026-11-16 de spec.md; la última resolvió FR-LIN-012 (incompatibilidad por versión, sin migración).
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/004-linea-de-tiempo/spec.md y checklists/requirements.md: traduce los encabezados de aclaraciones, restaura los campos de las historias 2 y 4, divide el escenario de la historia 2 en cuatro y actualiza el checklist sin cambiar ninguna regla."
+
+**Prompt (resumido):** Corrección de forma de la especificación tras el clarify: idioma, campos cruzados entre historias y escenarios.
+
+**Para qué se usó:** Dejar spec.md coherente con el formato de las demás capacidades y el checklist en 18/18.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo specs/004-linea-de-tiempo/spec.md: registra en la sesión de aclaraciones dos decisiones del grupo (valores inválidos de --checkpoint-cada K y rechazo de consultas de historia sin efecto), agrega FR-LIN-022, FR-LIN-023 y SC-LIN-007 con sus escenarios, redacta los escenarios 2 a 4 de la historia 2 en formato dado/cuando/entonces y agrega las decisiones pendientes de confirmar al apartado de supuestos. No hagas preguntas ni agregues otras reglas."
+
+**Prompt (resumido):** Cierre de las aclaraciones de la línea de tiempo con respuestas ya decididas, sin una nueva ronda interactiva de /speckit-clarify.
+
+**Para qué se usó:** Dejar en la especificación el tratamiento de valores inválidos de K y de consultas rechazadas, y la lista de decisiones del grupo pendientes de confirmar con el profesor.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "$speckit-plan Sigue las instrucciones de prompts/p2/04-plan-004.md. SPECIFY_FEATURE_DIRECTORY=specs/004-linea-de-tiempo. [...] Solo crea o modifica archivos dentro de specs/004-linea-de-tiempo/. Puedes LEER (sin modificar) el código, specs/001-terreno-cazador/ y specs/002-niebla-ir-a/plan.md vía git show."
+
+**Prompt (resumido):** Generar el plan de la línea de tiempo con puntos de control: alternativas de reconstrucción, búsqueda del punto de control, recorte por pergamino, memoria frente a K, formato binario y trazabilidad.
+
+**Para qué se usó:** Obtener plan.md, research.md, data-model.md, contracts/ y quickstart.md de specs/004-linea-de-tiempo/.
+
 ### 2026-11-11 — Claude Code (Sonnet 5.5)
 **Prompt:** "/speckit-implement Solo los bloques B.0 y B.1 de la Fase B: T018, T019, T019b y T020. Solo pruebas, nada de código en cripta/. Las pruebas que dependan de código aún no implementado deben fallar; si alguna pasa desde el inicio porque el comportamiento ya existe (por ejemplo T020 sobre reloj.py), dímelo. Al terminar, corre py -m unittest completo, dime cuáles fallan y por qué, y marca las casillas de esas tareas en tasks.md. No sigas con B.2. Para editar archivos usa tu herramienta de edición, no sed -i, porque cambia los finales de línea CRLF."
 
@@ -651,6 +700,7 @@ Detalles menores: T007 dice “id de la sala” y T028 dice “Crear
 - Agregar a la tarea T034c y al plan la actualización de docs/CONTRATO_PARTIDA.md.
 - Actualizar el README (ejemplos de --replay, lista de cargas de --solo y nota del código de salida de --bench) y marcar en tasks.md T034b, T039, T039b, T040, T041 y T042.
 - Quitar varios ";" de comentarios y docstrings y corregir referencias a requisitos e imports en archivos de prueba.
+ 
 
 ### 2026-11-14 — Codex CLI 0.167.2 (GPT-6-Luna)
 **Prompt:**
@@ -882,7 +932,7 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 
 **Prompt (resumido):** Aplicar la revisión del Pull Request de la capacidad 002 a la especificación, el plan y las tareas.
 
-**Para qué se usó:** Incorporar las correcciones de la revisión de saull04 antes de fusionar el PR de documentación.
+**Para qué se usó:** Incorporar las correcciones de la revisión del PR antes de fusionar el PR de documentación.
 
 
 ### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
@@ -891,6 +941,20 @@ Al terminar, dime qué cambiaste por punto y cuántas tareas quedaron.
 **Prompt (resumido):** Segunda corrección de tasks.md de la 002 tras la revisión del Pull Request: referencias, etiquetas y ubicación de la comparación de costos.
 
 **Para qué se usó:** Dejar las tareas consistentes con la spec y el plan antes de fusionar el PR de documentación.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo archivos dentro de specs/004-linea-de-tiempo/: el uso del pergamino no es una acción numerada (spec primero); relación entre la línea vigente y partida.log; fuente del contenido de salas en la reconstrucción aislada; problema de pasar t al número de acción; registro de retroceso pausado; proyección compartida entre historia y replay; borde del recorte; tratamiento de lo no reversible; coordinación de archivos compartidos; --hasta solo con --replay; un solo cambio de versión del formato por esta capacidad con el conocimiento de la 002 en los checkpoints, incluidos los costos de salida; vistas de la 001. [...]"
+
+**Prompt (resumido):** Corregir huecos de diseño del plan de la línea de tiempo y una aclaración de la especificación sobre el pergamino, con la coordinación de las capacidades 001 y 002.
+
+**Para qué se usó:** Dejar el plan y sus artefactos consistentes con partida.log, el pergamino y la versión final de la 002.
+
+### 2026-11-16 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Corrige solo archivos dentro de specs/004-linea-de-tiempo/: numeración tras el pergamino (el número de una acción revertida se reutiliza), mecanismo de ajuste de inventario por el pergamino, replay completo con pergamino, fuente del contenido al reconstruir sin precarga, definición del punto de control, búsqueda binaria de t a número de acción y corrección de una fila del pergamino. [...]"
+
+**Prompt (resumido):** Segunda corrección de la especificación y el plan de la línea de tiempo tras la revisión: numeración, estado vivo tras el pergamino, replay y reconstrucción sin E/S por consulta.
+
+**Para qué se usó:** Cerrar las contradicciones de numeración y los huecos de diseño detectados antes de generar las tareas.
 
 
 ### 2026-11-10 — Antigravity CLI 1.5.4 (Gemini 3.8 Flash)
@@ -1059,10 +1123,49 @@ Informe: tabla con ID, gravedad (CRÍTICA, ALTA, MEDIA, BAJA), archivo y línea,
 **Prompt (resumido):** Se pidió un análisis de solo lectura de la consistencia entre spec.md, plan.md, tasks.md, los anexos y la constitución de la capacidad de resolubilidad, con informe en el chat clasificado por gravedad.
 
 **Para qué se usó:** Detectar requisitos sin tarea, reglas nuevas en el plan, estructuras prohibidas y rutas incoherentes antes de /speckit-implement.
+ 
 
 ### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
 **Prompt:**
 ```text
+$speckit-tasks
+SPECIFY_FEATURE_DIRECTORY=specs/004-linea-de-tiempo
+Contexto: ya estoy en la rama 004-linea-de-tiempo. No crees ni cambies de rama y no hagas commit ni push. Redacta todo en español, incluidos los títulos de las fases y secciones de la plantilla. Solo crea o modifica specs/004-linea-de-tiempo/tasks.md. Usa solo spec.md, plan.md, research.md, data-model.md, quickstart.md y contracts/ de esa carpeta, y puedes LEER (sin modificar) el código de cripta/ y tests/ para citar rutas reales. No agregues reglas del juego ni decisiones de diseño que no estén en esos documentos. Si falta algo, detente y pregunta.
+
+Reglas de la constitución que las tareas deben cumplir:
+- Cada tarea cita los identificadores FR-LIN-NNN que atiende, la ruta real del archivo que toca (marca "Nuevo" o "Modificado" según exista en esta rama, comprobándolo), el comando de prueba que la valida y su criterio de "hecho". Máximo unos 90 minutos por tarea y ninguna tarea sin requisito.
+- Cada escenario de aceptación de spec.md, los seis casos B-LIN-001 a B-LIN-006 y cada SC-LIN-001 a SC-LIN-007 tienen al menos una tarea de prueba automatizada con unittest que cita el requisito. Las pruebas van antes que el código que las hace pasar. Las carpetas de pruebas nuevas llevan su __init__.py en una tarea explícita; tests/aceptacion/__init__.py y tests/servicios/test_servicio_bench.py se marcan «Nuevo si no existe tras fusionar la 002».
+- Ninguna tarea usa heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Las búsquedas binarias se implementan a mano y list solo como almacenamiento contiguo indexado por entero.
+- Los errores de programación heredan de IndexError o ValueError; CriptaError solo para fallos externos.
+- El modelo no importa red, archivos ni vista. --replay y --bench no instancian la vista.
+- Ninguna tarea contiene commits ni push, ni códigos de tarea ni nombres de personas en mensajes de commit.
+- Ninguna tarea escribe cifras de rendimiento ni el valor por defecto de K antes de medir. La cripta de referencia se elige por el mayor total de salas del listado de fixtures, sin fijar su id; el criterio frente a la constante CRIPTA_REFERENCIA de la 001 queda como pendiente del grupo, sin decidir.
+- Etiquetas de dependencia: «Depende de 001» para lo que use SalidaVista, EnemigoVista, Partida.vista() o el costo de salida en el movimiento; «Depende de 002» solo para lo que use el código del conocimiento del jugador (su proyección y sus costos de salida), que aún no está implementado; la línea de tiempo, los checkpoints y el formato binario propios de esta capacidad no llevan etiqueta. Ningún código previsto se redacta como si ya existiera.
+
+Decisiones de diseño que las tareas deben reflejar tal como están en plan.md, data-model.md y research.md:
+- El pergamino no es una acción numerada: la numeración de «historia #k» continúa desde la última acción vigente, el número de una acción revertida se reutiliza y k se rechaza si es cero o mayor que la cantidad de acciones vigentes. partida.log conserva las líneas revertidas y la del pergamino.
+- Al aceptar un pergamino se anexa a la línea una entrada de ajuste de inventario sin número ni cuenta para K, acumulada en el nuevo final si un pergamino posterior trunca por detrás; el cursor del inventario no forma parte del resumen histórico.
+- El punto de control se captura en el punto de decisión posterior a la acción múltiplo de K; al recortar se descartan los checkpoints con más acciones que la longitud vigente.
+- La reconstrucción es aislada, con el registro de retroceso pausado, sin bitácora ni mensajes, y toma el contenido estático de las salas ya materializadas con una vía de restauración que no llama a precarga.preparar_sala.
+- La búsqueda de t a número de acción y la de checkpoint son binarias manuales; las lineales solo existen en el benchmark.
+- «historia» y «--replay --hasta» usan el mismo componente de proyección; el replay reproduce la bitácora completa, construye la línea vigente y consulta como historia. --hasta solo se acepta junto con --replay. La prueba de equivalencia usa docs/ejemplos/partida_cripta-03.log, que contiene un pergamino.
+- Esta capacidad hace el único cambio de versión del formato binario y guarda en los checkpoints el conocimiento de la 002 con sus costos de salida.
+
+Organización obligatoria:
+1. Fase A, estructura pura de la línea de tiempo: pruebas primero y luego cripta/modelo/linea_tiempo.py (acciones vigentes con su instante, checkpoints, búsqueda binaria por número de acción y por instante, truncamiento desde el final, ajuste de inventario). No depende de otras capacidades.
+2. Fase B, reconstrucción y consulta: contexto aislado, re-simulación desde el checkpoint con el estado de random.Random restaurado, estados en el instante t y en #k, resumen con los siete grupos mínimos, rechazos con motivo y sin efectos.
+3. Fase C, persistencia: campos nuevos en EstadoPartida y persistencia_modelo.py, formato binario con versión nueva en guardado_binario.py, rechazo explícito y no destructivo de un archivo de la Parte I, y round-trip de la línea completa. Las tareas que guardan el conocimiento del jugador llevan «Depende de 002».
+4. Fase D, interfaz y replay: comando historia en controlador y vista, --checkpoint-cada con validación, y --replay --hasta con la equivalencia descrita. El resumen de enemigos y salidas lleva «Depende de 001».
+5. Fase E, mediciones --bench: carga linea_tiempo con K=100, 500, 1000 y sin checkpoints; inversión de cambios, búsqueda lineal de checkpoint y de acción, recorte por escaneo, y restauración con y sin precarga; cada tarea con el comando exacto. La elección del K por defecto es una tarea posterior a las mediciones.
+6. Fase F, cierre: pruebas de la Parte I y II en OK, auditoría de importaciones prohibidas, repetición de las mediciones de agenda e historial de retroceso (Parte II §5.6) y una tarea final «Sección de DECISIONES.md».
+
+Marca [P] solo las tareas que tocan archivos distintos y no dependen entre sí. Indica el orden de dependencias entre fases y el punto de corte del Pull Request, que no puede fusionarse antes de los de la 001 y la 002 y que incorpora main con merge. El registro de este comando en PROMPTS_LLM.md se hace fuera de las tareas.
+```
+
+**Prompt (resumido):** Generar la lista de tareas de la capacidad de línea de tiempo con pruebas antes que el código, requisitos citados, dependencias de 001 y 002 etiquetadas, las decisiones sobre el pergamino, la reconstrucción y el replay reflejadas, y el punto de corte del Pull Request.
+
+**Para qué se usó:** Generar tasks.md para revisarlo antes de ejecutar analyze.
+
 Corrige solo archivos dentro de specs/003-resolubilidad/ (spec.md, plan.md y tasks.md). No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego salvo lo pedido aquí; si algo cambia el resultado observable y no está decidido, detente y pregunta.
 
 Spec primero:
@@ -1203,6 +1306,224 @@ No agregues reglas fuera de lo pedido. Si algo cambia lo que el jugador observa 
 
 **Para qué se usó:** Cerrar T011, que se había detenido porque el campo rompía dos pruebas de ida y vuelta binaria de la Parte I, y reforzar dos pruebas que pasaban sin comprobar lo pedido.
 
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6.2 Sol)
+**Prompt:**
+```text
+$speckit-implement Trabaja solo en el benchmark de la 004, como preparación de T033. Actualiza primero los artefactos de la fase E para dejar trazado el nuevo escenario. Añade K=50 con puntos reales cada 50 acciones y conserva K=100, 500, 1000 y sin puntos periódicos. Para medir registro y ciclo usa corridas propias con la misma semilla y carga. Para consulta usa las mismas posiciones en todos los escenarios e incluye casos justo antes de un punto de control. Verifica la cadencia y ejecuta py -m cripta --bench --solo linea_tiempo --escala 1. Reporta por escenario cantidad de puntos, memoria, mediana y máximo observado de consulta y peor ciclo. Conserva la captura completa para obtener la línea base. No cambies el K predeterminado, no cierres T033 y no toques T034–T036. Respeta CRLF, cita los FR en las pruebas y no hagas commits ni push.
+```
+
+(El texto completo está en prompts/p2/22-implement-004-benchmark-linea-base.md.)
+
+**Continuación:** «Implement the plan.»
+
+**Prompt (resumido):** Benchmark de la 004 con K=50 y puntos reales cada 50 acciones junto a K=100, 500, 1000 y sin puntos, con los artefactos de la fase E actualizados primero y la captura completa conservada como línea base.
+
+**Para qué se usó:** Preparar y registrar la línea base del benchmark de la 004 antes de T033.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6.2 Sol)
+**Prompt:**
+```text
+$speckit-implement Trabaja solo en la optimización de los puntos de control periódicos de la 004. Antes de tocar código, actualiza el plan y añade una tarea en tasks.md vinculada a los FR correspondientes. Omite una sala del punto periódico solo si nunca se preparó y su estado se puede reconstruir desde el esqueleto: puertas en estado inicial, sin rastro y sin enemigos activos. Conserva la captura completa del estado inicial y del estado actual del guardado. Verifica que el formato v2 siga leyendo los puntos completos anteriores y los nuevos puntos reducidos, y que historia, replay y guardado/carga den los mismos resultados. Ejecuta la suite completa y repite py -m cripta --bench --solo linea_tiempo --escala 1 con la misma carga. Guarda los resultados por separado y compara memoria, mediana y máximo de consulta y peor ciclo con docs/bench/resultados_004_linea_base.md. Deja K=100 provisional y T033 abierta para revisar los datos. Registra el prompt en PROMPTS_LLM.md, conserva CRLF y no hagas commits ni push.
+```
+
+(El texto completo está en prompts/p2/23-implement-004-puntos-reducidos.md.)
+
+**Prompt (resumido):** Reducir los puntos de control periódicos omitiendo las salas nunca preparadas que se pueden reconstruir desde el esqueleto, con el plan y una tarea actualizados antes del código y la medición repetida contra la línea base.
+
+**Para qué se usó:** Reducir la captura periódica, comprobar la compatibilidad v2 y medir el cambio frente a la línea base de la 004.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6.2 Sol)
+**Prompt:**
+```text
+$speckit-implement Ejecuta solo T033 de specs/004-linea-de-tiempo/tasks.md. Contrasta las mediciones de docs/bench/resultados_004_linea_base.md y docs/bench/resultados_004_puntos_reducidos.md. Registra en tasks.md el comando, las condiciones de la carga y la justificación para proponer K=50 frente a los otros escenarios, con el máximo observado de consulta y el costo de memoria. Si falta alguna medición del grupo requerida por T033, indícala y deja la tarea abierta. Registra el prompt en PROMPTS_LLM.md. Conserva CRLF y no hagas commits ni push.
+```
+
+(El texto completo está en prompts/p2/24-implement-004-t033.md.)
+
+**Prompt (resumido):** T033: contrastar la línea base con la medición de puntos reducidos y registrar el comando, las condiciones y la justificación de proponer K=50.
+
+**Para qué se usó:** Comparar las mediciones de la 004, sustentar la propuesta de K=50 y registrar el insumo de rendimiento pendiente para cerrar T033.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6.2 Sol)
+**Prompt:**
+```text
+$speckit-implement Completa la elección de K para la 004. Confirmo K=50 como valor predeterminado con base en las mediciones de T041 y T042. Corrige en T033 la nota que trata la medición de retroceso con muchos cazadores como un bloqueo para elegir K y deja esa medición pendiente en T039. Registra en tasks.md el cambio de cripta/constantes.py antes de editar el código. Ajusta el valor predeterminado a 50 y verifica con una prueba que una partida iniciada sin --checkpoint-cada usa 50 y que un K explícito sigue funcionando. Ejecuta la suite completa, cita la medición a escala 1 que respalda K=50 y marca T033 al completar la validación. Registra el prompt en PROMPTS_LLM.md. Respeta CRLF y no hagas commits ni push.
+```
+
+(El texto completo está en prompts/p2/25-implement-004-k-predeterminado.md.)
+
+**Prompt (resumido):** Confirmar K=50 como valor predeterminado, corregir la nota de T033 sobre la medición con cazadores y probar el valor al iniciar con y sin --checkpoint-cada.
+
+**Para qué se usó:** Fijar K=50, comprobar la configuración al iniciar una partida y dejar el benchmark de retroceso con cazadores en T039.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo las pruebas de la Fase A de specs/004-linea-de-tiempo/tasks.md: T001 y T004. Antes lee spec.md, plan.md y data-model.md de specs/004-linea-de-tiempo/. Crea tests/modelo/test_linea_tiempo.py con clases de prefijo Test que citen los FR en comentarios. No crees ni modifiques nada en cripta/. Las pruebas deben fallar porque cripta/modelo/linea_tiempo.py aún no existe: córrelas y muéstrame que fallan por eso y no por otra razón. CRLF en el .py, sin ";" en comentarios, y no marques las tareas todavía. Dime qué casos cubriste."
+
+**Prompt (resumido):** T001 y T004: pruebas de la clase LineaTiempo (límites temporales, numeración #k, puntos de control, recorte y consulta) antes del código.
+
+**Para qué se usó:** Crear tests/modelo/test_linea_tiempo.py con clases Test y FR citados. Debían fallar porque cripta/modelo/linea_tiempo.py aún no existía.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T002, T003 y T005 de specs/004-linea-de-tiempo/tasks.md. Crea cripta/modelo/linea_tiempo.py con la clase LineaTiempo y la API exacta que fijan las pruebas de tests/modelo/test_linea_tiempo.py, sin modificar las pruebas. Usa listas contiguas y búsquedas binarias escritas a mano, sin bisect, heapq, collections, dict ni set como índice, y sin sorted ni .sort. Un docstring al inicio del módulo y un comentario corto por método, sin ";". CRLF. Corre py -m unittest tests.modelo.test_linea_tiempo y después la suite completa con py -m unittest discover -s tests -t . Marca T001, T002, T003, T004 y T005 como [X] en specs/004-linea-de-tiempo/tasks.md (LF). Dime el resultado de las dos corridas."
+
+**Prompt (resumido):** T002, T003 y T005: implementación de LineaTiempo con listas contiguas y búsquedas binarias escritas a mano.
+
+**Para qué se usó:** Crear cripta/modelo/linea_tiempo.py para que pasen las pruebas de la Fase A sin modificarlas y marcar T001 a T005.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo las pruebas de la Fase B de specs/004-linea-de-tiempo/tasks.md: T006, T007, T008 y T009. Antes lee la Fase B de tasks.md y las secciones «Registro de historia y reconstrucción» de plan.md, y revisa cómo arman partidas las pruebas existentes (tests/cripta_cazadores.py, tests/modelo/test_conocimiento_jugador.py y las de tests/servicios/ que usan ClienteOffline) para reutilizar esos ayudantes. Crea tests/modelo/test_partida_linea_tiempo.py con clases de prefijo Test que citen los FR y los casos B-LIN. Antes de escribir, fija y dime la API pública que usarán las pruebas en Partida para consultar la historia (por ejemplo consultar_instante(t) y consultar_accion(k) que devuelven una proyección de solo lectura), porque la implementación tendrá que respetarla. No modifiques nada en cripta/. Las pruebas deben fallar porque esa API aún no existe: córrelas y muéstrame que fallan por eso. CRLF, sin ";" en comentarios, no marques tareas. Dime qué casos cubriste y la API elegida."
+
+**Prompt (resumido):** T006 a T009: pruebas de la consulta histórica de Partida (instantes, orden de eventos, pergamino, consulta sin efectos y resumen) y definición de su API pública.
+
+**Para qué se usó:** Crear tests/modelo/test_partida_linea_tiempo.py. Debían fallar porque consultar_instante, consultar_accion y linea_tiempo aún no existían.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T010, T011, T012, T013 y T014 de specs/004-linea-de-tiempo/tasks.md, para que pasen las pruebas de tests/modelo/test_partida_linea_tiempo.py sin modificarlas. Sigue el diseño de plan.md: el checkpoint se toma en el punto de decisión del jugador que sigue a cada acción múltiplo de K, como estado completo en datos planos (reutiliza la proyección que ya arma crear_estado en persistencia_modelo.py, con el estado del random.Random), y la consulta reconstruye en una Partida aislada desde el checkpoint más cercano, re-simulando como máximo K acciones dentro de HistorialRetroceso.sin_registrar(), sin red ni precarga (reutiliza el contenido estático de las salas ya cargadas, T011), sin escribir en la bitácora de mensajes ni en partida.log, y sin tocar la partida viva. Al aceptar un pergamino, trunca la línea y registra el ajuste de inventario como dice el plan. Usa como valor por defecto de checkpoint_cada una constante provisional en cripta/constantes.py (por ejemplo 100), que se justificará con el bench en T033. Sin bisect, heapq, collections, sorted, .sort, ni dict o set como índice. CRLF, sin ";" en comentarios. Si alguna prueba te parece contradictoria con spec.md o plan.md, detente y explícamelo en vez de cambiarla. Corre el archivo de pruebas y luego la suite completa, marca T006 a T014 como [X] en tasks.md y dime el resultado y qué archivos tocaste." (El texto completo está en prompts/p2/16-implement-004-registro-y-reconstruccion.md.)
+
+**Prompt (resumido):** T010 a T014: integración de la línea de tiempo en Partida con puntos de control, consulta por reconstrucción aislada, recorte por pergamino y valor provisional de K.
+
+**Para qué se usó:** Hacer pasar test_partida_linea_tiempo.py sin modificarlo: registrar acciones, crear puntos de control, re-simular en una partida aislada y recortar la línea al usar un pergamino.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "En tests/modelo/test_partida_linea_tiempo.py, el ayudante _hacer usa resultado.motivo, pero el campo real de ResultadoAccion es motivo_rechazo. Corrígelo con Edit (solo eso) y corre el archivo de pruebas."
+
+**Prompt (resumido):** Corrección de una línea de una prueba: resultado.motivo por motivo_rechazo.
+
+**Para qué se usó:** El ayudante _hacer de test_partida_linea_tiempo.py usaba un campo que no existe en ResultadoAccion.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo las pruebas de la Fase C de specs/004-linea-de-tiempo/tasks.md: T015 y T016. Lee la Fase C de tasks.md y plan.md, y revisa tests/infraestructura/test_guardado_binario.py y cripta/infraestructura/guardado_binario.py para seguir su estilo. Las pruebas deben cubrir el ida y vuelta de la línea de tiempo (acciones, ajustes, checkpoints con el estado de random) y del conocimiento de la 002 (EstadoPartida.conocimiento, que hoy tiene compare=False y no se codifica), y que un archivo con la versión de la Parte I se rechace con un error claro sin modificarlo. No modifiques nada en cripta/. Las pruebas nuevas deben fallar ahora por la razón esperada: córrelas y muéstrame por qué fallan. CRLF, sin ";" en comentarios, no marques tareas. Dime qué casos cubriste."
+
+**Prompt (resumido):** T015 y T016: pruebas del guardado binario de la línea de tiempo y del conocimiento, y del rechazo de la versión de la Parte I.
+
+**Para qué se usó:** Ampliar tests/infraestructura/test_guardado_binario.py. Debían fallar porque el formato aún no guardaba la línea ni el conocimiento.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T017, T018 y T019 de specs/004-linea-de-tiempo/tasks.md, para que pasen las pruebas nuevas de tests/infraestructura/test_guardado_binario.py sin modificarlas. Respeta la API que fijaron esas pruebas en estado_guardado.py (AccionGuardada, AjusteGuardado, PuntoControlGuardado, LineaGuardada, EstadoPartida.linea y conocimiento con compare=True). En guardado_binario.py sube FORMATO_VERSION una sola vez y codifica la línea y el conocimiento de la 002, y rechaza la versión de la Parte I con CriptaFormatoIncompatibleError sin modificar el archivo. En persistencia_modelo.py y partida.py, guarda y restaura la línea vigente completa, de modo que una partida cargada pueda consultar instantes anteriores a la carga (hoy da ValueError). Sin dict ni set como índice, sin sorted, bisect ni collections. CRLF, sin ";" en comentarios. Si una prueba te parece contradictoria con spec.md o plan.md, detente y explícamelo. Corre el archivo de pruebas, tests/modelo/test_partida_linea_tiempo.py y la suite completa, marca T015 a T019 como [X] en tasks.md y dime el resultado y qué archivos tocaste." (El texto completo está en prompts/p2/17-implement-004-guardado-binario.md.)
+
+**Prompt (resumido):** T017 a T019: formato binario nuevo que guarda y restaura la línea y el conocimiento, y rechaza los archivos de la Parte I.
+
+**Para qué se usó:** Subir FORMATO_VERSION, codificar la línea y el conocimiento y hacer que una partida cargada conserve la línea y pueda consultar instantes anteriores a la carga.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Sí, corrige test_el_resto_del_estado_no_cambia_por_llevar_linea comparando las salas por id, solo eso en la prueba. Además, como el formato ya pasó a la versión 2, agrega a EstadoPartida el contador de instancias (siguiente_instancia) y codifícalo en guardado_binario.py, para que una partida cargada numere los objetos igual que la original y los checkpoints creados después de cargar coincidan. Agrega una prueba de ida y vuelta para ese campo en tests/infraestructura/test_guardado_binario.py y una que compruebe que la partida cargada y la original asignan el mismo id al siguiente objeto recogido. Corre la suite completa, marca T015 y dime el resultado."
+
+**Prompt (resumido):** Corrección de una prueba del guardado y contador de instancias en el estado guardado.
+
+**Para qué se usó:** Comparar las salas por id en test_el_resto_del_estado_no_cambia_por_llevar_linea y guardar siguiente_instancia para que una partida cargada numere los objetos igual que la original.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo las pruebas de la Fase D de specs/004-linea-de-tiempo/tasks.md: T020, T021, T023 y T025. Lee la Fase D de tasks.md, el contrato specs/004-linea-de-tiempo/contracts/cli.md y spec.md (formato de historia <t>, historia #k, --checkpoint-cada K y --replay --hasta t). Revisa cómo están armadas las pruebas existentes del controlador, de la vista de consola, del servicio de partida y del replay, y amplíalas en sus archivos, con clases de prefijo Test y FR citados. No modifiques nada en cripta/. Las pruebas nuevas deben fallar ahora por la razón esperada: córrelas y muéstrame por qué fallan. CRLF, sin ";" en comentarios, no marques tareas. Dime qué casos cubriste y qué formato de salida fijan las pruebas." (El texto completo está en prompts/p2/18-implement-004-pruebas-fase-d.md.)
+
+**Prompt (resumido):** T020, T021, T023 y T025: pruebas de historia en controlador y vista, de --checkpoint-cada en el servicio y de --replay --hasta, antes del código.
+
+**Para qué se usó:** Ampliar las pruebas existentes del controlador, la vista, el servicio de partida y el replay, y fijar el formato de salida. Debían fallar porque nada de eso existía.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "En specs/004-linea-de-tiempo/ (plan.md, research.md, data-model.md, quickstart.md y tasks.md), reemplaza toda referencia a docs/ejemplos/partida_cripta-03.log por docs/ejemplos/partida_cripta-02.log, que es el ejemplo vigente con pergamino (el de cripta-03 se retiró al cambiar los ejemplos en la 001). Ajusta la descripción si menciona detalles del contenido del archivo viejo. Usa Edit, conserva los finales de línea y no toques nada fuera de esa carpeta."
+
+**Prompt (resumido):** Cambiar las referencias al log de ejemplo retirado por el vigente en los documentos de la 004.
+
+**Para qué se usó:** Que plan, research, data-model, quickstart y tasks citen docs/ejemplos/partida_cripta-02.log, el ejemplo con pergamino, y no el de cripta-03 que se retiró en la 001.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T022, T024 y T026 de specs/004-linea-de-tiempo/tasks.md, para que pasen las pruebas de la Fase D sin modificarlas, respetando el formato y la API que fijan. En VistaBase, mostrar_historia debe ser un método concreto (no abstracto) para no romper las vistas falsas que heredan de ella. El replay con --hasta no debe instanciar la vista ni el controlador. Sin dict ni set como índice, sin sorted, bisect ni collections. CRLF, sin ";" en comentarios. Si una prueba te parece contradictoria con spec.md o el contrato cli.md, detente y explícamelo. Corre la suite completa, marca T020 a T026 como [X] en tasks.md y dime el resultado y qué archivos tocaste." (El texto completo está en prompts/p2/19-implement-004-controlador-vista-cli.md.)
+
+**Prompt (resumido):** T022, T024 y T026: comando historia en controlador y vista, --checkpoint-cada en servicio y línea de comandos, y --replay --hasta sin vista.
+
+**Para qué se usó:** Hacer pasar las pruebas de la Fase D sin modificarlas y marcar T020 a T026.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T027 de specs/004-linea-de-tiempo/tasks.md: la prueba de la carga linea_tiempo. Revisa primero tests/bench/test_cargas_bench.py (la prueba de humo que ya recorre todas las cargas de CARGAS a escala mínima) y tests/servicios/, y no dupliques lo que ya cubre. La prueba debe comprobar que linea_tiempo está registrada en CARGAS, que corre sin instanciar la vista, que es determinista por semilla (dos corridas dan los mismos conteos) y que reporta K=100, 500, 1000 y sin checkpoints. No modifiques nada en cripta/. Debe fallar ahora porque la carga no existe: muéstrame por qué falla. CRLF, sin ";" en comentarios, no marques la tarea."
+
+**Prompt (resumido):** T027: prueba de la carga linea_tiempo del benchmark.
+
+**Para qué se usó:** Comprobar que está registrada en CARGAS, que corre sin vista, que es determinista por semilla y que reporta los escenarios de K. Debía fallar porque la carga no existía.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T028, T029, T030, T031 y T032 de specs/004-linea-de-tiempo/tasks.md, para que pasen las pruebas de tests/servicios/test_servicio_bench.py sin modificarlas. Implementa la carga linea_tiempo en cripta/bench/cargas_bench.py y regístrala en CARGAS y en servicio_bench.py. Indicaciones: 1. La partida de medición usa la cripta de referencia de fixtures/ (la misma constante CRIPTA_REFERENCIA que usa ciclo_referencia) con una semilla fija y un random.Random propio para elegir los pasos. Para que el jugador sobreviva miles de acciones, súbele la vida máxima en los datos generales ANTES de iniciar la partida (por ejemplo cargando los datos de la cripta en un cliente falso con la vida modificada), nunca después, porque la reconstrucción parte del estado inicial y daría otra partida. 2. A escala 1 son al menos 5 000 acciones del jugador. Con escalas menores la cantidad baja proporcionalmente, con un mínimo pequeño para que la prueba de humo sea rápida. 3. Para K=100, 500, 1000 y sin checkpoints, reporta la memoria de la línea (acciones, ajustes y checkpoints), la mediana y el máximo del tiempo de consulta sobre consultas en posiciones elegidas con la semilla, y si cumple el límite de 50 ms (P2 §6.1). Reporta también el peor tiempo de una acción que crea un checkpoint, comparado con el límite de 20 ms por ciclo. 4. Compara las alternativas descartadas que piden las tareas: re-simular frente a reconstruir hacia atrás (T030), búsqueda binaria frente a lineal del checkpoint y del límite temporal (T031), y recorte desde el final frente a escaneo y filtrado (T032). Para la memoria usa una estimación honesta y di en la nota cómo se calcula. 5. Llama a gc.collect() antes de cada corrida medida, como las demás cargas. Sin dict ni set como índice, sin sorted, bisect ni collections. CRLF, sin ";" en comentarios. Corre la prueba de la carga, la de humo de tests/bench y la suite completa. Después corre py -m cripta --bench --solo linea_tiempo una vez y pégame la salida completa. No elijas todavía el K por defecto (eso es T033). Marca T027 a T032 como [X] en tasks.md." (El texto completo está en prompts/p2/20-implement-004-carga-bench.md.)
+
+**Prompt (resumido):** T028 a T032: carga linea_tiempo del benchmark con K=100, 500, 1000 y sin puntos, y comparación con las alternativas descartadas.
+
+**Para qué se usó:** Implementar la carga en cargas_bench.py y registrarla en servicio_bench.py para que pasen sus pruebas, y correr el bench sin elegir todavía el K predeterminado.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Optimización acotada, solo cripta/modelo/cripta_mapa.py y sus pruebas. Un perfil de consultar_accion muestra que el 40 % del tiempo es CriptaMapa.obtener (búsqueda binaria en VectorOrdenado, unas 238 000 llamadas en 10 consultas), llamado sobre todo desde BuscadorRutas, costo_de_conexion, puerta_transitable y vecinos. 1. Primero agrega en las pruebas de CriptaMapa (busca el archivo existente en tests/modelo/) casos que fijen el comportamiento de obtener: una sala existente, una inexistente, ids fuera de rango y salas agregadas en varias páginas en desorden. Deben pasar ya con el código actual. 2. Luego agrega en CriptaMapa un índice plano por id de sala (una lista indexada por id que se amplía al agregar páginas, sin dict ni set) para que obtener sea O(1). Mantén la interfaz pública igual y no cambies nada fuera de cripta_mapa.py. Corre la suite completa y después py -m cripta --bench --solo ciclo_referencia linea_tiempo, y pégame las dos salidas. CRLF, sin ";" en comentarios, sin sorted, bisect ni collections. No marques tareas." (El texto completo está en prompts/p2/21-optimizacion-cripta-mapa-004.md.)
+
+**Prompt (resumido):** Índice plano por id de sala en CriptaMapa.obtener, con pruebas previas del comportamiento.
+
+**Para qué se usó:** Reducir el costo de consultar_accion, donde un perfil mostró que obtener ocupaba el 40 % del tiempo, y medir el efecto con ciclo_referencia y linea_tiempo.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T034, T035 y T036 de specs/004-linea-de-tiempo/tasks.md: las pruebas de aceptación en tests/aceptacion/test_linea_tiempo.py (tests/aceptacion/__init__.py ya existe). Cubre los escenarios de aceptación de las historias de spec.md y los casos B-LIN del Apéndice B que no estén ya cubiertos en tests/modelo/test_partida_linea_tiempo.py, sin duplicarlos. Clases con prefijo Test y FR citados. No modifiques nada en cripta/. Deben pasar con el código actual: córrelas y dime el resultado. CRLF, sin ";" en comentarios. Marca T034 a T036 como [X]."
+
+**Prompt (resumido):** T034 a T036: pruebas de aceptación de la línea de tiempo.
+
+**Para qué se usó:** Crear tests/aceptacion/test_linea_tiempo.py con las historias de la especificación y los casos B-LIN no cubiertos por las pruebas del modelo, y que pasen con el código actual.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T037, T038 y T039 de specs/004-linea-de-tiempo/tasks.md. T037: corre py -m unittest discover -s tests -t . y anota el resultado en tasks.md. T038: audita importaciones y estructuras prohibidas (heapq, bisect, collections, networkx, sorted, .sort, dict o set como índice) en los archivos de cripta/ modificados o creados por la 004 y por el índice de cripta_mapa.py, y anota el resultado. T039: corre py -m cripta --bench --solo agenda historial ciclo partida ciclo_referencia y anota los resultados en tasks.md comparándolos con docs/bench/resultados_001_a.md. Di honestamente que la carga historial es sintética y no incluye cazadores. No cambies código salvo que encuentres una regresión real (en ese caso detente y dímelo). Marca T037 a T039 como [X] y pégame las salidas."
+
+**Prompt (resumido):** T037 a T039: suite completa, auditoría de estructuras prohibidas y mediciones de la Parte I repetidas.
+
+**Para qué se usó:** Anotar en tasks.md el resultado de la suite, la auditoría de los archivos de la 004 y la comparación del bench con resultados_001_a.md, dejando claro que la carga historial es sintética y no incluye cazadores.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "/speckit-implement Solo T040 de specs/004-linea-de-tiempo/tasks.md. Edita solo DECISIONES.md (CRLF, sin ";" en el texto nuevo) y marca T040. Lee antes DECISIONES.md completo (estilo y secciones 5.1 y 5.6), specs/004-linea-de-tiempo/spec.md, plan.md, research.md, tasks.md (T033, T039, T041 y T042) y docs/bench/resultados_004_linea_base.md y resultados_004_puntos_reducidos.md. Las cifras deben salir de esos archivos o de este prompt, sin inventar. 1. Agrega una sección "5.5 La línea de tiempo" con la estructura de la Parte I (Problema, Alternativas, Decisión, Complejidad, Evidencia, Límites), enlaces a spec.md y plan.md de la 004 y si la decisión coincide con el plan original y qué medición motivó cada cambio. Incluye: re-simular desde el checkpoint frente a reconstruir hacia atrás, búsqueda binaria frente a lineal, recorte desde el final frente a filtrado, restauración materializada frente a preparar salas, la tabla de K=50, 100, 500, 1000 y sin checkpoints, y por qué K=50. 2. Cambios motivados por mediciones (no estaban en el plan): a. Índice plano por id en CriptaMapa.obtener (O(1) en lugar de búsqueda binaria). Un perfil mostró que el 83 % de una consulta era re-simular y el 40 % del total era obtener. Antes del índice, en el mismo equipo, el bench de linea_tiempo dio con K=100 mediana 66 ms y máximo 118 ms, K=500 263 y 523 ms, K=1000 512 y 1110 ms, sin checkpoints 2083 y 5318 ms. Después del índice, K=100 dio mediana 31.8 ms y máximo 54.6 ms. ciclo_referencia pasó de 3.144 ms (resultados_001_a.md) a 2.541 ms. b. Puntos de control reducidos (T042), con su ahorro de memoria. 3. Mide el tamaño del archivo de guardado con K=50 para 1 000 y 5 000 acciones, jugando la partida con el ayudante _jugar_linea de cargas_bench.py y guardando con ServicioPartida.guardar, y anota el comando o script usado. Aclara que la memoria del bench es una cota superior (suma objetos compartidos) y el archivo es el tamaño real en disco. 4. Límites conocidos: el estado cambiado a mano fuera de las acciones no se puede reconstruir; si una ficha fue desalojada de la caché, la reconstrucción puede leer disco o red; una partida cargada conserva el K con que se guardó; PuntoControlGuardado.siguiente_instancia repite el valor de su estado; el costo del historial con cazadores sigue sin medirse; el criterio de la cripta de referencia (constante frente a la de más salas) queda pendiente del grupo. 5. En la sección 5.6 agrega un párrafo con la revisión de la Parte I hecha en T039 (agenda, historial, ciclo, partida y ciclo_referencia) y el índice de CriptaMapa como cambio de una decisión de la Parte I. En 5.1, en "Alternativa no implementada", agrega una frase que remita a 5.5: la consulta de salas por id ya es O(1). Dime qué cambiaste." (El texto completo está en prompts/p2/26-decisiones-004.md.)
+
+**Prompt (resumido):** T040: sección 5.5 de DECISIONES.md con la línea de tiempo, más un párrafo en 5.6 y una frase en 5.1.
+
+**Para qué se usó:** Documentar las decisiones con la estructura de la Parte I, las cifras de docs/bench, el índice de CriptaMapa, los puntos reducidos y el tamaño del archivo de guardado.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Tres ajustes en DECISIONES.md, sección 5.5: 1. Ahora existe docs/bench/resultados_004_antes_indice.md, medido en el commit anterior al índice de CriptaMapa en el mismo equipo. Reemplaza las cifras de «antes del índice» por las de ese archivo, citándolo, y quita el límite que dice que esas cifras no tienen archivo. Ese bench es la versión vieja de la carga (sin K=50 y con 16 consultas en vez de 21), así que compara solo los escenarios que existen en los dos archivos y aclara esa diferencia. 2. El equipo es el mismo Equipo B de la tabla del inicio: agrega 5.5 a su fila y ajusta la frase de la sección. 3. Verifica la descripción de «Decisión» leyendo cripta/modelo/linea_tiempo.py y los métodos de la línea de tiempo en cripta/modelo/partida.py, y corrígela para que describa lo que hace el código. Usa Edit, CRLF y sin ";". Dime qué cambiaste." (El texto completo está en prompts/p2/27-decisiones-004-ajustes.md.)
+
+**Prompt (resumido):** Tres ajustes de la sección 5.5: cifras de antes del índice, equipo y descripción de la decisión.
+
+**Para qué se usó:** Usar el archivo medido antes del índice en lugar de cifras del prompt, ubicar la medición en el Equipo B y corregir la descripción para que coincida con el código.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Actualiza solo README.md para la capacidad 004, sin tocar otros archivos: agrega los comandos historia <t> e historia #k a la sección de controles o del juego, las banderas --checkpoint-cada K (valor por defecto 50, entero mayor o igual a 1) y --replay ... --hasta t a la tabla de banderas y a la sección de replay, con un ejemplo usando docs/ejemplos/partida_cripta-02.log, y la carga linea_tiempo a la lista de --solo. Agrega también una frase de que el guardado usa ahora la versión 2 del formato y que un archivo de la Parte I se rechaza con un error claro sin modificarlo. Usa Edit, CRLF y sin ";". Dime qué cambiaste."
+
+**Prompt (resumido):** README de la 004: comandos historia, banderas --checkpoint-cada y --hasta, carga linea_tiempo y formato v2.
+
+**Para qué se usó:** Documentar el uso de la línea de tiempo y que un archivo guardado de la Parte I se rechaza con un error claro sin modificarlo.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Dos cambios, con pruebas antes del código, y documentos al final. 1. Cripta de referencia: en cripta/bench/cargas_bench.py, ciclo_referencia usa la constante CRIPTA_REFERENCIA = "cripta-06", mientras linea_tiempo elige la cripta con más salas del listado. La constitución prohíbe datos de una cripta concreta en el código. Extrae a una función común la elección de linea_tiempo (la de más salas, desempate por id) y úsala en las dos cargas. Elimina la constante. Ajusta la prueba existente si alguna depende de ella. 2. Retroceso con cazadores (P2 §5.6): agrega una carga historial_cazadores en cargas_bench.py y regístrala en CARGAS. Sobre la cripta de referencia, con los cazadores activos como en ciclo_referencia, mide por cada acción del jugador cuántas operaciones inversas registra su intervalo y cuánto tarda revertir el último intervalo como lo hace el pergamino, con mediana y máximo, y compáralo con la carga historial sintética de la Parte I. Agrega su prueba en tests/servicios/test_servicio_bench.py antes del código. Corre la suite completa y py -m cripta --bench --solo ciclo_referencia historial historial_cazadores, y pégame la salida. Después agrega el resultado a DECISIONES.md, en el párrafo de la sección 5.6 que dice que el retroceso con cazadores no se midió, y quita esa nota pendiente de 5.5 y de tasks.md (T039). Sin dict ni set como índice, sin sorted, bisect ni collections. CRLF, sin ";" en comentarios ni en el texto nuevo." (El texto completo está en prompts/p2/28-implement-004-cripta-referencia-historial-cazadores.md.)
+
+**Prompt (resumido):** Elegir la cripta de referencia con una función común en las cargas con partida real y eliminar la constante, y agregar la carga historial_cazadores que mide el retroceso con cazadores, con pruebas antes del código y los resultados en DECISIONES.md y tasks.md.
+
+**Para qué se usó:** Quitar de cargas_bench.py el id de una cripta concreta, que la constitución prohíbe, medir cuántas inversas registra una acción con cazadores activos y cuánto tarda revertirla como el pergamino, y comparar con la carga sintética de la Parte I.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Sí, actualiza esas dos cosas: la línea 15 de tasks.md y T040 para que digan que la cripta de referencia ya se elige con la función común, y agrega historial_cazadores a la lista de --solo del README y a la de «Cómo se reproduce» de DECISIONES.md (revisa que linea_tiempo también esté en las dos). Edit, CRLF y sin ";"."
+
+**Prompt (resumido):** Actualizar la línea 15 de tasks.md y T040 con la elección común de la cripta de referencia, y agregar historial_cazadores y linea_tiempo a las listas de --solo del README y de DECISIONES.md.
+
+**Para qué se usó:** Que la documentación dejara de decir que el criterio de la cripta de referencia estaba pendiente y que las listas de cargas coincidieran con las registradas en CARGAS.
+
+### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo archivos dentro de specs/003-resolubilidad/ (spec.md, plan.md y tasks.md). No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad. Redacta en español. No cambies reglas del juego salvo lo pedido aquí; si algo cambia el resultado observable y no está decidido, detente y pregunta.
+
+Spec primero:
+1. spec.md: agrega al final de Supuestos las decisiones del grupo pendientes de confirmar con el profesor porque el enunciado no las fija: el orden incluye todas las llaves obtenibles, se informa un ciclo representativo por grupo, y una puerta cerrada sin llave es infranqueable. Agrega también los códigos de salida de --verificar (0 si la verificación termina, sea resoluble o no; 1 por datos inválidos; 2 por error externo) como requisito FR-RES-024 con su escenario, tomando el texto de contracts/contrato_resolubilidad.md §1.1 sin cambiarlo.
+
+Plan y tareas (después de la spec):
+2. tasks.md T013 y T014: fusiónalas en una sola tarea (método abstracto en vista_base.py, vistas falsas de las pruebas e implementación en vista_consola.py) para que la suite completa no se rompa entre ambas.
+3. Unifica el ancho del reporte entre plan.md §4 y la tarea de la vista, tomando el valor de contracts/contrato_resolubilidad.md §3.
+4. Agrega, antes de las tareas de bench, una tarea de prueba (tests/servicios/test_servicio_bench.py, Nuevo o Modificado según exista en esta rama, comprobándolo) para FR-RES-020 y SC-007: el generador sintético y las cargas producen la misma salida con la misma semilla; usa el nombre test_bench_resolubilidad_reproducible del plan.
+5. Agrega una tarea que ejecute py -m cripta --bench --solo resolubilidad y py -m cripta --bench --solo resolubilidad_cota, y guarde los resultados en docs/bench/. La tarea de DECISIONES.md pasa a la sección «5.4 Resolubilidad», con alternativas, complejidad, evidencia medida y límites conocidos, y depende de esa tarea.
+6. plan.md §3.2 y §7: declara el factor O(E log V) de CriptaMapa.obtener o indica que el verificador copia las salas a listas planas en una pasada, y ajusta la complejidad total. §5.1: alinea K = 40 y V = 800 con las tres escalas crecientes que pide la tarea de la carga. Agrega el «#» a la primera línea del plan.
+7. Renumera las tareas y actualiza dependencias y trazabilidad.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/003-resolubilidad/.
+```
+
+**Prompt (resumido):** Aplicar la revisión del Pull Request de la capacidad de resolubilidad a la especificación, el plan y las tareas: supuestos del grupo, códigos de salida de --verificar, fusión de tareas de la vista, ancho del reporte, prueba de reproducibilidad del bench, tarea de mediciones, complejidad declarada y formato del plan.
+
+**Para qué se usó:** Atender los seis puntos bloqueantes y las sugerencias de la revisión antes de fusionar el PR de documentación.
 
 ### 2026-11-18 — Antigravity CLI 1.5.6 (Gemini 3.8 Flash)
 **Prompt:**

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from cripta.controlador.controlador_cripta import DatosFinales, Orden
+    from cripta.modelo.linea_tiempo import ResumenHistorico
     from cripta.modelo.puntajes import Puntaje
     from cripta.modelo.resultado_partida import ResumenPuntaje, VistaPartida
 
@@ -68,3 +69,8 @@ class VistaBase(ABC):
     @abstractmethod
     def mostrar_final(self, datos: "DatosFinales") -> None:
         '''Resumen del jugador y la partida; al continuar el controlador vuelve al menú principal.'''
+
+    # ------------------------------------------------------------ historia
+    def mostrar_historia(self, resumen: "ResumenHistorico", referencia: str) -> None:
+        '''Presenta el estado de un momento pasado: `referencia` es "t=150" o "#3". No es abstracto a propósito:
+        una vista que no lo implemente simplemente no muestra la historia.'''

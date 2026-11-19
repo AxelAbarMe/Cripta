@@ -253,6 +253,29 @@ class TestSalidaSinPuertaCerrable(unittest.TestCase):
         self.assertEqual(conocimiento.estado_de_puerta(1, "E"), "no_observada")
 
 
+class TestPuertaCerradaSinLlaveNiCierre(unittest.TestCase):
+    """FR-NIE-025, escenario 3.18: una puerta cerrada no se presume abierta."""
+
+    def test_cerrada_no_abierta_antes_y_cerrada_al_observarse(self):
+        mapa = crear_mapa((
+            {"id": 1, "nombre": "Inicio", "salidas": {
+                "E": salida(2, cerrada=True)}},
+            {"id": 2, "nombre": "Puerta", "salidas": {
+                "O": salida(1)}},
+            {"id": 3, "nombre": "Paso", "salidas": {"E": salida(4)}},
+            {"id": 4, "nombre": "Final", "salidas": {"O": salida(3)}},
+        ))
+        conocimiento = ConocimientoJugador(mapa, 1)
+        self.assertEqual(conocimiento.sala_conocida(1).salidas[0].estado_puerta,
+                         "no_observada")
+        conocimiento.observar_puerta(1, "E")
+        self.assertEqual(conocimiento.sala_conocida(1).salidas[0].estado_puerta,
+                         "cerrada")
+        conocimiento.al_entrar(3, False)
+        self.assertEqual(conocimiento.sala_conocida(3).salidas[0].estado_puerta,
+                         "abierta")
+
+
 class TestIntegracionPartida(unittest.TestCase):
     """T007: FR-NIE-002, FR-NIE-004 y FR-NIE-015, caso B-NIE-002."""
 

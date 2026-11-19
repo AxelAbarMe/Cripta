@@ -1,21 +1,81 @@
-"""Pruebas de la carga linea_tiempo del bench: registro en CARGAS, ejecución sin vista, conteos deterministas y escenarios de K.
-No repite la prueba de humo de tests/bench/test_cargas_bench.py, que ya recorre todas las cargas a escala mínima.
-Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.servicios.test_servicio_bench -v
-"""
+"""Pruebas de las cargas niebla_rutas, linea_tiempo e historial_cazadores."""
 import contextlib
 import functools
 import io
+import json
 import re
 import unittest
 from types import SimpleNamespace
 from unittest import mock
 
 from cripta.bench import cargas_bench
-from cripta.bench.cargas_bench import CARGAS, DIRECTORIO_FIXTURES_BENCH, Resultado
-from cripta.infraestructura.cliente_offline import ClienteOffline
+from cripta.bench.cargas_bench import (
+    CARGAS, DIRECTORIO_FIXTURES_BENCH, Resultado, _comparar_costos_con_mapa,
+    _comparar_revelacion, _comparar_reversion, _elegir_fixture_referencia,
+    _seleccion_lineal, _siguiente_paso_costos_guardados,
+)
 from cripta.controlador.controlador_cripta import ControladorCripta
+from cripta.infraestructura.cliente_offline import ClienteOffline
+from cripta.modelo.ruta_conocida import siguiente_paso
 from cripta.servicios.servicio_bench import ServicioBench, ejecutar_bench_cli
 from cripta.vista.vista_consola import VistaConsola
+
+
+class TestServicioBench(unittest.TestCase):
+    def test_revelacion_y_reversion_equivalentes(self):
+        """FR-NIE-018, SC-NIE-004: las alternativas dejan conocimiento equivalente."""
+        referencia = _elegir_fixture_referencia()
+        revelacion = _comparar_revelacion(referencia, 7, 41)
+        reversion = _comparar_reversion(referencia, 7, 41)
+        self.assertTrue(revelacion[0])
+        self.assertTrue(reversion[0])
+        self.assertEqual(len(revelacion[1]), 2)
+        self.assertEqual(len(revelacion[2]), 2)
+        self.assertGreater(revelacion[1][0], 0)
+        self.assertGreater(revelacion[2][0], 0)
+        self.assertEqual(len(reversion[1]), 2)
+        self.assertEqual(len(reversion[2]), 2)
+        self.assertGreater(reversion[1][0], 0)
+        self.assertGreater(reversion[2][0], 0)
+        self.assertGreater(reversion[3], 0)
+
+
+    def test_rutas_y_costos_equivalentes_sobre_fixture_mayor(self):
+        """FR-NIE-018, SC-NIE-002 y SC-NIE-004: algoritmos coinciden sin fijar id."""
+        referencia = _elegir_fixture_referencia()
+        self.assertGreater(referencia["salas"], 0)
+        self.assertGreater(referencia["salidas"], 0)
+        otra_referencia = _elegir_fixture_referencia()
+        self.assertTrue(referencia["consultas"])
+        self.assertEqual(referencia["consultas"], otra_referencia["consultas"])
+        conocimiento = referencia["conocimiento"]
+        for origen, destino in referencia["consultas"]:
+            with self.subTest(origen=origen, destino=destino):
+                self.assertIsNotNone(siguiente_paso(conocimiento, origen, destino))
+                self.assertEqual(
+                    siguiente_paso(conocimiento, origen, destino),
+                    _seleccion_lineal(conocimiento, origen, destino),
+                )
+                self.assertEqual(
+                    siguiente_paso(conocimiento, origen, destino),
+                    _siguiente_paso_costos_guardados(conocimiento, origen, destino),
+                )
+        self.assertTrue(_comparar_costos_con_mapa(referencia))
+        maximo = 0
+        elegidos = []
+        for carpeta in DIRECTORIO_FIXTURES_BENCH.iterdir():
+            ruta = carpeta / "general.json"
+            if not ruta.is_file():
+                continue
+            with ruta.open(encoding="utf-8") as archivo:
+                total = json.load(archivo)["salas_total"]
+            if total > maximo:
+                maximo, elegidos = total, [carpeta.name]
+            elif total == maximo:
+                elegidos.append(carpeta.name)
+        self.assertEqual(referencia["salas"], maximo)
+        self.assertEqual(referencia["id"], min(elegidos))
+
 
 ESCALA_MINIMA = 0.01
 CARGA = "linea_tiempo"
@@ -70,12 +130,14 @@ class TestRegistroDeLaCarga(unittest.TestCase):
         self.assertEqual(nombres.count(CARGA), 1)
         self.assertTrue(callable(_funcion()))
 
+
     def test_todos_los_resultados_son_del_subsistema(self):  # FR-LIN-018
         resultados = _correr(1)
         self.assertGreater(len(resultados), 0)
         for resultado in resultados:
             self.assertIsInstance(resultado, Resultado)
             self.assertEqual(resultado.subsistema, CARGA)
+
 
     def test_el_servicio_la_acepta_en_solo_y_la_ejecuta_sin_vista(self):  # FR-LIN-018, SC-LIN-003
         _, salida = _correr_con_servicio()
@@ -84,10 +146,12 @@ class TestRegistroDeLaCarga(unittest.TestCase):
         self.assertGreater(duracion, 0)
         self.assertGreater(len(resultados), 0)
 
+
     def test_la_linea_de_comandos_la_acepta_y_termina_bien(self):  # FR-LIN-018
         codigo, texto = _correr_en_la_linea_de_comandos()
         self.assertEqual(codigo, 0)
         self.assertIn("LINEA_TIEMPO", texto)
+
 
     def test_la_carga_directa_tampoco_instancia_la_vista(self):  # FR-LIN-018
         with _sin_vista():
@@ -100,6 +164,7 @@ class TestEscenariosDeK(unittest.TestCase):
         for etiqueta, _ in ESCENARIOS:
             with self.subTest(escenario=etiqueta):
                 self.assertEqual(len(_resultados_de(etiqueta, resultados)), 1)
+
 
     def test_cada_escenario_informa_memoria_y_la_consulta_con_mediana_y_maximo(self):  # FR-LIN-016, FR-LIN-018, SC-LIN-004
         resultados = _correr(1)
@@ -114,10 +179,12 @@ class TestEscenariosDeK(unittest.TestCase):
                     self.assertGreaterEqual(resultado.operaciones, 1)
                     self.assertFalse(resultado.es_razon)
 
+
     def test_el_cumplimiento_del_limite_de_50_ms_se_informa_con_lo_medido(self):  # FR-LIN-018, SC-LIN-003
         notas = " ".join(r.nota for r in _correr(1))
         self.assertIn("50 ms", notas)
         self.assertRegex(notas, r"\bN?O? ?CUMPLE\b")
+
 
     def test_los_escenarios_aparecen_en_el_reporte_de_texto_y_en_el_markdown(self):  # FR-LIN-014
         servicio, salida = _correr_con_servicio()
@@ -130,17 +197,21 @@ class TestEscenariosDeK(unittest.TestCase):
             self.assertIn(etiqueta, texto)
             self.assertIn(etiqueta, markdown)
 
+
     def test_cadencia_real_y_misma_carga_y_consultas_en_cada_corrida(self):  # FR-LIN-013, FR-LIN-014, FR-LIN-015, FR-LIN-018
         escenarios = []
         acciones = 1050
+
 
         def observar(etiqueta, corrida, posiciones):
             escenarios.append((etiqueta, corrida.partida, posiciones))
             return Resultado(CARGA, etiqueta, 0, len(posiciones))
 
+
         with mock.patch.object(cargas_bench, "_acciones_de_la_carga", return_value=acciones), \
                 mock.patch.object(cargas_bench, "_resultado_de_escenario", side_effect=observar):
             _funcion()(ESCALA_MINIMA)
+
 
         self.assertEqual([etiqueta for etiqueta, _, _ in escenarios], [etiqueta for etiqueta, _ in ESCENARIOS])
         _, partida_base, consultas = escenarios[0]
@@ -174,15 +245,18 @@ class TestConteosDeterministas(unittest.TestCase):
         for patron in (r"semilla (\d+)", r"(\d+) acciones", r"(\d+) salas"):
             self.assertGreater(int(re.search(patron, caso).group(1)), 0)
 
+
     def test_dos_corridas_dan_los_mismos_conteos(self):  # FR-LIN-018, SC-LIN-003
         primera = [(r.caso, r.operaciones) for r in _correr(1)]
         segunda = [(r.caso, r.operaciones) for r in _correr(2)]
         self.assertEqual(primera, segunda)
 
+
     def test_los_casos_no_llevan_tiempos_medidos(self):  # FR-LIN-018
         # Lo medido va en la nota: el texto del caso identifica el escenario y debe ser igual entre corridas
         for resultado in _correr(1):
             self.assertNotRegex(resultado.caso, r"\d\s*(ms|µs|s)\b")
+
 
     def test_la_misma_escala_da_el_mismo_numero_de_resultados_por_escenario(self):  # FR-LIN-018
         for etiqueta, _ in ESCENARIOS:
@@ -197,27 +271,33 @@ class TestCriptaDeReferenciaComun(unittest.TestCase):
                    SimpleNamespace(id="cripta-c", salas=120)]
         self.assertEqual(cargas_bench.elegir_cripta_de_referencia(criptas).id, "cripta-b")
 
+
     def test_el_empate_de_salas_lo_decide_el_menor_id(self):  # AGENTS.md 7, P2 5.6
         criptas = [SimpleNamespace(id="cripta-z", salas=300), SimpleNamespace(id="cripta-m", salas=300),
                    SimpleNamespace(id="cripta-x", salas=10)]
         self.assertEqual(cargas_bench.elegir_cripta_de_referencia(criptas).id, "cripta-m")
+
 
     def test_el_orden_del_listado_no_cambia_la_eleccion(self):  # AGENTS.md 7
         criptas = [SimpleNamespace(id="cripta-b", salas=7), SimpleNamespace(id="cripta-a", salas=7)]
         self.assertEqual(cargas_bench.elegir_cripta_de_referencia(criptas).id,
                          cargas_bench.elegir_cripta_de_referencia(list(reversed(criptas))).id)
 
+
     def test_la_de_los_fixtures_es_la_de_mayor_numero_de_salas(self):  # AGENTS.md 7, P2 5.6
         listado = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH)).listar_criptas()
         elegida = cargas_bench.cripta_de_referencia()
         self.assertEqual(elegida.salas, max(cripta.salas for cripta in listado))
 
+
     def test_el_codigo_ya_no_fija_una_cripta_concreta(self):  # AGENTS.md 7
         self.assertFalse(hasattr(cargas_bench, "CRIPTA_REFERENCIA"))
+
 
     def test_ciclo_referencia_informa_la_cripta_elegida(self):  # P2 5.6
         resultados = cargas_bench.bench_ciclo_referencia(ESCALA_MINIMA, corridas=1)
         self.assertTrue(resultados[0].caso.startswith(f"{cargas_bench.cripta_de_referencia().id},"))
+
 
     def test_las_dos_cargas_usan_la_misma_funcion_de_eleccion(self):  # AGENTS.md 7, P2 5.6
         with mock.patch.object(cargas_bench, "elegir_cripta_de_referencia",
@@ -258,6 +338,7 @@ class TestHistorialConCazadores(unittest.TestCase):
         nombres = [nombre for nombre, _ in CARGAS]
         self.assertEqual(nombres.count(CARGA_CAZADORES), 1)
 
+
     def test_los_resultados_son_del_subsistema_y_hay_dos_casos(self):  # P2 5.6
         resultados = _correr_cazadores(1)
         for resultado in resultados:
@@ -266,8 +347,10 @@ class TestHistorialConCazadores(unittest.TestCase):
         inversas, reversion = _inversas_y_reversion(resultados)
         self.assertEqual((len(inversas), len(reversion)), (1, 1))
 
+
     def test_corre_sin_instanciar_la_vista(self):  # P2 5.6, P2 6
         _correr_cazadores(1)
+
 
     def test_informa_la_cripta_los_cazadores_activos_y_las_acciones(self):  # P2 5.6
         inversas, _ = _inversas_y_reversion(_correr_cazadores(1))
@@ -276,6 +359,7 @@ class TestHistorialConCazadores(unittest.TestCase):
         self.assertGreater(int(re.search(r"(\d+) acciones", caso).group(1)), 0)
         self.assertIn(cargas_bench.cripta_de_referencia().id, caso)
 
+
     def test_las_inversas_por_accion_traen_mediana_y_maximo(self):  # P2 5.6
         inversas, _ = _inversas_y_reversion(_correr_cazadores(1))
         encontrado = re.search(r"mediana (\d+) y máximo (\d+)", inversas[0].nota)
@@ -283,11 +367,13 @@ class TestHistorialConCazadores(unittest.TestCase):
         self.assertGreaterEqual(mediana, 1)
         self.assertGreaterEqual(maximo, mediana)
 
+
     def test_el_tiempo_de_revertir_trae_mediana_y_maximo(self):  # P2 5.6
         _, reversion = _inversas_y_reversion(_correr_cazadores(1))
         encontrado = re.search(r"mediana ([\d.]+) µs y máximo ([\d.]+) µs", reversion[0].nota)
         self.assertGreater(float(encontrado.group(1)), 0)
         self.assertGreaterEqual(float(encontrado.group(2)), float(encontrado.group(1)))
+
 
     def test_se_revierte_cada_accion_medida(self):  # P2 5.6
         inversas, reversion = _inversas_y_reversion(_correr_cazadores(1))
@@ -295,11 +381,13 @@ class TestHistorialConCazadores(unittest.TestCase):
         self.assertEqual(reversion[0].operaciones, acciones)
         self.assertGreater(reversion[0].segundos, 0)
 
+
     def test_se_compara_con_la_carga_sintetica_de_la_parte_1(self):  # P2 5.6
         _, reversion = _inversas_y_reversion(_correr_cazadores(1))
         self.assertIn("sintética", reversion[0].nota)
         self.assertIn("6 inversas", reversion[0].nota)
         self.assertRegex(reversion[0].nota, r"por inversa")
+
 
     def test_los_conteos_son_deterministas(self):  # P2 5.6
         primera, _ = _inversas_y_reversion(_correr_cazadores(1))
@@ -307,9 +395,11 @@ class TestHistorialConCazadores(unittest.TestCase):
             segunda, _ = _inversas_y_reversion(_funcion_cazadores()(ESCALA_MINIMA))
         self.assertEqual((primera[0].caso, primera[0].nota), (segunda[0].caso, segunda[0].nota))
 
+
     def test_el_caso_no_lleva_tiempos_medidos(self):  # P2 5.6
         for resultado in _correr_cazadores(1):
             self.assertNotRegex(resultado.caso, r"\d\s*(ms|µs|s)\b")
+
 
     def test_el_servicio_la_acepta_en_solo(self):  # P2 5.6
         with _sin_vista():

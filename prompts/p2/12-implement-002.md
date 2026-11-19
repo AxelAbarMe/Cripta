@@ -1,0 +1,22 @@
+# Implementación 002, paso 6: la vista toma sus datos del conocimiento (T023 y T024)
+
+Solo T023 y T024 de specs/002-niebla-ir-a/tasks.md, en ese orden. No sigas con T025.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-002, FR-NIE-003, FR-NIE-007 y FR-NIE-008), plan.md, data-model.md, research.md, quickstart.md y contracts/ antes de escribir, y lee cripta/modelo/conocimiento_jugador.py, Partida.vista() en cripta/modelo/partida.py y cripta/modelo/resultado_partida.py.
+2. Si necesitas un nombre nuevo que los documentos no definan, propón el mínimo siguiendo los patrones del código existente, en español, y anótalo en tu resumen con archivo y motivo. Solo detente y pregunta si algo cambia lo que el jugador observa o una regla de spec.md.
+3. Sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Listas indexadas por id de sala. Errores de programación heredan de IndexError o ValueError. El modelo no importa red, archivos, controlador ni vista y no devuelve texto de interfaz.
+4. No modifiques pruebas existentes. No toques cripta/controlador/, cripta/vista/, cripta/servicios/, cripta/infraestructura/ ni cripta/bench/. No crees ni cambies de rama y no hagas commit ni push. Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". Comentarios cortos: cabecera de máximo 5 líneas y 1 o 2 líneas por método.
+5. Pruebas con valor: cada caso comprueba valores concretos, incluye un control positivo cuando afirma una ausencia, no asigna atributos privados si existe una acción real, y cita en su docstring el FR-NIE y el escenario que cubre. Usa mapas sintéticos y los ayudantes existentes de tests/, por ejemplo crear_partida_sintetica de tests/modelo/test_conocimiento_jugador.py.
+6. Después de cada tarea marca su casilla [X] en tasks.md respetando sus finales de línea.
+
+Contexto de diseño:
+- Hoy Partida.vista() arma las salidas de la sala actual con el mapa real: vecinos, puerta_transitable y costo_de_conexion. T024 debe armarlas desde ConocimientoJugador: destino, costo guardado y estado recordado de la puerta. Si el conocimiento no ofrece un método de consulta para esos datos sin pasar por proyectar(), agrega el mínimo en conocimiento_jugador.py y anótalo.
+- Los enemigos de la sala actual, sus trampas y los objetos del suelo se observan por estar el jugador en la sala: no son información del mapa. Conserva su fuente y no ocultes nada. Si el texto de T023 o T024 te parece pedir otra cosa, detente y explícalo.
+- _paneles_izquierdos vive en cripta/vista/vista_consola.py y solo muestra lo que trae VistaPartida. No lo edites: la prueba de T023 verifica el panel con una VistaPartida producida por Partida. Si para que T023 o T024 se cumplan hace falta cambiarlo, detente y explícalo.
+- Una salida de la sala actual sin observación (si puede darse) o cualquier ambigüedad sobre qué muestra la vista, detente y pregunta en vez de decidir.
+
+Puntos de control:
+- T023: agrega a tests/vista/test_vista_consola.py (ya existe, es Modificado) pruebas que comprueban los cuatro cambios previstos por 001 (SalidaVista con costo, EnemigoVista con es_cazador, Partida.vista() y el texto de _paneles_izquierdos) con una Partida sintética con costos distintos de 100, y que con niebla esos datos vienen del conocimiento. Para distinguir la fuente, cambia el estado real de una puerta de la sala actual directamente en el mapa sin pasar por el evento de cierre, de modo que el conocimiento conserva lo recordado, y exige que la vista muestre lo recordado, con su control positivo. Comprueba además que ni VistaPartida ni el texto del panel contienen el nombre de una sala avistada o desconocida. Deben fallar por lo que aún no está hecho en Partida.vista(), no por errores de sintaxis ni nombres mal escritos. Muestra las razones.
+- T024: en cripta/modelo/partida.py y cripta/modelo/resultado_partida.py haz que Partida.vista() tome las salidas del conocimiento. Deben pasar las pruebas de T023 y no cambiar el resultado de ninguna prueba existente. Corre py -m unittest tests.vista.test_vista_consola y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, reporta cuántas pruebas pasan, qué hiciste por tarea, los nombres nuevos y confirma que no cambió ningún archivo fuera de cripta/modelo/, tests/vista/ y tasks.md.

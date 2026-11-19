@@ -8,7 +8,6 @@ cripta real: todo son datos generados aquí (o en tests/cripta_artificial.py) co
 """
 import copy
 import gc
-import json
 import os
 import platform
 import random

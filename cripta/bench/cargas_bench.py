@@ -12,6 +12,7 @@ import random
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, fields, is_dataclass, replace
 from pathlib import Path
 
@@ -930,12 +931,13 @@ def bench_ciclo_referencia(escala: float = 1.0, corridas: int = 3):
 SEMILLA_LINEA_TIEMPO = 20261117
 ACCIONES_LINEA_COMPLETA = 5000        # a escala 1 (FR-LIN-018)
 ACCIONES_LINEA_MINIMAS = 250          # con escalas pequeñas, para que la prueba de humo sea rápida
-CONSULTAS_LINEA_COMPLETA = 16         # consultas por escenario a escala 1, la mitad por acción y la mitad por instante
+CONSULTAS_LINEA_COMPLETA = 16         # consultas aleatorias a escala 1, más las de frontera
 CONSULTAS_LINEA_MINIMAS = 4
 VIDA_MAXIMA_LINEA = 10 ** 9           # se fija en los datos generales ANTES de iniciar: la reconstrucción parte del estado inicial
 LIMITE_CONSULTA_MS = 50.0             # P2 §6.1
-K_BASE_LINEA = 100                    # la partida se juega con este K: los de 500 y 1000 usan un subconjunto de sus checkpoints
-ESCENARIOS_K_LINEA = (("K=100", 100), ("K=500", 500), ("K=1000", 1000), ("sin checkpoints", None))
+K_COMPARACION_LINEA = 100
+ESCENARIOS_K_LINEA = (("K=50", 50), ("K=100", 100), ("K=500", 500), ("K=1000", 1000),
+                     ("sin puntos periódicos", None))
 ESTIMACION_MEMORIA = ("estimación de memoria: suma de sys.getsizeof de cada objeto que se alcanza desde la línea, "
                       "sin descontar lo que comparten (cota superior)")
 
@@ -971,7 +973,6 @@ class _CorridaLinea:
         self.registro = 0.0            # segundos en anotar acciones y checkpoints en la línea
         self.registros_inversion = []  # por acción, los valores anteriores de lo que cambió
         self.segundos_inversion = 0.0  # lo que cuesta calcular esos registros
-        self.foto_inicial = None
         self.foto_final = None
         self.salas = 0
         self.salidas = 0
@@ -1036,86 +1037,97 @@ def _consultas_de_la_carga(escala: float) -> int:
     return max(CONSULTAS_LINEA_MINIMAS, int(CONSULTAS_LINEA_COMPLETA * escala))
 
 
-def _jugar_linea(acciones: int) -> _CorridaLinea:
-    """Juega `acciones` acciones aleatorias sobre la cripta de referencia, con K=100 y la vida alta desde el inicio."""
+@contextmanager
+def _jugar_linea(acciones: int, k: int | None, id_cripta: str, medir_inversion: bool = False):
+    """Juega una partida con puntos de control creados durante las acciones medidas."""
     corrida = _CorridaLinea()
     corrida.cliente = _ClienteMedido(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH)), VIDA_MAXIMA_LINEA)
-    corrida.servicio = ServicioPartida(ClienteGeneral(corrida.cliente), ContadorSolicitudes(), asincrono=False,
-                                       checkpoint_cada=K_BASE_LINEA)
-    corrida.servicio.iniciar_nueva(CRIPTA_REFERENCIA, semilla=SEMILLA_LINEA_TIEMPO)
-    partida = corrida.partida = corrida.servicio.partida
-    mapa = partida._mapa
-    corrida.salas = len(mapa)
-    for sala in mapa.todas_las_salas():
-        corrida.salidas += len(mapa.vecinos(sala.id))
-    original = partida._registrar_en_linea
+    frecuencia = acciones + 1 if k is None else k
+    corrida.servicio = ServicioPartida(ClienteGeneral(corrida.cliente), ContadorSolicitudes(),
+                                       asincrono=False, checkpoint_cada=frecuencia)
+    try:
+        corrida.servicio.iniciar_nueva(id_cripta, semilla=SEMILLA_LINEA_TIEMPO)
+        partida = corrida.partida = corrida.servicio.partida
+        mapa = partida._mapa
+        corrida.salas = len(mapa)
+        corrida.salidas = sum(len(mapa.vecinos(sala.id)) for sala in mapa.todas_las_salas())
+        registrar = partida._registrar_en_linea
+        ejecutar = partida.ejecutar_accion
 
-    def registrar_midiendo(*argumentos):
-        inicio = time.perf_counter()
-        original(*argumentos)
-        corrida.registro += time.perf_counter() - inicio
-    partida._registrar_en_linea = registrar_midiendo
+        def registrar_midiendo(*argumentos):
+            inicio = time.perf_counter()
+            registrar(*argumentos)
+            corrida.registro += time.perf_counter() - inicio
 
-    prohibido = corrida.servicio.datos_generales.sala_salida
-    azar = random.Random(SEMILLA_LINEA_TIEMPO)
-    linea = partida.linea_tiempo()
-    antes = _foto_basica(partida)
-    corrida.foto_inicial = list(antes)
-    gc.collect()   # cada corrida medida no paga la basura acumulada por las anteriores
-    for _ in range(acciones):
-        inicio = time.perf_counter()
-        _dar_paso_aleatorio(partida, mapa, azar, prohibido)
-        corrida.tiempos.append(time.perf_counter() - inicio)
-        inicio = time.perf_counter()
-        despues = _foto_basica(partida)
-        corrida.registros_inversion.append(_cambios_entre(antes, despues))
-        corrida.segundos_inversion += time.perf_counter() - inicio
-        antes = despues
-    corrida.foto_final = antes
-    partida._registrar_en_linea = original
-    if len(linea) != acciones:
-        raise RuntimeError(f"La partida de medición terminó tras {len(linea)} de {acciones} acciones")
-    return corrida
+        def ejecutar_midiendo(accion):
+            inicio = time.perf_counter()
+            resultado = ejecutar(accion)
+            duracion = time.perf_counter() - inicio
+            if resultado.aceptada:
+                corrida.tiempos.append(duracion)
+            return resultado
+
+        partida._registrar_en_linea = registrar_midiendo
+        partida.ejecutar_accion = ejecutar_midiendo
+        prohibido = corrida.servicio.datos_generales.sala_salida
+        azar = random.Random(SEMILLA_LINEA_TIEMPO)
+        antes = _foto_basica(partida) if medir_inversion else None
+        try:
+            gc.collect()
+            for _ in range(acciones):
+                _dar_paso_aleatorio(partida, mapa, azar, prohibido)
+                if medir_inversion:
+                    inicio = time.perf_counter()
+                    despues = _foto_basica(partida)
+                    corrida.registros_inversion.append(_cambios_entre(antes, despues))
+                    corrida.segundos_inversion += time.perf_counter() - inicio
+                    antes = despues
+        finally:
+            del partida._registrar_en_linea
+            del partida.ejecutar_accion
+        corrida.foto_final = antes
+        linea = partida.linea_tiempo()
+        if len(linea) != acciones or len(corrida.tiempos) != acciones:
+            raise ValueError(f"La partida de medición registró {len(linea)} acciones y "
+                             f"{len(corrida.tiempos)} ciclos de los {acciones} esperados")
+        _verificar_cadencia(linea, k)
+        yield corrida
+    finally:
+        corrida.servicio.cerrar()
 
 
-def _linea_derivada(base: LineaTiempo, k: int | None) -> LineaTiempo:
-    """La misma línea con otro K: reutiliza los checkpoints de la base que caen en múltiplos de K.
-    Con k=None no deja ninguno. K debe ser múltiplo del K de la base."""
-    derivada = LineaTiempo(len(base) + 1 if k is None else k)
-    for numero in range(1, len(base) + 1):
-        derivada.registrar_accion(base.accion(numero), base.tiempo_de(numero))
-        if k is not None and numero % k == 0:
-            punto = base.buscar_checkpoint(numero)
-            if punto is not None and punto.numero_acciones == numero:
-                derivada.registrar_checkpoint(punto.estado)
-    return derivada
+def _verificar_cadencia(linea: LineaTiempo, k: int | None) -> None:
+    posiciones = [punto.numero_acciones for punto in linea._puntos]
+    esperadas = [] if k is None else list(range(k, len(linea) + 1, k))
+    if posiciones != esperadas:
+        raise ValueError(f"Cadencia de puntos incorrecta para K={k}: {posiciones}, se esperaba {esperadas}")
 
 
 def _posiciones_de_consulta(acciones: int, reloj: int, cantidad: int):
-    """Posiciones elegidas con la semilla: alternan consulta por acción (k) y por instante (t)."""
+    """Muestra pseudoaleatoria y estados inmediatamente anteriores a puntos de control."""
     azar = random.Random(SEMILLA_LINEA_TIEMPO + 1)
     posiciones = []
     for i in range(cantidad):
         posiciones.append(("accion", azar.randint(1, acciones)) if i % 2 == 0 else ("instante", azar.randint(0, reloj)))
+    for _, k in ESCENARIOS_K_LINEA:
+        if k is not None and k <= acciones:
+            for numero in (k, acciones // k * k):
+                posicion = ("accion", numero)
+                if posicion not in posiciones:
+                    posiciones.append(posicion)
     return posiciones
 
 
-def _tiempos_de_consulta(partida, linea, posiciones):
-    # Mide cada consulta con la línea indicada puesta en la partida y la devuelve a su sitio al terminar
-    original = partida._linea
-    partida._linea = linea
+def _tiempos_de_consulta(partida, posiciones):
     tiempos = []
-    try:
-        gc.collect()
-        for tipo, valor in posiciones:
-            inicio = time.perf_counter()
-            if tipo == "accion":
-                partida.consultar_accion(valor)
-            else:
-                partida.consultar_instante(valor)
-            tiempos.append(time.perf_counter() - inicio)
-    finally:
-        partida._linea = original
+    gc.collect()
+    for tipo, valor in posiciones:
+        inicio = time.perf_counter()
+        if tipo == "accion":
+            partida.consultar_accion(valor)
+        else:
+            partida.consultar_instante(valor)
+        tiempos.append(time.perf_counter() - inicio)
     return tiempos
 
 
@@ -1126,33 +1138,34 @@ def _memoria_de_la_linea(linea: LineaTiempo):
     return acciones, ajustes, _tamano_profundo(linea._puntos)
 
 
-def _resultado_de_escenario(etiqueta, k, corrida, linea, posiciones):
-    partida, n = corrida.partida, len(linea)
-    tiempos = _tiempos_de_consulta(partida, linea, posiciones)
-    mediana, peor = _mediana(tiempos), max(tiempos)
+def _resultado_de_escenario(etiqueta, corrida, posiciones):
+    partida = corrida.partida
+    linea = partida.linea_tiempo()
+    tiempos = _tiempos_de_consulta(partida, posiciones)
+    ordenar_auto(tiempos)
+    cantidad = len(tiempos)
+    mediana = (tiempos[(cantidad - 1) // 2] + tiempos[cantidad // 2]) / 2
+    peor_consulta = tiempos[-1]
+    peor_ciclo = max(corrida.tiempos)
     acciones, ajustes, puntos = _memoria_de_la_linea(linea)
-    cumple = "CUMPLE" if peor * 1000 < LIMITE_CONSULTA_MS else "NO CUMPLE"
-    creadoras = [] if k is None else [corrida.tiempos[i - 1] for i in range(k, n + 1, k)]
-    if creadoras:
-        peor_accion = max(creadoras)
-        cumple_ciclo = "CUMPLE" if peor_accion * 1000 < LIMITE_CICLO_MS else "NO CUMPLE"
-        accion = (f"peor acción que crea un checkpoint: {_ms(peor_accion)} ms de {len(creadoras)} -> "
-                  f"{cumple_ciclo} el límite de {LIMITE_CICLO_MS:.0f} ms por ciclo (§5.2)")
-    else:
-        accion = f"no crea checkpoints: la acción más lenta tarda {_ms(max(corrida.tiempos))} ms"
+    cumple_consulta = "CUMPLE" if peor_consulta * 1000 < LIMITE_CONSULTA_MS else "NO CUMPLE"
+    cumple_ciclo = "CUMPLE" if peor_ciclo * 1000 < LIMITE_CICLO_MS else "NO CUMPLE"
     nota = (f"memoria de la línea {_kib(acciones + ajustes + puntos)} KiB (acciones {_kib(acciones)}, "
-            f"ajustes {_kib(ajustes)}, checkpoints {_kib(puntos)}); consulta: mediana {_ms(mediana)} ms, "
-            f"máximo {_ms(peor)} ms de {len(tiempos)} -> {cumple} el límite de {LIMITE_CONSULTA_MS:.0f} ms "
-            f"(P2 §6.1, decide el máximo); {accion}. {ESTIMACION_MEMORIA}")
-    return Resultado("linea_tiempo", f"{etiqueta}: {n} acciones, {linea.cantidad_checkpoints()} checkpoints, "
-                                     f"{len(tiempos)} consultas", peor, len(tiempos), nota)
+            f"ajustes {_kib(ajustes)}, puntos {_kib(puntos)}). "
+            f"registro medio {corrida.registro / len(linea) * 1e6:.1f} µs/acción, incluida la captura cuando toca. "
+            f"Consulta: mediana {_ms(mediana)} ms, máximo observado {_ms(peor_consulta)} ms -> "
+            f"{cumple_consulta} el límite de {LIMITE_CONSULTA_MS:.0f} ms (P2 §6.1). "
+            f"peor ciclo {_ms(peor_ciclo)} ms -> {cumple_ciclo} el límite de {LIMITE_CICLO_MS:.0f} ms. "
+            f"{ESTIMACION_MEMORIA}")
+    return Resultado("linea_tiempo", f"{etiqueta}: {len(linea)} acciones, {linea.cantidad_checkpoints()} puntos periódicos, "
+                                     f"{cantidad} consultas", sum(tiempos), cantidad, nota)
 
 
 def _comparar_inversion(corrida, linea, posiciones):
     """T030: re-simular desde un checkpoint (elegida) frente a deshacer cambios serializables desde el final (descartada)."""
     partida, n = corrida.partida, len(linea)
     por_accion = [valor for tipo, valor in posiciones if tipo == "accion"]
-    tiempos_resimular = _tiempos_de_consulta(partida, linea, [("accion", k) for k in por_accion])
+    tiempos_resimular = _tiempos_de_consulta(partida, [("accion", k) for k in por_accion])
     tiempos_inversion, coinciden = [], 0
     gc.collect()
     for k in por_accion:
@@ -1252,7 +1265,13 @@ def _comparar_busquedas(corrida, linea):
 
 
 def _clonar_linea(base: LineaTiempo) -> LineaTiempo:
-    return _linea_derivada(base, base.frecuencia)
+    clon = LineaTiempo(base.frecuencia)
+    clon._acciones = base._acciones.copy()
+    clon._tiempos = base._tiempos.copy()
+    clon._puntos = base._puntos.copy()
+    clon._ajustes_posicion = base._ajustes_posicion.copy()
+    clon._ajustes_instancias = base._ajustes_instancias.copy()
+    return clon
 
 
 def _truncar_filtrando(linea: LineaTiempo, limite: int) -> int:
@@ -1346,32 +1365,39 @@ def _comparar_restauracion(corrida, linea):
 
 
 def bench_linea_tiempo(escala: float = 1.0):
-    """Línea de tiempo (capacidad 004) sobre la cripta de referencia, con semilla fija y vida alta desde el inicio.
-    Mide memoria y consulta para K=100, 500, 1000 y sin checkpoints, y las alternativas descartadas de las tareas.
-    No elige el K por defecto: solo reporta lo observado (T033 decide)."""
+    """Mide la línea de tiempo con cinco corridas comparables y conserva las alternativas de la fase E."""
     acciones = _acciones_de_la_carga(escala)
-    corrida = _jugar_linea(acciones)
-    try:
-        partida = corrida.partida
-        base = partida.linea_tiempo()
-        posiciones = _posiciones_de_consulta(acciones, partida.vista().tiempo, _consultas_de_la_carga(escala))
-        resultados = [Resultado(
-            "linea_tiempo", f"{CRIPTA_REFERENCIA}, semilla {SEMILLA_LINEA_TIEMPO}, {acciones} acciones, "
-                            f"{corrida.salas} salas, {corrida.salidas} salidas",
-            sum(corrida.tiempos), acciones,
-            f"recorrido de random.Random({SEMILLA_LINEA_TIEMPO}) con vida máxima {VIDA_MAXIMA_LINEA} fijada en los datos generales "
-            f"antes de iniciar; acción típica {_ms(_mediana(corrida.tiempos))} ms, la más lenta {_ms(max(corrida.tiempos))} ms; "
-            f"se juega con K={K_BASE_LINEA} y los otros K reutilizan sus checkpoints (misma partida, mismos datos)")]
-        for etiqueta, k in ESCENARIOS_K_LINEA:
-            linea = base if k == K_BASE_LINEA else _linea_derivada(base, k)
-            resultados.append(_resultado_de_escenario(etiqueta, k, corrida, linea, posiciones))
-        resultados += _comparar_inversion(corrida, base, posiciones)
-        resultados += _comparar_busquedas(corrida, base)
-        resultados.append(_comparar_recorte(base))
-        resultados.append(_comparar_restauracion(corrida, base))
-        return resultados
-    finally:
-        corrida.servicio.cerrar()
+    cliente = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))
+    referencia = min(cliente.listar_criptas(), key=lambda cripta: (-cripta.salas, cripta.id))
+    base = None
+    resultados = []
+    for etiqueta, k in ESCENARIOS_K_LINEA:
+        with _jugar_linea(acciones, k, referencia.id) as corrida:
+            linea = corrida.partida.linea_tiempo()
+            reloj = corrida.partida._reloj.tiempo_actual
+            carga = (linea._acciones, linea._tiempos, reloj)
+            if base is None:
+                base = carga
+                posiciones = _posiciones_de_consulta(acciones, reloj, _consultas_de_la_carga(escala))
+                resultados.append(Resultado(
+                    "linea_tiempo", f"{referencia.id}, semilla {SEMILLA_LINEA_TIEMPO}, {acciones} acciones, "
+                                    f"{corrida.salas} salas, {corrida.salidas} salidas",
+                    sum(corrida.tiempos), acciones,
+                    f"tiempo acumulado de ciclos de {etiqueta}. Cinco partidas independientes con la misma semilla "
+                    f"y carga. Vida máxima {VIDA_MAXIMA_LINEA} "
+                    f"fijada antes de iniciar. {len(posiciones)} consultas comunes por acción e instante, "
+                    "incluidos estados inmediatamente anteriores a puntos de control"))
+            elif carga != base:
+                raise ValueError(f"La corrida {etiqueta} generó acciones o instantes distintos a la primera")
+            resultados.append(_resultado_de_escenario(etiqueta, corrida, posiciones))
+
+    with _jugar_linea(acciones, K_COMPARACION_LINEA, referencia.id, medir_inversion=True) as corrida:
+        linea = corrida.partida.linea_tiempo()
+        resultados += _comparar_inversion(corrida, linea, posiciones)
+        resultados += _comparar_busquedas(corrida, linea)
+        resultados.append(_comparar_recorte(linea))
+        resultados.append(_comparar_restauracion(corrida, linea))
+    return resultados
 
 
 CARGAS = (

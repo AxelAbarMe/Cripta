@@ -1,0 +1,14 @@
+# Implementación 002, paso 18: T040 (guardado binario del conocimiento)
+
+Solo T040 de specs/002-niebla-ir-a/tasks.md. Estoy en la rama 002-niebla-ir-a-fases-c-d con el merge de main ya resuelto y commiteado. No crees ni cambies de rama y no hagas commit ni push. Lee solo los archivos que se nombran aquí y no corras scripts de verificación amplios.
+
+1. Lee la tarea T040, FR-NIE-006 y SC-NIE-005 de specs/002-niebla-ir-a/spec.md, cripta/infraestructura/guardado_binario.py, cripta/infraestructura/estado_guardado.py, cripta/modelo/persistencia_modelo.py, tests/servicios/test_servicio_partida_guardado.py y tests/infraestructura/test_guardado_binario.py. La 004 ya subió el formato binario a la versión 2 y guarda el conocimiento del jugador y la línea de tiempo. No cambies el formato ni la versión y no definas bytes.
+2. Primero la prueba. En tests/servicios/test_servicio_partida_guardado.py (Modificado) agrega, solo si no existe ya una equivalente, una prueba que juegue una partida con niebla (salas exploradas y avistadas, una puerta observada y recordada, la antorcha encendida en algún momento), la guarde con ServicioPartida en el archivo binario, la cargue en un servicio nuevo y compruebe que el conocimiento (estado de cada sala, observaciones de puertas y costos de salida) coincide con el de la partida original, que ir a calcula la misma ruta y que historia de un instante anterior muestra el mismo mapa conocido que antes de guardar. Cita FR-NIE-006 y SC-NIE-005 en el comentario de la prueba.
+3. Si ya existen pruebas que cubren parte de eso (revisa test_proyecta_y_restaura_conocimiento_y_permite_retroceso_nuevo, test_conocimiento_completo_de_puertas_se_conserva_al_restaurar y las de la 004), no las dupliques: dime cuáles cubren qué y agrega solo lo que falte.
+4. Si la prueba nueva falla porque el código no restaura algo, detente y dime qué falta, sin corregir código fuera de lo pedido.
+5. Corre py -m unittest tests.servicios.test_servicio_partida_guardado y después py -m unittest discover -s tests -t . completo, y dime los resultados.
+6. Marca T040 en tasks.md y cambia «Depende de 004» por un texto que diga que la 004 ya está fusionada, sin tocar otras tareas. Revisa si DECISIONES.md 5.3 o plan.md dicen que el guardado binario del conocimiento está pendiente de la 004 y, si lo dicen, corrígelo con una frase.
+7. Sin heapq, bisect, collections, networkx, set ni dict como índice, y sin sorted ni list.sort(). En comentarios y textos nuevos no uses ";". Conserva CRLF. No uses sed -i.
+8. No agregues reglas del juego. Si falta algo o cambia el resultado observable, detente y pregunta.
+
+Al terminar dime qué cambiaste por punto y verifica con git diff que solo cambiaron tests/servicios/test_servicio_partida_guardado.py, specs/002-niebla-ir-a/tasks.md y, si hizo falta, DECISIONES.md o specs/002-niebla-ir-a/plan.md.

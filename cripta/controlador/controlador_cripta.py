@@ -5,9 +5,11 @@ Captura CriptaError, FileNotFoundError, RuntimeError y ValueError y los muestra 
 '''
 from dataclasses import dataclass
 
+
 from cripta.excepciones import CriptaError
 from cripta.modelo.accion import Accion
 from cripta.modelo.resultado_partida import ResumenPuntaje, VistaPartida
+
 
 CRITERIOS_ORDEN = ("peso", "valor", "nombre")
 _ERRORES = (CriptaError, FileNotFoundError, RuntimeError, ValueError)
@@ -17,10 +19,10 @@ _ERRORES = (CriptaError, FileNotFoundError, RuntimeError, ValueError)
 class Orden:
     '''Intención del usuario, igual para consola y gráfica. `argumento` según el tipo:
     mover/abrir: "N","S","E","O"; atacar/recoger: posición en vista.enemigos / vista.objetos_suelo;
-    ordenar: "peso","valor" o "nombre"; el resto no lleva.
-    Tipos: mover, abrir, atacar, esperar, recoger, usar, equipar, soltar, pergamino,
+    ordenar: "peso","valor" o "nombre". ir_a: identificador entero de sala. historia: texto escrito tras
+    la palabra ("150", "#3", o None), que el controlador interpreta y valida. El resto no lleva.
+    Tipos: mover, ir_a, mapa, abrir, atacar, esperar, recoger, usar, equipar, soltar, pergamino,
     siguiente, anterior, ordenar, guardar, cargar, historia, salir.
-    historia lleva el texto escrito tras la palabra ("150", "#3", o None): el controlador lo interpreta y rechaza.
     '''
     tipo: str
     argumento: str | int | None = None
@@ -55,6 +57,7 @@ class ControladorCripta:
         self._leer_puntajes = leer_puntajes
         self._criptas = ()
 
+
     def ejecutar(self) -> None:
         '''Menú principal en bucle hasta elegir salir; siempre cierra el servicio al terminar.'''
         try:
@@ -71,6 +74,7 @@ class ControladorCripta:
         finally:
             self._servicio.cerrar()
 
+
     # ------------------------------------------------------------ flujo
     def _jugar(self) -> None:
         # Una partida: elegir cripta y jugar; al terminar se muestran puntajes y final. Siempre libera la precarga.
@@ -80,6 +84,7 @@ class ControladorCripta:
         finally:
             self._servicio.cerrar()
 
+
     def _ver_puntajes(self) -> None:
         # Opción "ver puntajes" del menú.
         if self._leer_puntajes is None:
@@ -88,6 +93,7 @@ class ControladorCripta:
         ok, puntajes = self._intentar(self._leer_puntajes)
         if ok:
             self._vista.mostrar_puntajes_globales(puntajes)
+
 
     def _iniciar_partida(self) -> bool:
         # Lista las criptas, deja elegir una (None = volver al menú) y arranca la partida.
@@ -100,6 +106,7 @@ class ControladorCripta:
             return False
         ok, _ = self._intentar(self._servicio.iniciar_nueva, cripta_id, self._semilla, self._ruta_bitacora)
         return ok
+
 
     def _bucle_principal(self) -> None:
         # Muestra el estado, pide una orden y la procesa hasta volver al menú o terminar la partida.
@@ -117,6 +124,7 @@ class ControladorCripta:
             if self._procesar(orden, vista):
                 return
 
+
     def _mostrar_estado(self):
         # Devuelve la VistaPartida mostrada, o None si la infraestructura falló al consultarla.
         ok, datos = self._intentar(lambda: (self._servicio.partida.vista(), self._servicio.partida.mensajes()))
@@ -124,6 +132,7 @@ class ControladorCripta:
             return None
         self._vista.mostrar_estado(datos[0], datos[1])
         return datos[0]
+
 
     def _procesar(self, orden: Orden, vista) -> bool:
         # Devuelve True cuando la partida terminó (victoria o derrota).
@@ -139,10 +148,91 @@ class ControladorCripta:
             self._consultar_historia(orden.argumento)
         elif orden.tipo == "pergamino":
             return self._retroceder(orden.argumento or 1, vista)
+        elif orden.tipo == "mapa":
+            self._mostrar_mapa_conocido()
+        elif orden.tipo == "ir_a":
+            return self._viajar(orden.argumento)
         else:
             accion = self._traducir(orden, vista)
             return accion is not None and self._ejecutar_accion(accion)
         return False
+
+
+    def _mostrar_mapa_conocido(self) -> None:
+        """Entrega a la vista solo la proyección conocida por el jugador."""
+        ok, mapa = self._intentar(self._servicio.partida.mapa_conocido)
+        if ok:
+            self._vista.mostrar_mapa_conocido(mapa)
+
+
+    def _viajar(self, destino: int) -> bool:
+        """Ejecuta pasos ordinarios, recalculando la ruta tras cada paso."""
+        partida = self._servicio.partida
+        ok, paso = self._intentar(partida.siguiente_paso, destino)
+        if not ok:
+            return False
+        if paso.direccion is None:
+            self._avisar_motivo_viaje(paso.motivo)
+            return False
+        registrar_comentario = getattr(self._servicio, "registrar_comentario_viaje", None)
+        if registrar_comentario is not None:
+            ok, _ = self._intentar(registrar_comentario, destino)
+            if not ok:
+                return False
+        while True:
+            estado_paso = self._ejecutar_paso_viaje(destino, paso.direccion)
+            if estado_paso is not None:
+                return estado_paso
+            ok, paso = self._intentar(partida.siguiente_paso, destino)
+            if not ok:
+                return False
+            if paso.direccion is None:
+                self._vista.mostrar_motivos_viaje((paso.motivo,))
+                return False
+
+
+    def _ejecutar_paso_viaje(self, destino: int, direccion: str) -> bool | None:
+        """Ejecuta un paso aislado. True termina la partida, False detiene el viaje y None permite seguir."""
+        partida = self._servicio.partida
+        vida_anterior = partida.vista().vida
+        resultado_paso = self._ejecutar_accion_viaje(Accion("mover", direccion))
+        if resultado_paso is not None:
+            return resultado_paso
+        motivos = partida.motivos_despues_de_paso(destino, vida_anterior)
+        if motivos:
+            self._vista.mostrar_motivos_viaje(motivos)
+            return False
+        return None
+
+
+    def _ejecutar_accion_viaje(self, accion: Accion) -> bool | None:
+        """Ejecuta la acción de un viaje y distingue rechazo, fin de partida y continuación."""
+        ok, resultado = self._intentar(self._servicio.ejecutar, accion)
+        if not ok:
+            return False
+        if not resultado.aceptada:
+            self._vista.mostrar_aviso(resultado.motivo_rechazo)
+            return False
+        if resultado.desenlace != "en_curso":
+            self._finalizar(resultado.desenlace)
+            return True
+        return None
+
+
+    def _avisar_motivo_viaje(self, motivo: str | None) -> None:
+        """Traduce las validaciones sin ejecutar pasos ni registrar la orden."""
+        if motivo == "destino_inexistente":
+            mensaje = "La sala de destino no existe."
+        elif motivo == "destino_no_explorado":
+            mensaje = "La sala de destino no está explorada."
+        elif motivo == "sala_actual":
+            mensaje = "Ya estás en esa sala."
+        elif motivo == "sin_ruta":
+            mensaje = "No hay una ruta conocida hasta esa sala."
+        else:
+            mensaje = "No se puede iniciar el viaje."
+        self._vista.mostrar_aviso(mensaje)
+
 
     def _retroceder(self, cantidad: int, vista) -> bool:
         # Cada pergamino deshace una acción; se limita a lo que la vista dice que es posible.
@@ -153,6 +243,7 @@ class ControladorCripta:
         for _ in range(cantidad):
             self._ejecutar_accion(Accion("pergamino"))
         return False
+
 
     # ------------------------------------------------- orden -> acción
     def _traducir(self, orden: Orden, vista) -> Accion | None:
@@ -183,16 +274,19 @@ class ControladorCripta:
         self._vista.mostrar_aviso(f"Orden desconocida: {tipo!r}.")
         return None
 
+
     def _crear_accion(self, tipo: str, argumento) -> Accion | None:
         # Accion valida la dirección y lanza ValueError si la vista envía una inválida.
         ok, accion = self._intentar(Accion, tipo, argumento)
         return accion if ok else None
+
 
     def _posicion_valida(self, posicion, elementos, mensaje: str) -> bool:
         valida = isinstance(posicion, int) and not isinstance(posicion, bool) and 0 <= posicion < len(elementos)
         if not valida:
             self._vista.mostrar_aviso(mensaje)
         return valida
+
 
     # ---------------------------------------------------------- acciones
     def _ejecutar_accion(self, accion: Accion) -> bool:
@@ -207,6 +301,7 @@ class ControladorCripta:
             self._finalizar(resultado.desenlace)
             return True
         return False
+
 
     def _finalizar(self, desenlace: str) -> None:
         # Pide el nombre, registra el puntaje y muestra las pantallas de resultado y final.
@@ -224,9 +319,11 @@ class ControladorCripta:
             nombre, desenlace, general.id, self._nombre_cripta(general.id), general.version,
             self._servicio.semilla, vista, resumen, self._servicio.reporte_final()))
 
+
     def _pedir_nombre(self) -> str | None:
         texto = self._vista.pedir_texto("Escribe tu nombre para la tabla de puntajes (Enter para omitir)")
         return texto.strip() if texto and texto.strip() else None
+
 
     def _puntajes_globales(self) -> tuple:
         # Todos los puntajes guardados; vacío si no hay tabla o falló la lectura.
@@ -235,11 +332,13 @@ class ControladorCripta:
         ok, puntajes = self._intentar(self._leer_puntajes)
         return puntajes if ok else ()
 
+
     def _nombre_cripta(self, cripta_id: str) -> str:
         for cripta in self._criptas:
             if cripta.id == cripta_id:
                 return cripta.nombre
         return cripta_id
+
 
     # -------------------------------------------------------- inventario
     def _mover_cursor(self, sentido: str) -> None:
@@ -249,6 +348,7 @@ class ControladorCripta:
         else:
             self._intentar(lambda: self._servicio.partida.inventario_anterior())
 
+
     def _mostrar_ordenado(self, criterio) -> None:
         # Vista ordenada por peso, valor o nombre; no altera el orden real del inventario.
         if criterio not in CRITERIOS_ORDEN:
@@ -257,6 +357,7 @@ class ControladorCripta:
         ok, objetos = self._intentar(lambda: self._servicio.partida.inventario_ordenado(criterio))
         if ok:
             self._vista.mostrar_inventario_ordenado(criterio, objetos)
+
 
     # ---------------------------------------------------------- historia
     def _consultar_historia(self, texto) -> None:
@@ -281,11 +382,13 @@ class ControladorCripta:
             return
         self._vista.mostrar_historia(resumen, referencia)
 
+
     # ---------------------------------------------------- guardar y cargar
     def _guardar(self) -> None:
         ok, _ = self._intentar(self._servicio.guardar, self._ruta_guardado)
         if ok:
             self._vista.mostrar_aviso(f"Partida guardada en {self._ruta_guardado}.")
+
 
     def _cargar(self) -> None:
         # Cargar reemplaza la partida actual, por eso se confirma antes.
@@ -297,6 +400,7 @@ class ControladorCripta:
         self._vista.mostrar_aviso(f"Partida cargada desde {self._ruta_guardado}.")
         if not self._servicio.bitacora_completa:
             self._vista.mostrar_aviso("La bitácora de esta partida está incompleta: no se podrá reproducir fielmente.")
+
 
     # ------------------------------------------------------------ errores
     def _intentar(self, operacion, *argumentos):

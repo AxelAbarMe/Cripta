@@ -156,6 +156,7 @@ def restaurar_jugador(jugador, guardado, catalogo) -> None:
 def restaurar_conocimiento(mapa, sala_actual: int, proyeccion):
     conocimiento = ConocimientoJugador(mapa, sala_actual)
     if proyeccion is None:
+        conocimiento.al_entrar(sala_actual, False)
         return conocimiento
     conocimiento.importar_celdas((proyeccion.estados, proyeccion.puertas, proyeccion.costos))
     return conocimiento

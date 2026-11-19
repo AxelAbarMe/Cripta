@@ -225,7 +225,7 @@ Depende de Fases A–D completas.
     ```
   - Hecho: no aparece ninguna importación prohibida; cada `sorted(` o `.sort(` que aparezca se revisa a mano y solo se permite fuera de los ordenamientos evaluados; el uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request.
 
-- [ ] T024 Redactar la sección `5.4 Resolubilidad` en `DECISIONES.md` (en la raíz del repositorio): documentar alternativas consideradas, complejidad, evidencia medida en T021 y límites conocidos según plan §6 — **Modificado**: `DECISIONES.md`
+- [X] T024 Redactar la sección `5.4 Resolubilidad` en `DECISIONES.md` (en la raíz del repositorio): documentar alternativas consideradas, complejidad, evidencia medida en T021 y límites conocidos según plan §6 — **Modificado**: `DECISIONES.md`
   - Depende de: T021
   - Requisitos: Principio VII de la Constitución; plan §6; evidencia de T021
   - Comando: (ninguno automatizable; revisión manual)

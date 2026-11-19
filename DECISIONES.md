@@ -16,7 +16,7 @@
 | Equipo | Hardware y sistema | Python | Se usó en |
 |---|---|---|---|
 | A | Ryzen 5 5600GT, 32 GB, Windows | 3.12.10 | 4.1, 5.3 |
-| B | Intel Core Ultra 7, 16 GB, Windows | 3.14.6 | 4.1, 4.2, 4.4, 4.9, 4.10, 5.1, 5.2, 5.5, 5.6 |
+| B | Intel Core Ultra 7, 16 GB, Windows | 3.14.6 | 4.1, 4.2, 4.4, 4.9, 4.10, 5.1, 5.2, 5.4, 5.5, 5.6 |
 | C | Linux | 3.12 | 4.5, 4.6, 4.7, 4.8 |
 
 
@@ -1029,6 +1029,104 @@ Las equivalencias de las alternativas fueron verdaderas en las tres corridas. Lo
 - Al entrar a una sala se observan todas sus puertas. Por eso, en la sala actual no hay puertas sin observar y `Partida.vista()` presenta cada una según su estado observado, abierta o cerrada.
 - El grupo decidió considerar abierta al explorar su sala una salida que no tenga puerta cerrable. Esta decisión está pendiente de confirmación con el profesor.
 - Los costos de las salidas conocidas ocupan memoria proporcional a las salidas representadas.
+
+
+## 5.4 Resolubilidad
+
+
+Especificación: [spec.md](specs/003-resolubilidad/spec.md). Plan: [plan.md](specs/003-resolubilidad/plan.md). Investigación: [research.md](specs/003-resolubilidad/research.md). Mediciones completas: [resultados_003.md](docs/bench/resultados_003.md).
+
+
+**Coincidencia con el plan original.** La decisión final coincide con la del plan (sección 3.1): recorrido incremental único con cola propia, catálogo ordenado con búsqueda binaria manual, tablas contiguas por entero, montículo para desempatar llaves y DFS tricolor para los ciclos. La carga sintética tuvo que corregirse para que el ingenuo mostrara su costo, como se explica en la evidencia.
+
+
+**Términos de esta sección.** *K* es la cantidad de llaves distintas de la cripta. *V* es la cantidad de salas. *E* es la cantidad de salidas entre salas (como mucho 4 por sala, así que E es a lo sumo 4V). *Recorrido incremental*: un único recorrido por anchura que, al conseguir una llave, sigue desde donde estaba sin volver a empezar. *Recorrido por anchura* (BFS): visitar primero las salas más cercanas y después las más lejanas, usando una cola. *Ciclo de dependencia*: un grupo de llaves donde cada una está encerrada tras una puerta que exige otra del mismo grupo, de modo que ninguna se puede conseguir. *DFS tricolor*: una búsqueda en profundidad que marca cada nodo como sin ver, en curso o terminado, y detecta un ciclo cuando llega a un nodo que está en curso.
+
+
+### Problema
+
+
+Antes de jugar hay que saber si la cripta se puede completar: obtener la llave de salida y llegar a la sala de salida por una puerta que la exija, suponiendo que las llaves no se consumen y que todo enemigo se puede derrotar (FR-RES-001 a FR-RES-006). Si no se puede, el reporte debe decir qué llaves no se consiguen, qué puertas forman la frontera bloqueada y qué llaves se bloquean entre sí (FR-RES-012). La verificación corre una vez por cripta (con `--verificar` o al elegir la cripta) y debe tardar menos de 200 ms en la cripta publicada más grande (SC-001). Las llaves se identifican con texto y el enunciado prohíbe usar `dict` o `set` como índice, así que cada id de llave hay que convertirlo a un entero por otro camino.
+
+
+### Alternativas consideradas
+
+
+1. **Recorrido incremental único (elegida).** Cuando el recorrido encuentra una puerta cerrada cuya llave aún no tiene, anota la puerta como pendiente de esa llave y sigue. Al vaciarse la cola, toma la llave disponible de menor id y libera sus puertas pendientes. Frente a **repetir el recorrido completo cada vez que se consigue una llave** (`verificar_ingenuo_reiniciado`, descartada), que repite visitas a salas ya exploradas. El plan estimó su costo en O(K · (V + E log V)).
+2. **Catálogo ordenado con búsqueda binaria manual (elegida).** Los ids de llaves se ordenan con merge sort propio, se deduplican en una pasada y cada id se convierte en su posición. Frente a **búsqueda lineal sobre la lista de ids**, que costaría O(E · K) comparaciones de texto, y a **una tabla hash hecha a mano**, que agrega colisiones y redimensionamiento para un conjunto fijo y pequeño.
+3. **Detección de ciclos con DFS tricolor sobre un grafo reducido (elegida).** Solo se ejecuta si la cripta no es resoluble. Agrupa las salas inalcanzables en bloques unidos por puertas abiertas y reporta un ciclo por grupo, empezando por la llave de menor id. Frente a **enumerar todos los ciclos** (Johnson o Tarjan), que puede crecer de forma exponencial y contradice FR-RES-012, y a **una búsqueda plana con un solo arreglo de visitados**, que confunde ciclos reales con ramas ya procesadas.
+4. **Desempate con `HeapMinimo` (elegida).** Las llaves disponibles entran una sola vez al montículo y la de menor id sale en O(log K). Frente a **reordenar la lista de candidatas en cada ronda**, que costaría hasta O(K² log K), y a `sorted()` o `list.sort()`, prohibidos.
+5. **Rutas mínimas (Dijkstra o Bellman-Ford), descartada.** La resolubilidad es una propiedad de conectividad y no de costo, así que un montículo de rutas solo agrega trabajo.
+
+
+### Decisión
+
+
+Se mantienen las decisiones del plan. `VerificadorResolubilidad.verificar` hace un solo recorrido por anchura sobre listas contiguas indexadas por entero (`visitada`, `llave_obtenida`, `puertas_pendientes`, `llaves_en_sala`). Cuando la cola se vacía y hay llaves candidatas, extrae la de menor id del montículo y encola las salas destino de sus puertas pendientes. La cripta es resoluble solo si se obtuvo la llave de salida y se cruzó, hacia la sala de salida, una puerta que la exige. Si no lo es, calcula la frontera bloqueada, la ubicación de cada llave no obtenida y los ciclos de dependencia. La frontera y los ciclos se ordenan con un merge sort propio sobre sus campos, sin `sorted()`. El modelo no toca red, archivos ni vista.
+
+
+### Análisis de complejidad
+
+
+El plan da O(E log V + K log K) para el recorrido incremental, con memoria O(V + E + K). El término E log V viene de que cada salida examinada consulta `CriptaMapa.obtener`, que es una búsqueda binaria entre las V salas. El catálogo cuesta O(K log K). La detección de ciclos corre solo si la cripta no es resoluble y recorre una sola vez las salas inalcanzables, con costo O(V + E + K) más el DFS sobre el grafo reducido. La alternativa descartada tiene costo O(K · (V + E log V)) en el peor caso, porque cada reinicio repite un recorrido completo.
+
+
+### Evidencia empírica
+
+
+Comando `py -m cripta --bench --solo resolubilidad resolubilidad_cota`. Equipo B (Intel Core Ultra 7, Windows, Python 3.14.6), tres corridas, cada una en un proceso aparte, commit 6114646. Las cifras son medianas de las tres corridas tomadas de [resultados_003.md](docs/bench/resultados_003.md). La razón es la mediana de las tres razones impresas por cada corrida.
+
+
+La cripta sintética pone la puerta de cada segmento en la primera sala del corredor y su llave en una sala lateral al final, es decir, cada llave queda después de su puerta. Así el recorrido llega a la puerta sin tener la llave y el ingenuo necesita volver a empezar para cruzarla. La primera versión de la carga ponía la llave antes que la puerta, que es el mejor caso del ingenuo, y por eso se cambió (ver más abajo).
+
+
+| Escenario | Incremental (ms) | Ingenuo reiniciado (ms) | Razón ingenuo/incremental |
+|---|---:|---:|---:|
+| 10 llaves, 200 salas | 0.908 | 3.347 | 3.7x |
+| 20 llaves, 400 salas | 1.799 | 10.589 | 6.1x |
+| 40 llaves, 800 salas | 3.298 | 44.845 | 13.6x |
+
+
+| Cota | Verificación (ms) | Límite (ms) | Resultado |
+|---|---:|---:|---|
+| cripta-06, 300 salas | 1.389 | 200.0 | CUMPLE |
+
+
+La verificación de la cripta de referencia, elegida por el mayor total de salas del listado sin fijar su id en el código, tomó 1.389 ms contra un límite de 200 ms, unas 144 veces por debajo.
+
+
+Salas sacadas de la cola en una verificación (también en [resultados_003.md](docs/bench/resultados_003.md)). Se contaron con un script temporal fuera del repositorio que no se versiona, y el conteo no depende del equipo.
+
+
+| Escenario | Incremental | Ingenuo, primera cripta | Ingenuo, cripta nueva | Razón nueva |
+|---|---:|---:|---:|---:|
+| 10 llaves, 200 salas | 200 | 400 | 1299 | 6.5x |
+| 20 llaves, 400 salas | 400 | 800 | 4599 | 11.5x |
+| 40 llaves, 800 salas | 800 | 2080 | 17199 | 21.5x |
+
+
+**Por qué se cambió la cripta sintética.** La primera versión de la carga colgaba la sala lateral de la llave de una sala al azar del corredor y ponía la puerta al final del corredor. El recorrido por anchura visitaba la lateral antes que la puerta, así que al llegar a la puerta ya tenía la llave. Con eso el ingenuo casi no necesitaba reiniciar: sacó de la cola 400, 800 y 2080 salas, es decir 2.0, 2.0 y 2.6 veces V (algo más de 2 pasadas), y la razón de tiempos fue de 1.6 a 2.0 veces. Esas cifras se midieron con el código del commit d2b340d y están en `docs/bench/resultados_003.md` del commit b3474b0. Era el mejor caso del ingenuo y no mostraba lo que el plan quería mostrar, por eso se cambió la carga y se repitió la medición.
+
+**Lo que el plan esperaba y lo que se midió.** El plan (sección 2, alternativa A.1) estimaba para K = 50 y V = 1000 unas 25 000 visitas redundantes y una diferencia del orden de K veces. Con la cripta nueva:
+
+- **Medido (conteo de salas):** el incremental saca cada sala una sola vez (200, 400 y 800) y el ingenuo saca 1299, 4599 y 17199, es decir 6.5, 11.5 y 21.5 veces lo que el incremental. El trabajo del ingenuo crece con K, como decía el plan. Con K = 40 y V = 800 son unas 16 400 visitas por encima de las 800 necesarias, el mismo orden que las 25 000 estimadas para K = 50 y V = 1000.
+- **Medido (tiempo):** el ingenuo es 3.7, 6.1 y 13.6 veces más lento, y la razón crece con K.
+- **Medido (código y conteo):** el ingenuo repite el recorrido mientras la pasada anterior haya conseguido alguna llave nueva, así que siempre hace al menos 2 pasadas, y con la cripta nueva el conteo muestra que hace muchas más.
+- **Hipótesis, no confirmada:** que el número de visitas del ingenuo sea cercano a (K + 1) / 2 veces V, porque cada reinicio vuelve a recorrer los segmentos anteriores. Es una cuenta aritmética que concuerda con el conteo (por ejemplo 800 · 41 / 2 = 16 400 contra 17 199 medidas), pero no se contó pasada por pasada.
+- **Hipótesis, no confirmada:** que parte de la diferencia se diluya por trabajo fijo. Ambos métodos hacen lo mismo antes de recorrer: revisar todas las salas y salidas para juntar los ids de llaves, ordenarlos y deduplicarlos con merge sort, y armar las tablas. Ese trabajo no depende del número de pasadas y se suma a los dos tiempos. Es coherente con que la razón de tiempos (3.7, 6.1 y 13.6) sea menor que la razón de salas sacadas de la cola (6.5, 11.5 y 21.5), pero no se midió por separado cuánto pesa ese trabajo.
+
+La decisión no cambia y la evidencia la refuerza: el incremental fue más rápido en las tres escalas y es el único cuyo costo no depende de cuántas llaves haya que conseguir en cadena.
+
+
+### Límites conocidos
+
+
+- Solo se midió una cripta sintética de cadena, con 20 salas por segmento y una llave por segmento, y está construida para que el ingenuo necesite reiniciar en cada segmento. Con otra forma la ventaja puede ser mucho menor, como mostró la primera versión de la carga (razón de 1.6 a 2.0). Las criptas publicadas no se midieron con el ingenuo.
+- Cada cifra es la mediana de tres corridas en un solo equipo (Equipo B), y las medianas de tiempo no se comparan con las de los equipos A o C. Las razones sí son más estables, pero tampoco se midieron en otro equipo.
+- La cota de 200 ms se midió solo en cripta-06 (300 salas). No se midió con una cripta más grande ni en red viva, y la medición no incluye el tiempo de leer fixtures ni de construir el mapa.
+- La detección de ciclos no está medida: las criptas de `--bench` son resolubles, así que ese camino no corre en las cargas. Su costo es el del plan, sin evidencia propia.
+- Riesgos del plan (sección 6). Los arreglos `visitada` y `llaves_en_sala` miden `max_sala_id + 1`, así que ids de sala muy dispersos gastarían memoria innecesaria (el API numera las salas desde 1 de forma correlativa, y el diseño asume V hasta unas 1000). Con más de 100 000 llaves distintas el ordenamiento inicial O(K log K) tendría un costo que solo `--bench` podría confirmar y que no se midió. El algoritmo reporta un solo ciclo representativo por grupo de llaves, como pide FR-RES-012, y no todos los ciclos posibles.
+- Además, la búsqueda binaria de `CriptaMapa.obtener` agrega el factor log V a cada salida examinada. El plan (sección 7) mantiene `CriptaMapa` sin cambios y no se midió el efecto de reemplazarla por referencias directas.
 
 
 ## 5.5 La línea de tiempo

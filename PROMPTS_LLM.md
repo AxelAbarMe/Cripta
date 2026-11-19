@@ -2045,3 +2045,17 @@ Sigue las instrucciones de prompts/p2/20-correcciones-003-fase-a.md. Corrige sol
 **Prompt (resumido):** Correcciones de la Fase A tras la revisión del Pull Request: coincidencia entre el recorrido incremental y el ingenuo, ciclo de la llave de salida y fixture consistente para el doble ciclo.
 
 **Para qué se usó:** Corregir tres defectos probados con contraejemplos antes de medir el rendimiento.
+
+
+### 2026-11-18 — Codex CLI v0.170.0 (GPT-6-Luna default)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/29-implement-003-fase-c.md. Solo T012 a T016.
+```
+(El texto completo está en prompts/p2/29-implement-003-fase-c.md.)
+
+**Prompt (resumido):** Implementación de la Fase C de la resolubilidad: opción --verificar con códigos de salida, controlador, vista, integración en servicio_partida y __main__.
+
+**Para qué se usó:** Implementar la interfaz de la verificación de resolubilidad sobre el servicio ya existente.

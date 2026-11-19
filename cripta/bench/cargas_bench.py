@@ -7,7 +7,9 @@ cripta real: todo son datos generados aquí (o en tests/cripta_artificial.py) co
 """
 import copy
 import gc
+import json
 import os
+import platform
 import random
 import tempfile
 import time
@@ -16,6 +18,7 @@ from pathlib import Path
 
 from cripta.dto.entidad_dto import entidad_desde_json
 from cripta.estructuras.lista_doble_enlazada import ListaDobleEnlazada
+from cripta.estructuras.heap_min import HeapMinimo
 from cripta.estructuras.ordenamiento_selector import elegir_algoritmo, ordenar_auto
 from cripta.estructuras.ordenamientos import Ordenamiento
 from cripta.estructuras.vector import VectorOrdenado
@@ -36,6 +39,9 @@ from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.historial_retroceso import HistorialRetroceso
 from cripta.modelo.jugador import Jugador
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
+from cripta.modelo.conocimiento_jugador import ConocimientoJugador
+from cripta.modelo.ruta_conocida import siguiente_paso
+from cripta.modelo.cripta_mapa import CriptaMapa
 from cripta.servicios.servicio_partida import ServicioPartida
 
 SEMILLA_BENCH = 20260928
@@ -500,6 +506,16 @@ def _mediana(valores):
     return ordenados[len(ordenados) // 2]
 
 
+def _resumen_mediciones(funcion, repeticiones: int = 3):
+    """Devuelve mediana y máximo de corridas completas medidas por reloj de pared."""
+    tiempos = []
+    for _ in range(repeticiones):
+        inicio = time.perf_counter()
+        funcion()
+        tiempos.append(time.perf_counter() - inicio)
+    return _mediana(tiempos), max(tiempos)
+
+
 def bench_partida_real(escala: float = 1.0, corridas: int = 3):
     """§5.2 con el modelo real: Partida + ServicioPartida sobre una cripta artificial, sin red (ClienteFalso
     responde al instante) ni vista. El jugador recorre la cripta despertando enemigos y después espera;
@@ -590,6 +606,7 @@ TICK_REAPERTURA = 7
 CRIPTA_REFERENCIA = "cripta-06"
 PASOS_CALENTAMIENTO_REFERENCIA = 150
 LIMITE_CICLO_MS = 20.0
+LIMITE_PASO_MS = 5.0
 DIRECTORIO_FIXTURES_BENCH = Path(__file__).resolve().parents[2] / "fixtures"
 
 
@@ -923,6 +940,349 @@ def bench_ciclo_referencia(escala: float = 1.0, corridas: int = 3):
         f"-> {cumple} el límite de {LIMITE_CICLO_MS:.0f} ms")]
 
 
+SEMILLA_NIEBLA = 20261118
+
+
+def _elegir_fixture_referencia():
+    """Carga el fixture íntegro de mayor tamaño sin fijar el identificador."""
+    candidatos = []
+    for carpeta in DIRECTORIO_FIXTURES_BENCH.iterdir():
+        general_ruta = carpeta / "general.json"
+        version_ruta = carpeta / "version.json"
+        if not carpeta.is_dir() or not general_ruta.is_file() or not version_ruta.is_file():
+            continue
+        with general_ruta.open(encoding="utf-8") as archivo:
+            general = json.load(archivo)
+        total = general.get("salas_total")
+        if isinstance(total, int) and (not candidatos or total > candidatos[0][0]):
+            candidatos = [(total, carpeta.name)]
+        elif isinstance(total, int) and total == candidatos[0][0]:
+            candidatos.append((total, carpeta.name))
+    if not candidatos:
+        raise ValueError("No hay fixtures completos de criptas para niebla_rutas")
+    elegido = candidatos[0][1]
+    for _total, identificador in candidatos[1:]:
+        if identificador < elegido:
+            elegido = identificador
+    cliente = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))
+    general = cliente.obtener_general(elegido)
+    version = cliente.obtener_version_cripta(elegido)
+    if general.version != version.version:
+        raise ValueError(f"Versión inconsistente en el fixture {elegido}")
+    mapa = CriptaMapa()
+    for pagina in range(1, general.paginas + 1):
+        mapa.agregar_pagina(cliente.obtener_pagina_esqueleto(elegido, pagina))
+    mapa.sincronizar_puertas()
+    salas = mapa.todas_las_salas()
+    if len(salas) != general.salas_total:
+        raise ValueError(f"El fixture {elegido} declara {general.salas_total} salas y contiene {len(salas)}")
+    puertas_abiertas = 0
+    for sala in salas:
+        for direccion, _destino in mapa.vecinos(sala.id):
+            if not mapa.puerta_transitable(sala.id, direccion):
+                mapa.abrir_puerta(sala.id, direccion)
+                puertas_abiertas += 1
+    conocimiento = ConocimientoJugador(mapa, general.sala_inicial)
+    for sala in salas:
+        conocimiento.al_entrar(sala.id, False)
+    salidas = sum(len(mapa.vecinos(sala.id)) for sala in salas)
+    azar = random.Random(SEMILLA_NIEBLA)
+    consultas = []
+    pares_probados = 0
+    max_intentos = 1200
+    pares_vistos = []
+    while len(consultas) < 12 and pares_probados < max_intentos:
+        origen = salas[azar.randrange(len(salas))].id
+        destino = salas[azar.randrange(len(salas))].id
+        consulta = (origen, destino)
+        pares_probados += 1
+        if origen == destino or consulta in pares_vistos:
+            continue
+        pares_vistos.append(consulta)
+        if siguiente_paso(conocimiento, origen, destino) is not None:
+            consultas.append(consulta)
+    return {"id": elegido, "salas": len(salas), "salidas": salidas,
+            "mapa": mapa, "conocimiento": conocimiento, "consultas": consultas,
+            "semilla": SEMILLA_NIEBLA, "puertas_abiertas": puertas_abiertas,
+            "pares_probados": pares_probados, "pares_con_ruta": len(consultas)}
+
+
+def _seleccion_lineal(conocimiento, origen, destino, proyeccion=None):
+    """Calcula el primer paso por selección lineal, solo como referencia de medición."""
+    if origen == destino or conocimiento.estado_de_sala(destino) != "explorada":
+        return None
+    salas = conocimiento.proyectar() if proyeccion is None else proyeccion
+    maximo = max((sala.id_sala for sala in salas), default=-1)
+    distancias = [None] * (maximo + 1)
+    visitadas = [False] * (maximo + 1)
+    entrantes = [[] for _ in distancias]
+    for sala in salas:
+        if sala.estado != "explorada":
+            continue
+        for salida in sala.salidas:
+            if salida.estado_puerta == "abierta":
+                entrantes[salida.id_sala_destino].append((sala.id_sala, salida.costo))
+    distancias[destino] = 0
+    while True:
+        actual = None
+        for sala_id in range(len(distancias)):
+            if (distancias[sala_id] is not None and not visitadas[sala_id]
+                    and (actual is None or (distancias[sala_id], sala_id) <
+                         (distancias[actual], actual))):
+                actual = sala_id
+        if actual is None:
+            break
+        visitadas[actual] = True
+        for anterior, costo in entrantes[actual]:
+            nuevo = distancias[actual] + costo
+            if distancias[anterior] is None or nuevo < distancias[anterior]:
+                distancias[anterior] = nuevo
+    mejor = None
+    paso = None
+    sala_origen = conocimiento.sala_conocida(origen)
+    for salida in sala_origen.salidas:
+        resto = distancias[salida.id_sala_destino]
+        if salida.estado_puerta != "abierta" or resto is None:
+            continue
+        total = salida.costo + resto
+        if (mejor is None or total < mejor or
+                (total == mejor and salida.id_sala_destino < paso[0])):
+            mejor = total
+            paso = (salida.id_sala_destino, salida.direccion)
+    return paso[1] if paso is not None else None
+
+
+def _comparar_costos_con_mapa(referencia):
+    """Contrasta los costos conocidos con consultas al mapa real para consultas iguales."""
+    conocimiento, mapa = referencia["conocimiento"], referencia["mapa"]
+    for origen, destino in referencia["consultas"]:
+        guardado = _siguiente_paso_costos_guardados(conocimiento, origen, destino)
+        if guardado != _siguiente_paso_costos_mapa(conocimiento, mapa, origen, destino):
+            return False
+    return True
+
+
+def _siguiente_paso_costos_guardados(conocimiento, origen, destino, proyeccion=None):
+    """Busca con heap usando los costos guardados en la proyección conocida."""
+    if (conocimiento.estado_de_sala(origen) != "explorada"
+            or conocimiento.estado_de_sala(destino) != "explorada" or origen == destino):
+        return None
+    salas = conocimiento.proyectar() if proyeccion is None else proyeccion
+    distancias = [None] * (max(s.id_sala for s in salas) + 1)
+    entrantes = [[] for _ in distancias]
+    for sala in salas:
+        if sala.estado != "explorada":
+            continue
+        for salida in sala.salidas:
+            if salida.estado_puerta == "abierta":
+                entrantes[salida.id_sala_destino].append((sala.id_sala, salida.costo))
+    distancias[destino] = 0
+    pendientes = HeapMinimo()
+    pendientes.insertar((0, destino))
+    while not pendientes.esta_vacio():
+        costo_actual, actual = pendientes.eliminar_minimo()
+        if costo_actual != distancias[actual]:
+            continue
+        for anterior, costo in entrantes[actual]:
+            nuevo = costo_actual + costo
+            if distancias[anterior] is None or nuevo < distancias[anterior]:
+                distancias[anterior] = nuevo
+                pendientes.insertar((nuevo, anterior))
+    mejor = None
+    paso = None
+    for salida in conocimiento.sala_conocida(origen).salidas:
+        resto = distancias[salida.id_sala_destino]
+        if salida.estado_puerta != "abierta" or resto is None:
+            continue
+        total = salida.costo + resto
+        if mejor is None or total < mejor or (total == mejor and salida.id_sala_destino < paso[0]):
+            mejor, paso = total, (salida.id_sala_destino, salida.direccion)
+    return paso[1] if paso else None
+
+
+def _siguiente_paso_costos_mapa(conocimiento, mapa, origen, destino, proyeccion=None):
+    """Busca con heap consultando al mapa el costo de cada arista relajada."""
+    if (conocimiento.estado_de_sala(origen) != "explorada"
+            or conocimiento.estado_de_sala(destino) != "explorada" or origen == destino):
+        return None
+    salas = conocimiento.proyectar() if proyeccion is None else proyeccion
+    distancias = [None] * (max(s.id_sala for s in salas) + 1)
+    entrantes = [[] for _ in distancias]
+    for sala in salas:
+        if sala.estado != "explorada":
+            continue
+        for salida in sala.salidas:
+            if salida.estado_puerta == "abierta":
+                entrantes[salida.id_sala_destino].append((sala.id_sala, salida.direccion))
+    distancias[destino] = 0
+    pendientes = HeapMinimo()
+    pendientes.insertar((0, destino))
+    while not pendientes.esta_vacio():
+        costo_actual, actual = pendientes.eliminar_minimo()
+        if costo_actual != distancias[actual]:
+            continue
+        for anterior, direccion in entrantes[actual]:
+            costo = mapa.costo_de_conexion(anterior, direccion)
+            nuevo = costo_actual + costo
+            if distancias[anterior] is None or nuevo < distancias[anterior]:
+                distancias[anterior] = nuevo
+                pendientes.insertar((nuevo, anterior))
+    mejor = None
+    paso = None
+    for salida in conocimiento.sala_conocida(origen).salidas:
+        resto = distancias[salida.id_sala_destino]
+        if salida.estado_puerta != "abierta" or resto is None:
+            continue
+        total = mapa.costo_de_conexion(origen, salida.direccion) + resto
+        if mejor is None or total < mejor or (total == mejor and salida.id_sala_destino < paso[0]):
+            mejor, paso = total, (salida.id_sala_destino, salida.direccion)
+    return paso[1] if paso else None
+
+
+def _resumen_tiempos(tiempos):
+    return _mediana(tiempos), max(tiempos)
+
+
+def _comparar_revelacion(referencia, escala, semilla, repeticiones=3):
+    """Mide actualización incremental y pasada ingenua para los mismos ingresos."""
+    mapa = referencia["mapa"]
+    salas = mapa.todas_las_salas()
+    azar = random.Random(semilla)
+    entradas = [salas[azar.randrange(len(salas))].id for _ in range(max(1, int(escala)))]
+    tiempos_incrementales = []
+    tiempos_ingenuos = []
+    equivalente = True
+    for _ in range(repeticiones):
+        incremental = ConocimientoJugador(mapa, salas[0].id)
+        ingenuo = ["desconocida"] * (max(s.id for s in salas) + 1)
+        ingenuo[salas[0].id] = "explorada"
+        for _direccion, destino in mapa.vecinos(salas[0].id):
+            ingenuo[destino] = "avistada"
+        for entrada in entradas:
+            t0 = time.perf_counter()
+            incremental.al_entrar(entrada, True)
+            tiempos_incrementales.append(time.perf_counter() - t0)
+            t0 = time.perf_counter()
+            ingenuo[entrada] = "explorada"
+            for _direccion, destino in mapa.vecinos(entrada):
+                ingenuo[destino] = "explorada"
+            for sala in salas:
+                for _direccion, destino in mapa.vecinos(sala.id):
+                    if ingenuo[sala.id] == "explorada" and ingenuo[destino] == "desconocida":
+                        ingenuo[destino] = "avistada"
+            tiempos_ingenuos.append(time.perf_counter() - t0)
+        equivalente = equivalente and all(
+            incremental.estado_de_sala(s.id) == ingenuo[s.id] for s in salas
+        )
+    return equivalente, _resumen_tiempos(tiempos_incrementales), _resumen_tiempos(tiempos_ingenuos)
+
+
+def _comparar_reversion(referencia, escala, semilla, repeticiones=3):
+    """Mide registrar y revertir frente a registrar y restaurar una copia."""
+    mapa = referencia["mapa"]
+    salas = mapa.todas_las_salas()
+    azar = random.Random(semilla)
+    entradas = [salas[azar.randrange(len(salas))].id for _ in range(max(1, int(escala)))]
+    tiempos_inversas = []
+    tiempos_copia = []
+    equivalente = True
+    cantidad = 0
+    for _ in range(repeticiones):
+        conocimiento = ConocimientoJugador(mapa, salas[0].id)
+        historial = HistorialRetroceso()
+        conocimiento.registrador = historial.registrar_cambio
+        inicial = copy.deepcopy(conocimiento.exportar_celdas())
+        historial.iniciar_intervalo()
+        t0 = time.perf_counter()
+        for entrada in entradas:
+            conocimiento.al_entrar(entrada, True)
+        historial.cerrar_intervalo()
+        cantidad = historial.deshacer_ultimo_intervalo()
+        tiempos_inversas.append(time.perf_counter() - t0)
+        equivalente = equivalente and conocimiento.exportar_celdas() == inicial
+        t0 = time.perf_counter()
+        conocimiento.registrador = None
+        copia = copy.deepcopy(inicial)
+        for entrada in entradas:
+            conocimiento.al_entrar(entrada, True)
+        conocimiento.importar_celdas(copia)
+        tiempos_copia.append(time.perf_counter() - t0)
+        equivalente = equivalente and conocimiento.exportar_celdas() == inicial
+    return equivalente, _resumen_tiempos(tiempos_inversas), _resumen_tiempos(tiempos_copia), cantidad
+
+
+def bench_niebla_rutas(escala: float = 1.0):
+    """Mide rutas, revelación incremental y reversión con fixtures offline."""
+    referencia = _elegir_fixture_referencia()
+    consultas = referencia["consultas"]
+    dato = (f"fixture={referencia['id']}, salas={referencia['salas']}, salidas={referencia['salidas']}, "
+            f"puertas abiertas={referencia['puertas_abiertas']}, pares probados={referencia['pares_probados']}, "
+            f"pares con ruta={referencia['pares_con_ruta']}, semilla={referencia['semilla']}, "
+            f"Python={platform.python_version()}")
+    conocimiento = referencia["conocimiento"]
+    consultas_con_ruta = [(origen, destino) for origen, destino in consultas
+                          if siguiente_paso(conocimiento, origen, destino) is not None]
+    if not consultas_con_ruta:
+        raise ValueError("Ninguna consulta de niebla_rutas tiene una ruta")
+    tiempos_produccion = []
+    tiempos_lineal = []
+    tiempos_guardados = []
+    tiempos_mapa = []
+    equivalentes_costos = True
+    for origen, destino in consultas_con_ruta:
+        for tiempos, funcion in (
+                (tiempos_produccion, lambda: siguiente_paso(conocimiento, origen, destino)),
+                (tiempos_lineal, lambda: _seleccion_lineal(conocimiento, origen, destino)),
+                (tiempos_guardados, lambda: _siguiente_paso_costos_guardados(
+                    conocimiento, origen, destino)),
+                (tiempos_mapa, lambda: _siguiente_paso_costos_mapa(
+                    conocimiento, referencia["mapa"], origen, destino))):
+            for _ in range(3):
+                inicio = time.perf_counter()
+                obtenido = funcion()
+                tiempos.append(time.perf_counter() - inicio)
+                if tiempos is tiempos_guardados or tiempos is tiempos_mapa:
+                    equivalentes_costos = equivalentes_costos and obtenido == siguiente_paso(
+                        conocimiento, origen, destino)
+    mediana_produccion, maximo_produccion = _resumen_tiempos(tiempos_produccion)
+    mediana_lineal, maximo_lineal = _resumen_tiempos(tiempos_lineal)
+    mediana_guardados, maximo_guardados = _resumen_tiempos(tiempos_guardados)
+    mediana_mapa, maximo_mapa = _resumen_tiempos(tiempos_mapa)
+    cumple = "CUMPLE" if maximo_produccion * 1000 <= LIMITE_PASO_MS else "NO CUMPLE"
+    resultado = [Resultado("niebla_rutas", f"ruta de producción, {len(consultas_con_ruta)} consultas con ruta",
+                           mediana_produccion, 1,
+                           f"mediana por cálculo {_ms(mediana_produccion)} ms, máximo por cálculo "
+                           f"{_ms(maximo_produccion)} ms. {cumple} el límite de {LIMITE_PASO_MS:.0f} ms. {dato}")]
+    resultado.append(Resultado("niebla_rutas", "selección lineal manual, mismas consultas",
+                               mediana_lineal, 1,
+                               f"mediana por cálculo {_ms(mediana_lineal)} ms, máximo por cálculo "
+                               f"{_ms(maximo_lineal)} ms. {dato}"))
+    resultado.append(Resultado("niebla_rutas", "costos guardados frente a costo_de_conexion",
+                               mediana_guardados, 1,
+                               f"costos guardados: mediana {_ms(mediana_guardados)} ms y máximo "
+                               f"{_ms(maximo_guardados)} ms. Consulta al mapa: mediana {_ms(mediana_mapa)} ms "
+                               f"y máximo {_ms(maximo_mapa)} ms. Equivalencia con ruta real: "
+                               f"{equivalentes_costos}. {dato}"))
+    for tamano in (max(1, int(10 * escala)), max(1, int(50 * escala)), max(1, int(200 * escala))):
+        semilla = referencia["semilla"] + tamano
+        ok, incremental, ingenua = _comparar_revelacion(referencia, tamano, semilla)
+        resultado.append(Resultado("niebla_rutas", f"revelación, R={tamano}", incremental[0], 1,
+                                   f"incremental: mediana {_ms(incremental[0])} ms y máximo "
+                                   f"{_ms(incremental[1])} ms. Pasada ingenua: mediana "
+                                   f"{_ms(ingenua[0])} ms y máximo {_ms(ingenua[1])} ms. "
+                                   f"Equivalencia: {ok}. {dato}"))
+    cantidad = max(1, int(20 * escala))
+    ok, inversas_tiempo, copia_tiempo, inversas = _comparar_reversion(
+        referencia, cantidad, referencia["semilla"])
+    resultado.append(Resultado("niebla_rutas", "reversión por inversas frente a copia completa",
+                               inversas_tiempo[0], max(1, inversas),
+                               f"registrar y revertir por inversas: mediana {_ms(inversas_tiempo[0])} ms "
+                               f"y máximo {_ms(inversas_tiempo[1])} ms. Copiar y restaurar: mediana "
+                               f"{_ms(copia_tiempo[0])} ms y máximo {_ms(copia_tiempo[1])} ms. "
+                               f"inversas={inversas}. Equivalencia: {ok}. {dato}"))
+    return resultado
+
+
 CARGAS = (
     ("agenda", bench_agenda),
     ("cache", bench_cache),
@@ -937,4 +1297,5 @@ CARGAS = (
     ("ruta_cazador", bench_ruta_cazador),
     ("invalidacion", bench_invalidacion),
     ("ciclo_referencia", bench_ciclo_referencia),
+    ("niebla_rutas", bench_niebla_rutas),
 )

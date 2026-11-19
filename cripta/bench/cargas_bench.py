@@ -16,7 +16,12 @@ from contextlib import contextmanager
 from dataclasses import dataclass, fields, is_dataclass, replace
 from pathlib import Path
 
+from cripta.constantes import direccion_opuesta
 from cripta.dto.entidad_dto import entidad_desde_json
+from cripta.dto.llave_ubicacion_dto import LlaveUbicacionDTO
+from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
+from cripta.dto.sala_dto import SalaDTO
+from cripta.dto.salida_dto import SalidaDTO
 from cripta.estructuras.lista_doble_enlazada import ListaDobleEnlazada
 from cripta.estructuras.ordenamiento_selector import elegir_algoritmo, ordenar_auto
 from cripta.estructuras.ordenamientos import Ordenamiento
@@ -39,8 +44,10 @@ from cripta.modelo.historial_retroceso import HistorialRetroceso
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
 from cripta.modelo.linea_tiempo import LineaTiempo
+from cripta.modelo.cripta_mapa import CriptaMapa
 from cripta.modelo.partida import Partida
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
+from cripta.modelo.resolubilidad import VerificadorResolubilidad
 from cripta.servicios.servicio_partida import ServicioPartida
 
 SEMILLA_BENCH = 20260928
@@ -1481,6 +1488,128 @@ def bench_linea_tiempo(escala: float = 1.0):
     return resultados
 
 
+# ================================== 12. RESOLUBILIDAD (capacidad 003, FR-RES-020, SC-001, SC-007)
+LLAVE_SALIDA_SINTETICA = "itm_llave_salida"
+SALAS_POR_SEGMENTO_RESOLUBILIDAD = 20
+LLAVES_RESOLUBILIDAD = (10, 20, 40)
+REPETICIONES_RESOLUBILIDAD = 3
+LIMITE_RESOLUBILIDAD_MS = 200.0
+COSTO_MIN_RESOLUBILIDAD = 20
+COSTO_MAX_RESOLUBILIDAD = 490
+
+
+def _unir_salas(conexiones, origen, direccion, destino, azar, llave=None):
+    """Agrega la conexión en los dos sentidos con un costo del azar. Con llave, la puerta queda cerrada."""
+    costo = azar.randint(COSTO_MIN_RESOLUBILIDAD, COSTO_MAX_RESOLUBILIDAD)
+    conexiones[origen].append((direccion, destino, llave, costo))
+    conexiones[destino].append((direccion_opuesta(direccion), origen, llave, costo))
+
+
+def _mapa_desde_conexiones(conexiones) -> CriptaMapa:
+    """Arma el CriptaMapa con una página de esqueleto construida directamente con los DTO."""
+    salas = []
+    for sala in range(1, len(conexiones)):
+        norte = sur = este = oeste = None
+        for direccion, destino, llave, costo in conexiones[sala]:
+            salida = SalidaDTO(destino, llave is not None, llave, None, costo)
+            if direccion == "N":
+                norte = salida
+            elif direccion == "S":
+                sur = salida
+            elif direccion == "E":
+                este = salida
+            else:
+                oeste = salida
+        salas.append(SalaDTO(sala, f"Sala {sala}", norte, sur, este, oeste))
+    mapa = CriptaMapa()
+    mapa.agregar_pagina(PaginaEsqueletoDTO(pagina=1, total_paginas=1, salas=tuple(salas)))
+    mapa.sincronizar_puertas()
+    return mapa
+
+
+def _generar_cripta_encadenada(k: int, salas_por_segmento: int, semilla: int):
+    """Cripta de k segmentos en cadena, cada uno tras una puerta cerrada que exige la llave del segmento.
+    La llave de salida es una ubicación más (como en llaves.json del API) y abre la última puerta.
+    Devuelve (mapa, sala_inicial, sala_salida, llave_salida, ubicaciones de llaves)."""
+    azar = random.Random(semilla)
+    if k * salas_por_segmento == 1:
+        salas_por_segmento = 2          # con una sola sala no hay puerta de salida, el mínimo viable son dos
+    total = k * salas_por_segmento
+    conexiones = [[] for _ in range(total + 1)]
+    ids = [f"itm_llave_{i:04d}" for i in range(k)]
+    ids[k - 1] = LLAVE_SALIDA_SINTETICA
+    if salas_por_segmento == 1 and k >= 2:
+        ids[k - 2] = LLAVE_SALIDA_SINTETICA          # la última sala es la salida y su puerta es la del segmento anterior
+    ubicaciones = []
+    for i in range(k):
+        base = i * salas_por_segmento
+        ultimo = i == k - 1
+        utiles = salas_por_segmento - 1 if ultimo else salas_por_segmento
+        if utiles == 0:
+            continue
+        lateral = base + utiles if utiles >= 2 else 0
+        en_corredor = utiles - 1 if lateral else utiles
+        for sala in range(base + 1, base + en_corredor):
+            _unir_salas(conexiones, sala, "E", sala + 1, azar)
+        ultima_del_corredor = base + en_corredor
+        if lateral:
+            _unir_salas(conexiones, base + 1 + azar.randrange(en_corredor), "N", lateral, azar)
+            sala_llave = lateral
+        else:
+            sala_llave = base + 1 + azar.randrange(en_corredor)
+        ubicaciones.append(LlaveUbicacionDTO(ids[i], sala_llave, None))
+        destino = total if ultimo else base + salas_por_segmento + 1
+        _unir_salas(conexiones, ultima_del_corredor, "E", destino, azar, ids[i])
+    return _mapa_desde_conexiones(conexiones), 1, total, LLAVE_SALIDA_SINTETICA, tuple(ubicaciones)
+
+
+def _verificador_de(cripta) -> VerificadorResolubilidad:
+    mapa, sala_inicial, sala_salida, llave_salida, ubicaciones = cripta
+    return VerificadorResolubilidad(mapa, sala_inicial, sala_salida, llave_salida, ubicaciones)
+
+
+def bench_resolubilidad(escala: float = 1.0):
+    """Recorrido incremental (elegida) frente a reiniciar el recorrido por cada llave (descartada)."""
+    resultados = []
+    por_segmento = max(1, int(SALAS_POR_SEGMENTO_RESOLUBILIDAD * escala))
+    for base in LLAVES_RESOLUBILIDAD:
+        k = max(1, int(base * escala))
+        verificador = _verificador_de(_generar_cripta_encadenada(k, por_segmento, SEMILLA_BENCH))
+        if not verificador.verificar().es_resoluble:
+            raise ValueError(f"La cripta sintética de {k} llaves debería ser resoluble")
+        t_incremental = _medir(verificador.verificar, REPETICIONES_RESOLUBILIDAD)
+        t_ingenuo = _medir(verificador.verificar_ingenuo_reiniciado, REPETICIONES_RESOLUBILIDAD)
+        salas = k * por_segmento
+        resultados.append(Resultado("resolubilidad", f"{k} llaves encadenadas, {salas} salas: recorrido incremental (elegida)",
+                                    t_incremental, 1))
+        resultados.append(Resultado("resolubilidad", f"{k} llaves encadenadas, {salas} salas: recorrido ingenuo reiniciado (descartada)",
+                                    t_ingenuo, 1, _comparar("recorrido_ingenuo_reiniciado", t_ingenuo,
+                                                            "recorrido_incremental", t_incremental)))
+    return resultados
+
+
+def _cripta_publicada(cliente, id_cripta: str):
+    """Lee de fixtures lo que necesita el verificador, sin pasar por el servicio para poder medir solo la verificación."""
+    general = cliente.obtener_general(id_cripta)
+    mapa = CriptaMapa()
+    for pagina in range(1, general.paginas + 1):
+        mapa.agregar_pagina(cliente.obtener_pagina_esqueleto(id_cripta, pagina))
+    mapa.sincronizar_puertas()
+    llaves = tuple(cliente.obtener_llaves(id_cripta))
+    return mapa, general.sala_inicial, general.sala_salida, general.llave_salida, llaves
+
+
+def bench_resolubilidad_cota(escala: float = 1.0):
+    """Verificación de la cripta publicada con más salas contra el límite de 200 ms (SC-001)."""
+    cliente = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))
+    elegida = elegir_cripta_de_referencia(cliente.listar_criptas())
+    verificador = _verificador_de(_cripta_publicada(cliente, elegida.id))
+    segundos = _medir(verificador.verificar, REPETICIONES_RESOLUBILIDAD)
+    cumple = "CUMPLE" if segundos * 1000 < LIMITE_RESOLUBILIDAD_MS else "FALLA"
+    return [Resultado("resolubilidad_cota", f"verificación {elegida.id} ({elegida.salas} salas)", segundos, 1,
+                      f"{_ms(segundos)} ms (límite {LIMITE_RESOLUBILIDAD_MS:.1f} ms: {cumple})")]
+
+
 CARGAS = (
     ("agenda", bench_agenda),
     ("cache", bench_cache),
@@ -1497,4 +1626,6 @@ CARGAS = (
     ("invalidacion", bench_invalidacion),
     ("ciclo_referencia", bench_ciclo_referencia),
     ("linea_tiempo", bench_linea_tiempo),
+    ("resolubilidad", bench_resolubilidad),
+    ("resolubilidad_cota", bench_resolubilidad_cota),
 )

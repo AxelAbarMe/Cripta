@@ -1488,3 +1488,17 @@ $speckit-implement Completa la elección de K para la 004. Confirmo K=50 como va
 **Prompt (resumido):** README de la 004: comandos historia, banderas --checkpoint-cada y --hasta, carga linea_tiempo y formato v2.
 
 **Para qué se usó:** Documentar el uso de la línea de tiempo y que un archivo guardado de la Parte I se rechaza con un error claro sin modificarlo.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Dos cambios, con pruebas antes del código, y documentos al final. 1. Cripta de referencia: en cripta/bench/cargas_bench.py, ciclo_referencia usa la constante CRIPTA_REFERENCIA = "cripta-06", mientras linea_tiempo elige la cripta con más salas del listado. La constitución prohíbe datos de una cripta concreta en el código. Extrae a una función común la elección de linea_tiempo (la de más salas, desempate por id) y úsala en las dos cargas. Elimina la constante. Ajusta la prueba existente si alguna depende de ella. 2. Retroceso con cazadores (P2 §5.6): agrega una carga historial_cazadores en cargas_bench.py y regístrala en CARGAS. Sobre la cripta de referencia, con los cazadores activos como en ciclo_referencia, mide por cada acción del jugador cuántas operaciones inversas registra su intervalo y cuánto tarda revertir el último intervalo como lo hace el pergamino, con mediana y máximo, y compáralo con la carga historial sintética de la Parte I. Agrega su prueba en tests/servicios/test_servicio_bench.py antes del código. Corre la suite completa y py -m cripta --bench --solo ciclo_referencia historial historial_cazadores, y pégame la salida. Después agrega el resultado a DECISIONES.md, en el párrafo de la sección 5.6 que dice que el retroceso con cazadores no se midió, y quita esa nota pendiente de 5.5 y de tasks.md (T039). Sin dict ni set como índice, sin sorted, bisect ni collections. CRLF, sin ";" en comentarios ni en el texto nuevo." (El texto completo está en prompts/p2/28-implement-004-cripta-referencia-historial-cazadores.md.)
+
+**Prompt (resumido):** Elegir la cripta de referencia con una función común en las cargas con partida real y eliminar la constante, y agregar la carga historial_cazadores que mide el retroceso con cazadores, con pruebas antes del código y los resultados en DECISIONES.md y tasks.md.
+
+**Para qué se usó:** Quitar de cargas_bench.py el id de una cripta concreta, que la constitución prohíbe, medir cuántas inversas registra una acción con cazadores activos y cuánto tarda revertirla como el pergamino, y comparar con la carga sintética de la Parte I.
+
+### 2026-11-18 — Claude Code (Sonnet 5.5)
+**Prompt:** "Sí, actualiza esas dos cosas: la línea 15 de tasks.md y T040 para que digan que la cripta de referencia ya se elige con la función común, y agrega historial_cazadores a la lista de --solo del README y a la de «Cómo se reproduce» de DECISIONES.md (revisa que linea_tiempo también esté en las dos). Edit, CRLF y sin ";"."
+
+**Prompt (resumido):** Actualizar la línea 15 de tasks.md y T040 con la elección común de la cripta de referencia, y agregar historial_cazadores y linea_tiempo a las listas de --solo del README y de DECISIONES.md.
+
+**Para qué se usó:** Que la documentación dejara de decir que el criterio de la cripta de referencia estaba pendiente y que las listas de cargas coincidieran con las registradas en CARGAS.

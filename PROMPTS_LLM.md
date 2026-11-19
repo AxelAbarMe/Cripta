@@ -1323,3 +1323,19 @@ $speckit-implement Trabaja solo en la optimización de los puntos de control per
 ```
 
 **Para qué se usó:** Reducir la captura periódica, comprobar la compatibilidad v2 y medir el cambio frente a la línea base de la 004.
+
+### 2026-11-18 — Codex (GPT-6)
+**Prompt:**
+```text
+$speckit-implement Ejecuta solo T033 de specs/004-linea-de-tiempo/tasks.md. Contrasta las mediciones de docs/bench/resultados_004_linea_base.md y docs/bench/resultados_004_puntos_reducidos.md. Registra en tasks.md el comando, las condiciones de la carga y la justificación para proponer K=50 frente a los otros escenarios, con el máximo observado de consulta y el costo de memoria. Si falta alguna medición del grupo requerida por T033, indícala y deja la tarea abierta. Registra el prompt en PROMPTS_LLM.md. Conserva CRLF y no hagas commits ni push.
+```
+
+**Para qué se usó:** Comparar las mediciones de la 004, sustentar la propuesta de K=50 y registrar el insumo de rendimiento pendiente para cerrar T033.
+
+### 2026-11-18 — Codex (GPT-6)
+**Prompt:**
+```text
+$speckit-implement Completa la elección de K para la 004. Confirmo K=50 como valor predeterminado con base en las mediciones de T041 y T042. Corrige en T033 la nota que trata la medición de retroceso con muchos cazadores como un bloqueo para elegir K y deja esa medición pendiente en T039. Registra en tasks.md el cambio de cripta/constantes.py antes de editar el código. Ajusta el valor predeterminado a 50 y verifica con una prueba que una partida iniciada sin --checkpoint-cada usa 50 y que un K explícito sigue funcionando. Ejecuta la suite completa, cita la medición a escala 1 que respalda K=50 y marca T033 al completar la validación. Registra el prompt en PROMPTS_LLM.md. Respeta CRLF y no hagas commits ni push.
+```
+
+**Para qué se usó:** Fijar K=50, comprobar la configuración al iniciar una partida y dejar el benchmark de retroceso con cazadores en T039.

@@ -80,7 +80,7 @@ La captura completa de todas las salas queda para la base inicial y el estado ac
 
 En v2 cada punto comienza sus registros de sala con un conteo y cada registro incluye el ID de la sala. El lector actual consume el conteo de cada punto y aplica solo sus registros. El mismo archivo puede contener puntos completos anteriores y puntos periódicos reducidos nuevos sin alterar la codificación. Se probará historia por acción e instante, replay y guardado/carga con ambas representaciones (FR-LIN-004, FR-LIN-005, FR-LIN-008, FR-LIN-010, FR-LIN-013, FR-LIN-015, FR-LIN-016, FR-LIN-017, FR-LIN-019, FR-LIN-021).
 
-La captura completa de T041 es la alternativa de referencia. Se repetirá la misma carga y se registrarán por separado memoria, mediana y máximo observado de consulta y peor ciclo (FR-LIN-014, FR-LIN-018). K=100 sigue provisional y T033 queda abierta para revisar los datos.
+La captura completa de T041 es la referencia. T042 repitió la carga con puntos reducidos y registró memoria, mediana y máximo observado de consulta y peor ciclo. T033 fija K=50 en `cripta/constantes.py` con base en ambas mediciones (FR-LIN-014, FR-LIN-018).
 
 ### Rendimiento y benchmark
 
@@ -225,14 +225,13 @@ tests/
 | Replay reproduce todo el log y crea resultado sin vista interactiva | `ServicioReplay.reproducir`, `__main__._reproducir` | Falta consulta por instante; con un pergamino en el log el reloj retrocede; el resumen no debe crear vista | Reproducir el log completo, construir la línea vigente y consultar con el componente de `historia`; probar replay con pergamino y sin vista. |
 | Guardado binario versión 1, valida magic/versión | `guardado_binario.py` | Debe guardar checkpoints y la línea; P1 incompatible | Subir versión y verificar rechazo P1 no destructivo, tamaño y tiempo de guardado/carga dentro del benchmark. |
 
-El plan de 001 solicita `--bench --solo historial` con cazadores, pero no aporta resultados medidos en el artefacto leído. El dato queda como insumo pendiente de incorporar antes de cerrar las decisiones de implementación.
+El plan de 001 solicita `--bench --solo historial` con cazadores, pero no aporta resultados medidos en el artefacto leído. La medición con muchos cazadores activos queda pendiente en T039 como revisión del historial de retroceso.
 
 ## Límites conocidos
 
 - El registro de acciones permite reconstruir solo hasta el checkpoint más próximo; si las acciones entre checkpoints se almacenan como datos, deben conservar exactamente sus parámetros y orden.
 - La reconstrucción depende del estado completo de capacidades integradas. El conocimiento de niebla no puede inferirse del mapa real; depende de los campos de 002.
 - La historia consultable es una sola línea vigente: el pergamino descarta la rama revertida según FR-LIN-007.
-- La frecuencia K predeterminada permanece abierta hasta contar con las mediciones del grupo. Los K experimentales no son configuración de producto anticipada.
 - Guardar la historia aumenta tamaño y tiempo de E/S en proporción a acciones/cambios y checkpoints; este costo debe reportarse, no se fija un umbral que spec.md no exige.
 - El benchmark de una máquina no demuestra el umbral en todos los equipos; el informe registra plataforma y versión de Python.
 - Para t posterior al último evento o final, el límite de estado se define por la especificación y la condición terminal de la partida; el replay informa final anticipado cuando corresponda.

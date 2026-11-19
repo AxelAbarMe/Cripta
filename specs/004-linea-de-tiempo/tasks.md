@@ -12,7 +12,7 @@
 - En la Fase B, la proyección que usa `Partida.vista()`, `SalidaVista` o `EnemigoVista` lleva «Depende de 001». La proyección histórica del conocimiento y sus costos lleva «Depende de 002».
 - En la Fase C, solo las tareas que persisten/restauran el conocimiento del jugador llevan «Depende de 002». La línea, checkpoints y cambio de versión binaria propios de 004 no llevan esa etiqueta.
 - En la Fase D, el resumen histórico de enemigos y salidas lleva «Depende de 001»; la consulta del conocimiento lleva «Depende de 002».
-- La Fase E compara K=50, 100, 500, 1000 y sin puntos periódicos; no presupone cifras ni fija K predeterminado. La cripta de referencia se elige por el mayor total de salas entre fixtures, sin id fijo. La elección frente a `CRIPTA_REFERENCIA` queda pendiente del grupo.
+- La Fase E compara K=50, 100, 500, 1000 y sin puntos periódicos. T033 establece el valor predeterminado a partir de las mediciones. La cripta de referencia se elige por el mayor total de salas entre fixtures, sin id fijo. La elección frente a `CRIPTA_REFERENCIA` queda pendiente del grupo.
 - El Pull Request de 004 no puede fusionarse antes de 001 y 002. Antes de integrarlo, incorporar `main` con merge y resolver la integración manteniendo un único cambio de versión del formato binario.
 - El registro de este comando en `PROMPTS_LLM.md` se realiza fuera de estas tareas.
 
@@ -88,7 +88,21 @@
 
   - Verificación de T042. La suite completa pasó 628 pruebas y el benchmark terminó con código 0. La [comparación con la línea base](../../docs/bench/resultados_004_puntos_reducidos.md) conserva la salida íntegra. Con K=100 se observaron 11885.9 KiB y 51.072 ms de máximo de consulta.
 
-- [ ] T033 Registrar la salida observada del benchmark y proponer K predeterminado en `specs/004-linea-de-tiempo/tasks.md` (Modificado) únicamente después de ejecutar todas las mediciones y justificarlo; no elegir si faltan resultados del grupo. FR-LIN-014, FR-LIN-018, SC-LIN-003. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando la justificación cita resultados realmente obtenidos y verifica <50 ms, sin anticipar cifras.
+- [X] T033 Fijar K=50 como valor predeterminado en `cripta/constantes.py` (Modificado), a partir de las mediciones a escala 1 de T041 y T042. Verificar en `tests/aceptacion/test_linea_tiempo.py` (Modificado) que una partida iniciada desde la CLI usa 50 al omitir `--checkpoint-cada` y respeta un valor explícito. FR-LIN-013, FR-LIN-014, FR-LIN-018, FR-LIN-022, SC-LIN-003. Citar el máximo observado inferior a 50 ms y validar con `py -m unittest discover -s tests -t .`.
+
+  Se contrastaron la [línea base con captura completa](../../docs/bench/resultados_004_linea_base.md) y la [corrida con puntos periódicos reducidos](../../docs/bench/resultados_004_puntos_reducidos.md). Ambas ejecutaron `py -m cripta --bench --solo linea_tiempo --escala 1` en Windows 11 (AMD64) con Python 3.14.6. Se usó el fixture `cripta-06` (300 salas, 760 salidas), semilla 20261117 y vida máxima inicial de 1 000 000 000. Cada escenario jugó una partida independiente de 5 000 acciones con la misma carga y se evaluó con las mismas 21 consultas por acción e instante, incluidas posiciones inmediatamente anteriores a puntos de control.
+
+  | Escenario | Puntos periódicos | Máximo observado de consulta (ms), completa → reducida | Memoria estimada de la línea (KiB), completa → reducida |
+  |---|---:|---:|---:|
+  | K=50 | 100 | 24.817 → 24.457 | 34 494.7 → 22 873.6 |
+  | K=100 | 50 | 53.273 → 51.072 | 17 690.4 → 11 885.9 |
+  | K=500 | 10 | 249.615 → 247.549 | 4 245.8 → 3 093.4 |
+  | K=1000 | 5 | 467.162 → 481.429 | 2 565.4 → 1 992.5 |
+  | Sin puntos periódicos | 0 | 2 222.919 → 2 232.532 | 882.7 → 882.7 |
+
+  Se elige **K=50** porque fue el único escenario cuyo máximo observado quedó por debajo de 50 ms en ambas corridas (FR-LIN-018, SC-LIN-003). Con puntos reducidos, su peor ciclo fue de 1.933 ms, por debajo del límite de 20 ms. La mayor frecuencia cuesta 10 987.7 KiB adicionales de memoria estimada frente a K=100 con puntos reducidos. La reducción ahorró un 33.7 % de memoria frente a la captura completa con el mismo K=50. La estimación cubre acciones, ajustes y puntos periódicos. El punto inicial y la proyección de puertas iniciales quedan fuera de ese cálculo.
+
+  La suite completa pasó 629 pruebas con `py -m unittest discover -s tests -t .`. La prueba de aceptación confirmó K=50 sin la opción y K=7 con `--checkpoint-cada 7`.
 
 ## Fase F: Cierre
 
@@ -100,6 +114,8 @@
 - [ ] T037 Ejecutar suite Parte I y II y corregir solo regresiones de esta feature en sus archivos de prueba/código ya declarados; documentar comando y resultado en `specs/004-linea-de-tiempo/tasks.md` (Modificado). FR-LIN-001 a FR-LIN-023, SC-LIN-001 a SC-LIN-007. Validar con `py -m unittest discover -s tests -t .`; hecho cuando la suite completa termina en OK y pruebas afectadas citan FR.
 - [ ] T038 Auditar importaciones y estructuras prohibidas en los archivos nuevos/modificados de modelo, CLI y benchmark; anotar resultado en `specs/004-linea-de-tiempo/tasks.md` (Modificado). FR-LIN-005, FR-LIN-008, FR-LIN-015, SC-LIN-002. Validar con `py -m unittest discover -s tests -t .` y revisión estática de los archivos de la feature; hecho cuando no hay importación prohibida, índice/caché hash, ordenamiento prohibido, I/O/red/vista en modelo ni vista en replay/bench.
 - [ ] T039 Repetir y registrar mediciones de agenda y retroceso de Parte I §5.6 en `specs/004-linea-de-tiempo/tasks.md` (Modificado), coordinando carga nueva y resultados existentes sin inventar valores. FR-LIN-015, FR-LIN-018. Validar con `py -m cripta --bench --solo agenda ciclo historial`; hecho cuando se registran los resultados realmente medidos y se contrasta el impacto.
+  La medición del costo de registrar y revertir acciones con muchos cazadores activos queda pendiente en T039 como insumo separado del [plan de la 004](plan.md#rendimiento-y-benchmark). La carga publicada de `py -m cripta --bench --solo historial` usa seis inversas sintéticas por acción sin cazadores. [DECISIONES.md](../../DECISIONES.md#L867)
+
 - [ ] T040 Completar la sección «DECISIONES.md» en `DECISIONES.md` (Modificado): documentar elecciones de implementación resultantes de mediciones y mantener pendiente del grupo el criterio de cripta de referencia frente a `CRIPTA_REFERENCIA`; sin cifras no medidas. FR-LIN-014, FR-LIN-018, SC-LIN-003. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando cada decisión se apoya en resultados existentes y el criterio de referencia sigue sin decisión impuesta.
 
 ## Cobertura de pruebas y criterios independientes

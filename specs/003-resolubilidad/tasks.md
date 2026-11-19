@@ -134,7 +134,7 @@ Depende de Fase B completa.
 
 ### Pruebas de controlador — se escriben primero
 
-- [ ] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación (caso del Apéndice B, método con sufijo `_ApendiceB`), el reporte se imprime con el formato del §3 del contrato (métodos con `reporte` en el nombre), inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista, y devuelve el código 0 (cripta resoluble o no resoluble), 1 (datos inválidos) o 2 (error externo) según el contrato §1.1 (métodos con `codigo_salida` en el nombre) — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
+- [X] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación (caso del Apéndice B, método con sufijo `_ApendiceB`), el reporte se imprime con el formato del §3 del contrato (métodos con `reporte` en el nombre), inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista, y devuelve el código 0 (cripta resoluble o no resoluble), 1 (datos inválidos) o 2 (error externo) según el contrato §1.1 (métodos con `codigo_salida` en el nombre) — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015, FR-RES-016, FR-RES-024, SC-005
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: archivo existe, todos los casos fallan por `ImportError`.
@@ -148,17 +148,17 @@ Depende de Fase B completa.
   - Comando: `py -m unittest discover -s tests -t .`
   - Hecho: todas las vistas siguen instanciándose; la suite completa pasa y el reporte coincide con el formato de §3 (81 caracteres).
 
-- [ ] T014 Integrar verificación en `cripta/servicios/servicio_partida.py`: antes de instanciar `Partida`, invocar `ServicioResolubilidad.verificar(id_cripta)` y adjuntar el `ResultadoResolubilidad` al objeto devuelto al controlador — **Modificado**: `cripta/servicios/servicio_partida.py`
+- [X] T014 Integrar verificación en `cripta/servicios/servicio_partida.py`: antes de instanciar `Partida`, invocar `ServicioResolubilidad.verificar(id_cripta)` y adjuntar el `ResultadoResolubilidad` al objeto devuelto al controlador — **Modificado**: `cripta/servicios/servicio_partida.py`
   - Requisitos: FR-RES-013
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: el controlador recibe el resultado sin abrir vista; T012 pasa.
 
-- [ ] T015 Modificar `cripta/controlador/controlador_cripta.py`: aceptar `forzar: bool = False`; en `_iniciar_partida` (o equivalente), obtener `ResultadoResolubilidad` del servicio, llamar `vista.mostrar_reporte_resolubilidad(resultado, forzada=forzar)`; si `not resultado.es_resoluble and not forzar` retornar sin entrar al bucle interactivo — **Modificado**: `cripta/controlador/controlador_cripta.py`
+- [X] T015 Modificar `cripta/controlador/controlador_cripta.py`: aceptar `forzar: bool = False`; en `_iniciar_partida` (o equivalente), obtener `ResultadoResolubilidad` del servicio, llamar `vista.mostrar_reporte_resolubilidad(resultado, forzada=forzar)`; si `not resultado.es_resoluble and not forzar` retornar sin entrar al bucle interactivo — **Modificado**: `cripta/controlador/controlador_cripta.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: T012 pasa; las pruebas previas siguen en OK.
 
-- [ ] T016 Agregar banderas `--verificar <id_cripta>` y `--forzar` en `cripta/__main__.py`: si `--verificar` está presente, instanciar `ServicioResolubilidad` con `ClienteOffline` o `ClienteHttp` y `CacheDisco`, llamar `servicio.verificar(id_cripta)`, imprimir `resultado.reporte_texto()` a `sys.stdout`, salir con código `0`/`1`/`2` según contrato §1.1 sin instanciar `VistaConsola`; si no está `--verificar`, pasar `forzar` al controlador — **Modificado**: `cripta/__main__.py`
+- [X] T016 Agregar banderas `--verificar <id_cripta>` y `--forzar` en `cripta/__main__.py`: si `--verificar` está presente, instanciar `ServicioResolubilidad` con `ClienteOffline` o `ClienteHttp` y `CacheDisco`, llamar `servicio.verificar(id_cripta)`, imprimir `resultado.reporte_texto()` a `sys.stdout`, salir con código `0`/`1`/`2` según contrato §1.1 sin instanciar `VistaConsola`; si no está `--verificar`, pasar `forzar` al controlador — **Modificado**: `cripta/__main__.py`
   - Requisitos: FR-RES-014, FR-RES-015, FR-RES-016, FR-RES-024, SC-005
   - Comando: `py -m cripta --offline --verificar cripta-02` (sin vista interactiva; requiere que los datos de esa cripta ya estén guardados para --offline, por ejemplo tras descargarla en línea una vez); `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: T012 pasa; `--verificar` imprime reporte y sale sin instanciar la vista; `--forzar` pasa la bandera al controlador.

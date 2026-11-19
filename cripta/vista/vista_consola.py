@@ -340,6 +340,23 @@ class VistaConsola(VistaBase):
         self._avisar(f"[Error] {texto}")
 
 
+    def mostrar_reporte_resolubilidad(self, resultado, forzada: bool = False) -> None:
+        """Imprime el reporte de resolubilidad dentro del ancho fijo del contrato."""
+        lineas = resultado.reporte_texto().splitlines()
+        contenido = []
+        for linea in lineas:
+            if linea and all(caracter == "=" for caracter in linea):
+                continue
+            contenido.extend(textwrap.wrap(linea, width=77) or [""])
+        if forzada:
+            contenido.insert(2, "ADVERTENCIA: el inicio de la partida fue forzado.")
+        borde = "=" * 81
+        self._salida(borde)
+        for linea in contenido:
+            self._salida(f"| {linea[:77].ljust(77)} |")
+        self._salida(borde)
+
+
     def _avisar(self, linea: str) -> None:
         # En juego el aviso espera y sale justo encima de la entrada; fuera del juego sale de inmediato.
         if self._en_juego:

@@ -46,7 +46,8 @@ class DatosFinales:
 
 class ControladorCripta:
     def __init__(self, servicio, vista, ruta_guardado: str = "partida.sav",
-                 ruta_bitacora: str = "partida.log", semilla: int | None = None, leer_puntajes=None):
+                 ruta_bitacora: str = "partida.log", semilla: int | None = None, leer_puntajes=None,
+                 forzar: bool = False):
         # servicio: ServicioPartida; vista: VistaBase (consola o gráfica);
         # leer_puntajes: función sin argumentos que devuelve todos los puntajes guardados (None = sin tabla).
         self._servicio = servicio
@@ -55,6 +56,7 @@ class ControladorCripta:
         self._ruta_bitacora = ruta_bitacora
         self._semilla = semilla
         self._leer_puntajes = leer_puntajes
+        self._forzar = forzar
         self._criptas = ()
 
 
@@ -105,7 +107,14 @@ class ControladorCripta:
         if cripta_id is None:
             return False
         ok, _ = self._intentar(self._servicio.iniciar_nueva, cripta_id, self._semilla, self._ruta_bitacora)
-        return ok
+        if not ok:
+            return False
+        resultado = getattr(self._servicio, "resultado_resolubilidad", None)
+        if resultado is not None:
+            self._vista.mostrar_reporte_resolubilidad(resultado, forzada=self._forzar)
+            if not resultado.es_resoluble and not self._forzar:
+                return False
+        return True
 
 
     def _bucle_principal(self) -> None:

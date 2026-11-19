@@ -51,6 +51,7 @@ class VistaFalsa(VistaBase):
         self.estados, self.avisos, self.errores, self.ordenados = [], [], [], []
         self.mapas, self.motivos_viaje = [], []
         self.resultados, self.finales, self.preguntas = [], [], []
+        self.reportes_resolubilidad = []
         self.historias = []
         self.ultimo_vista = None
 
@@ -87,6 +88,10 @@ class VistaFalsa(VistaBase):
 
     def mostrar_error(self, texto):
         self.errores.append(texto)
+
+
+    def mostrar_reporte_resolubilidad(self, resultado, forzada=False):
+        self.reportes_resolubilidad.append((resultado, forzada))
 
 
     def mostrar_inventario_ordenado(self, criterio, objetos):

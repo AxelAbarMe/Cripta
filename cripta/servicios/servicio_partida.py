@@ -18,6 +18,7 @@ from cripta.modelo.puntajes import Puntaje
 from cripta.servicios.servicio_catalogo import ServicioCatalogo
 from cripta.servicios.servicio_precarga import ServicioPrecarga
 from cripta.servicios.servicio_presupuesto import ServicioPresupuesto
+from cripta.servicios.servicio_resolubilidad import ServicioResolubilidad
 
 
 class ServicioPartida:
@@ -32,6 +33,7 @@ class ServicioPartida:
         self._tamano_cache = tamano_cache
         self._asincrono = asincrono
         self._partida = None
+        self.resultado_resolubilidad = None
         self._catalogo = None
         self._precarga = None
         self._bitacora = None
@@ -68,6 +70,9 @@ class ServicioPartida:
         if semilla is None:
             semilla = random.SystemRandom().randrange(2 ** 32)   # la semilla queda en la bitácora y en el guardado
         try:
+            self.resultado_resolubilidad = ServicioResolubilidad(
+                self._cliente, self._contador, self._cache_disco
+            ).verificar(cripta_id)
             mapa = self._armar(general, version_catalogo)
             self._partida = Partida(general, mapa, self._catalogo, self._precarga, semilla,
                                     checkpoint_cada=self._checkpoint_cada)

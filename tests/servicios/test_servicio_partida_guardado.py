@@ -17,6 +17,7 @@ from cripta.infraestructura.puntajes_disco import RepositorioPuntajes
 from cripta.modelo.accion import Accion as A
 from cripta.modelo.cripta_mapa import CriptaMapa
 from cripta.modelo.inventario import ObjetoInventario
+from cripta.modelo.linea_tiempo import LineaTiempo
 from cripta.modelo.partida import Partida
 from cripta.modelo.puntajes import Puntaje
 from cripta.servicios.servicio_partida import ServicioPartida
@@ -91,6 +92,42 @@ class PruebaGuardarYCargar(unittest.TestCase):
             self.assertEqual(a.ejecutar(accion).aceptada, b.ejecutar(accion).aceptada)
         self.assertEqual(juego(estado_de(a)), juego(estado_de(b)))       # y después de seguir jugando las dos
         self.assertEqual((a.partida.vista(), a.partida.puntaje()), (b.partida.vista(), b.partida.puntaje()))
+        a.cerrar()
+        b.cerrar()
+
+    def test_la_partida_cargada_asigna_el_mismo_id_al_siguiente_objeto_recogido(self):  # FR-LIN-010, FR-LIN-021
+        a = armar()
+        iniciar(a)
+        for accion in (A("recoger", "itm_antorcha"), A("soltar", 0)):    # el contador queda en 1 y el inventario vacío
+            a.ejecutar(accion)
+        ruta = self.dir / "partida.bin"
+        a.guardar(ruta)
+        b = armar()
+        b.cargar(ruta)
+        for servicio in (a, b):
+            self.assertTrue(servicio.ejecutar(A("recoger", "itm_antorcha")).aceptada)
+        ids = lambda servicio: [o.instancia_id for o in servicio.partida._jugador.inventario.objetos_en_orden()]
+        self.assertEqual(ids(a), ["i-2"])
+        self.assertEqual(ids(b), ids(a))
+        a.cerrar()
+        b.cerrar()
+
+    def test_los_checkpoints_creados_tras_cargar_coinciden_con_los_de_la_original(self):  # FR-LIN-010, FR-LIN-017
+        a = armar()
+        iniciar(a)
+        a.partida._linea = LineaTiempo(2)
+        for accion in (A("recoger", "itm_antorcha"), A("soltar", 0), A("esperar"), A("esperar")):
+            a.ejecutar(accion)
+        ruta = self.dir / "partida.bin"
+        a.guardar(ruta)
+        b = armar()
+        b.cargar(ruta)
+        for accion in (A("recoger", "itm_antorcha"), A("esperar"), A("esperar")):
+            self.assertEqual(a.ejecutar(accion).aceptada, b.ejecutar(accion).aceptada)
+        linea_a, linea_b = estado_de(a).linea, estado_de(b).linea
+        self.assertEqual(len(linea_a.checkpoints), 3)
+        self.assertEqual(linea_b.checkpoints, linea_a.checkpoints)
+        self.assertEqual(linea_b, linea_a)
         a.cerrar()
         b.cerrar()
 

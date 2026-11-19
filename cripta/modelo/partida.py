@@ -8,7 +8,15 @@ import gc
 import random
 from contextlib import nullcontext
 
-from cripta.constantes import COSTO_ATACAR, COSTO_ESPERAR, COSTO_MOVER, DIRECCIONES, TRAMPA_REARME_DEFAULT
+from cripta.constantes import (
+    CHECKPOINT_CADA_DEFECTO,
+    COSTO_ATACAR,
+    COSTO_ESPERAR,
+    COSTO_MOVER,
+    DIRECCIONES,
+    RETROCESO_MAX_ACCIONES,
+    TRAMPA_REARME_DEFAULT,
+)
 from cripta.estructuras.vector import VectorOrdenado
 from cripta.excepciones import CriptaFormatoIncompatibleError
 
@@ -37,11 +45,19 @@ from cripta.modelo.conocimiento_jugador import ConocimientoJugador
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
 
+from cripta.modelo.linea_tiempo import LineaTiempo, ObjetoHistorico, ResumenHistorico
 from cripta.modelo.persistencia_modelo import (
+    PrecargaMaterializada,
+    contenido_inicial_de,
+    copiar_mapa_estatico,
     crear_estado,
+    linea_a_guardada,
+    linea_desde_guardada,
+    puertas_cerradas,
     restaurar_jugador,
     restaurar_conocimiento,
     restaurar_sala,
+    restaurar_sala_materializada,
     siguiente_instancia_tras,
 )
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
@@ -63,12 +79,36 @@ EN_CURSO = "en_curso"
 VICTORIA = "victoria"
 DERROTA = "derrota"
 
+AJUSTE_QUITAR = "quitar"      # ajuste de inventario: la instancia ya no está
+AJUSTE_AGREGAR = "agregar"    # ajuste de inventario: la instancia sigue en el inventario
+
+
+def _diferencia_inventario(esperado, vivo) -> list:
+    # Ajustes que llevan el inventario reproducido (esperado) al inventario vivo, ambos como pares (instancia, ficha)
+    ajuste = []
+    for instancia, _ficha in esperado:
+        if not _tiene_instancia(vivo, instancia):
+            ajuste.append((AJUSTE_QUITAR, instancia))
+    for instancia, ficha in vivo:
+        if not _tiene_instancia(esperado, instancia):
+            ajuste.append((AJUSTE_AGREGAR, instancia, ficha))
+    return ajuste
+
+
+def _tiene_instancia(pares, instancia) -> bool:
+    for otra, _ficha in pares:
+        if otra == instancia:
+            return True
+    return False
+
 
 class Partida:
-    def __init__(self, datos_generales, mapa, servicio_catalogo, servicio_precarga, semilla: int):
+    def __init__(self, datos_generales, mapa, servicio_catalogo, servicio_precarga, semilla: int,
+                 checkpoint_cada: int | None = None):
         self._datos = datos_generales            # CriptaGeneralDTO
         self._mapa = mapa
         self._mapa.sincronizar_puertas()         # la puerta cerrada en un lado debe estarlo en los dos 
+        self._puertas_iniciales = tuple(puertas_cerradas(sala) for sala in mapa.todas_las_salas())
         self._catalogo = servicio_catalogo
         self._precarga = servicio_precarga
         self._semilla = semilla
@@ -89,6 +129,15 @@ class Partida:
         self._salas_preparadas = VectorOrdenado()   # ids de las salas ya pobladas (el jugador llegó a ellas)
         self._mensajes_nuevos: list[str] = []
         self._iniciada = False
+        # Línea de tiempo (004): acciones vigentes, checkpoints y la base desde donde se reconstruye
+        frecuencia = CHECKPOINT_CADA_DEFECTO if checkpoint_cada is None else checkpoint_cada
+        self._linea = LineaTiempo(frecuencia)
+        self._estado_base = None
+        self._inventarios_previos = []           # inventario antes de cada una de las últimas acciones
+        self._contenido_inicial = VectorOrdenado(clave=lambda c: c.sala_id)   # salas ya materializadas
+        self._aislada = False                    # True en la copia que solo sirve para consultar el pasado
+        self._silenciosa = False                 # la copia aislada no escribe mensajes
+        self._limite_evento = None               # la copia aislada se detiene antes de eventos posteriores
 
 
 
@@ -137,6 +186,8 @@ class Partida:
             salas_preparadas=self._salas_preparadas, acciones_jugador=self._acciones_ejecutadas,
             enemigos_derrotados=self._enemigos_derrotados, mensajes=self._bitacora.mensajes(),
             conocimiento=self._conocimiento,
+            linea=linea_a_guardada(self._linea, self._estado_base, self._contenido_inicial),
+            siguiente_instancia=self._siguiente_instancia,
         )
 
 
@@ -154,16 +205,23 @@ class Partida:
         with partida._historial.sin_registrar():   # cargar no es una acción: nada de esto se podría deshacer
             partida._restaurar(estado)
         partida._precarga.precargar_desde(partida._jugador.sala_actual)
+        if estado.linea is None:
+            partida._estado_base = partida._capturar()   # sin línea guardada, la historia parte de la carga
+        else:
+            partida._linea, partida._estado_base, partida._contenido_inicial = linea_desde_guardada(estado.linea)
         return partida
 
-    def _restaurar(self, estado) -> None:
+    def _restaurar(self, estado, materializada: bool = False) -> None:
         enemigos = VectorOrdenado(clave=lambda e: e.instancia_id)
         trampas = VectorOrdenado(clave=lambda t: t.instancia_id)
         for guardada in estado.salas:
             sala = self._mapa.obtener(guardada.sala_id)
             if sala is None:
                 raise CriptaFormatoIncompatibleError(f"La partida guardada menciona la sala {guardada.sala_id}, que no existe.")
-            restaurar_sala(sala, guardada, self._precarga, self._catalogo, enemigos, trampas)
+            if materializada:
+                restaurar_sala_materializada(sala, guardada, self._catalogo, enemigos, trampas)
+            else:
+                restaurar_sala(sala, guardada, self._precarga, self._catalogo, enemigos, trampas)
             if guardada.contenido_cargado:
                 self._marcar_preparada(sala.id)
         restaurar_jugador(self._jugador, estado.jugador, self._catalogo)
@@ -181,7 +239,7 @@ class Partida:
         self._enemigos_derrotados = estado.enemigos_derrotados
         for mensaje in estado.mensajes:
             self._bitacora.agregar(mensaje)
-        self._siguiente_instancia = siguiente_instancia_tras(self._jugador.inventario)
+        self._siguiente_instancia = max(estado.siguiente_instancia, siguiente_instancia_tras(self._jugador.inventario))
         self._turno_listo = True                    # solo se guarda cuando al jugador le toca decidir
         self._buscador.invalidar()
         self._mensajes_nuevos = []
@@ -240,7 +298,7 @@ class Partida:
             raise RuntimeError("La partida ya fue iniciada.")
         sala = self._precarga.preparar_sala(self._datos.sala_inicial)
         self._conocimiento.al_entrar(sala.id, self._antorcha_encendida)
-        self._marcar_preparada(sala.id)
+        self._marcar_preparada_viva(sala)
         self._precarga.precargar_desde(self._datos.sala_inicial)
         sala.marcar_visita(0)
         self._activar_enemigos_de(sala)
@@ -248,6 +306,8 @@ class Partida:
         self._avanzar_hasta_turno_jugador()
         self._mensajes_nuevos = []
         self._iniciada = True
+        if not self._aislada:
+            self._estado_base = self._capturar()   # la reconstrucción sin checkpoints parte de aquí
 
     # --------------------------------------------------------- ciclo de eventos
     def _marcar_turno_jugador(self) -> None:
@@ -257,6 +317,8 @@ class Partida:
     def _avanzar_hasta_turno_jugador(self) -> None:
         """Ejecuta eventos (enemigos, efectos) hasta que le toque decidir al jugador."""
         while not self._turno_listo and self._desenlace == EN_CURSO:
+            if self._limite_evento is not None and not self._hay_evento_hasta(self._limite_evento):
+                break
             if self._reloj.ejecutar_siguiente() is None:
                 break
 
@@ -342,6 +404,8 @@ class Partida:
             return self._rechazar("La partida ya terminó.")
         if accion.tipo == "pergamino":
             return self._usar_pergamino()   # no es una acción del jugador: no abre intervalo en el historial
+        tiempo_decision = self._reloj.tiempo_actual
+        inventario_previo = None if self._aislada else self._objetos_inventario()
         self._historial.iniciar_intervalo()
         self._guardar_contadores()
         try:
@@ -351,6 +415,8 @@ class Partida:
             raise
         if not resultado.aceptada:
             self._historial.descartar_intervalo_actual()   # una acción rechazada no cambia nada
+        else:
+            self._registrar_en_linea(accion, tiempo_decision, inventario_previo)
         return resultado
 
     def _despachar(self, accion) -> ResultadoAccion:
@@ -384,6 +450,7 @@ class Partida:
         self._buscador.invalidar()
         with self._historial.sin_registrar():
             inventario.quitar_primero_de_clase("pergamino_retroceso")
+        self._recortar_linea_por_pergamino()
         self._decir("Usas un pergamino de retroceso: el tiempo vuelve atrás.")
         return self._aceptar()
 
@@ -407,7 +474,7 @@ class Partida:
         # Si todavía no llegó, esta llamada espera: la espera real no mueve el reloj virtual.
         with self._historial.sin_registrar():   # cargar contenido es infraestructura, no estado del juego
             destino = self._precarga.preparar_sala(salida.sala_destino)
-        self._marcar_preparada(destino.id)
+        self._marcar_preparada_viva(destino)
         tiempo = self._reloj.tiempo_actual
         sala.marcar_visita(tiempo)
         self._jugador.sala_actual = destino.id
@@ -710,10 +777,7 @@ class Partida:
                         salida.estado_puerta == "cerrada", salida.costo)
             for salida in sala_conocida.salidas
         )
-        enemigos = tuple(
-            EnemigoVista(e.etiqueta(), e.instancia_id, e.vida, e.vida_max, e.comportamiento == "cazador")
-            for e in sala.enemigos_activos if e.esta_vivo()
-        )
+        enemigos = self._enemigos_vista(sala)
         objetos = tuple(ObjetoSueloVista(i, self._catalogo.obtener(i).nombre) for i in sala.objetos_en_suelo)
         trampas = tuple(
             TrampaVista(self._catalogo.obtener(t.tipo_catalogo).nombre, t.armada) for t in sala.trampas
@@ -721,7 +785,7 @@ class Partida:
         jugador = self._jugador
         inventario = jugador.inventario
         actual = inventario.objeto_actual()
-        efectos = (("Veneno",) if jugador.veneno_activo is not None else ()) + (("Antorcha",) if self._antorcha_encendida else ())
+        efectos = self._efectos_activos()
         return VistaPartida(
             sala_id=sala.id,
             sala_nombre=sala.esqueleto.nombre,
@@ -747,10 +811,183 @@ class Partida:
             desenlace=self._desenlace,
         )
 
+    # --------------------------------------------------------- línea de tiempo (004)
+    def linea_tiempo(self) -> LineaTiempo:
+        # Línea vigente de acciones, checkpoints y ajustes de inventario
+        return self._linea
+
+    def consultar_instante(self, t) -> ResumenHistorico:
+        """Estado en el instante t (FR-LIN-001, 002, 006). Rechaza t mal formado o posterior al reloj."""
+        self._exigir_iniciada()
+        if isinstance(t, bool) or not isinstance(t, int):
+            raise ValueError(f"El instante debe ser un entero y se recibió {t!r}.")
+        if t < 0:
+            raise ValueError(f"El instante no puede ser negativo: {t}.")
+        reloj = self._reloj.tiempo_actual
+        if t > reloj:
+            raise ValueError(f"El instante {t} es posterior al reloj actual ({reloj}).")
+        inicio = self._estado_base[0].reloj_actual
+        if t < inicio:
+            raise ValueError(f"El instante {t} es anterior al inicio de la línea de tiempo ({inicio}).")
+        antes = self._linea.contar_hasta_instante(t, False)
+        hasta = self._linea.contar_hasta_instante(t, True)
+        if hasta > antes or t == reloj or hasta == 0:
+            copia = self._reconstruir(antes)          # hay decisión en t: estado justo antes de ella
+        else:
+            copia = self._reconstruir(hasta - 1, t)   # sin decisión: todos los eventos hasta t
+        return copia._resumir(t)
+
+    def consultar_accion(self, k) -> ResumenHistorico:
+        """Estado justo antes de la acción vigente k (FR-LIN-003). Rechaza k mal formado o sin acción."""
+        self._exigir_iniciada()
+        if isinstance(k, bool) or not isinstance(k, int):
+            raise ValueError(f"El número de acción debe ser un entero y se recibió {k!r}.")
+        if k < 1 or k > len(self._linea):
+            raise IndexError(f"No hay una acción vigente número {k}: hay {len(self._linea)}.")
+        return self._reconstruir(k - 1)._resumir(self._linea.tiempo_de(k))
+
+    def _exigir_iniciada(self) -> None:
+        if not self._iniciada:
+            raise RuntimeError("Hay que llamar a iniciar() antes de consultar la historia.")
+
+    def _capturar(self, *, periodico: bool = False):
+        # La base conserva todas las salas. Un punto periódico puede reconstruir las omitidas desde el esqueleto.
+        estado = crear_estado(
+            cripta_id=self._datos.id, cripta_version=self._datos.version, catalogo_version="",
+            semilla=self._semilla, azar=self._azar, reloj=self._reloj, jugador=self._jugador, mapa=self._mapa,
+            salas_preparadas=self._salas_preparadas, acciones_jugador=self._acciones_ejecutadas,
+            enemigos_derrotados=self._enemigos_derrotados, mensajes=(), conocimiento=self._conocimiento,
+            siguiente_instancia=self._siguiente_instancia,
+            puertas_iniciales=self._puertas_iniciales if periodico else None,
+        )
+        return (estado, self._siguiente_instancia)
+
+    def _marcar_preparada_viva(self, sala) -> None:
+        # La primera vez que se prepara una sala se guarda su contenido inicial para la reconstrucción
+        if (not self._aislada and not self._salas_preparadas.contiene(sala.id)
+                and not self._contenido_inicial.contiene(sala.id)):
+            self._contenido_inicial.insertar(contenido_inicial_de(sala))
+        self._marcar_preparada(sala.id)
+
+    def _registrar_en_linea(self, accion, tiempo_decision: int, inventario_previo) -> None:
+        # Anota la acción aceptada y crea el checkpoint si toca en esta decisión
+        if self._aislada:
+            return
+        self._linea.registrar_accion(accion, tiempo_decision)
+        self._inventarios_previos.append(inventario_previo)   # espeja los intervalos del historial de retroceso
+        if len(self._inventarios_previos) > RETROCESO_MAX_ACCIONES:
+            self._inventarios_previos.pop(0)
+        if self._turno_listo and self._desenlace == EN_CURSO and self._linea.debe_crear_checkpoint():
+            self._linea.registrar_checkpoint(self._capturar(periodico=True))
+
+    def _recortar_linea_por_pergamino(self) -> None:
+        # El pergamino revierte la última acción: se recorta la línea y se anota la diferencia de inventario
+        if self._aislada or len(self._linea) == 0 or len(self._inventarios_previos) == 0:
+            return
+        limite = len(self._linea) - 1
+        self._linea.truncar(limite)
+        esperado = self._inventarios_previos.pop()   # inventario vivo en la decisión previa a la acción revertida
+        ajuste = _diferencia_inventario(esperado, self._objetos_inventario())
+        if len(ajuste) > 0:
+            self._linea.registrar_ajuste(ajuste)
+
+    def _hay_evento_hasta(self, limite: int) -> bool:
+        # True si queda algún evento vigente con tiempo menor o igual que el límite
+        for evento in self._reloj.eventos_vigentes():
+            if evento.tiempo <= limite:
+                return True
+        return False
+
+    def _reconstruir(self, posicion: int, hasta_instante: int | None = None):
+        """Copia aislada en el estado tras `posicion` acciones, desde el checkpoint más cercano y con a lo sumo K
+        acciones re-simuladas. Con `hasta_instante` ejecuta además la acción siguiente y sus eventos hasta ese instante."""
+        punto = self._linea.buscar_checkpoint(posicion)
+        origen, base = (self._estado_base, 0) if punto is None else (punto.estado, punto.numero_acciones)
+        copia = self._crear_aislada(origen)
+        with copia._historial.sin_registrar():
+            copia._aplicar_ajustes(self._linea, base)
+            for numero in range(base + 1, posicion + 1):
+                copia._reproducir(self._linea.accion(numero))
+                copia._aplicar_ajustes(self._linea, numero)
+            if hasta_instante is not None:
+                copia._limite_evento = hasta_instante
+                copia._reproducir(self._linea.accion(posicion + 1))
+                copia._limite_evento = None
+                copia._aplicar_ajustes(self._linea, posicion + 1)
+        return copia
+
+    def _crear_aislada(self, origen):
+        # Partida nueva sin red, bitácora ni historial compartido, restaurada desde datos planos
+        estado, siguiente_instancia = origen
+        mapa = copiar_mapa_estatico(self._mapa)
+        precarga = PrecargaMaterializada(mapa, self._contenido_inicial, self._catalogo)
+        copia = type(self)(self._datos, mapa, self._catalogo, precarga, estado.semilla)
+        copia._aislada = True
+        copia._silenciosa = True
+        with copia._historial.sin_registrar():
+            copia._restaurar(estado, materializada=True)
+        copia._siguiente_instancia = siguiente_instancia
+        return copia
+
+    def _reproducir(self, accion) -> None:
+        # Vuelve a ejecutar una acción vigente, que debe aceptarse igual que la primera vez
+        if not self._ejecutar_accion(accion).aceptada:
+            raise RuntimeError("La re-simulación de la línea de tiempo no coincide con la partida original.")
+
+    def _aplicar_ajustes(self, linea, posicion: int) -> None:
+        # Aplica los ajustes de inventario que la línea anotó en esta posición
+        inventario = self._jugador.inventario
+        for ajuste in linea.ajustes_en(posicion):
+            if ajuste[0] == AJUSTE_QUITAR:
+                self._quitar_instancia(ajuste[1])
+            else:
+                inventario.recoger(ObjetoInventario(ajuste[1], self._catalogo.obtener(ajuste[2])))
+
+    def _quitar_instancia(self, instancia: str) -> None:
+        # Quita del inventario el objeto con esa instancia si está
+        inventario = self._jugador.inventario
+        indice = 0
+        for objeto in inventario.objetos_en_orden():
+            if objeto.instancia_id == instancia:
+                inventario.ir_a_posicion(indice)
+                inventario.soltar_actual()
+                return
+            indice += 1
+
+    def _objetos_inventario(self) -> tuple:
+        # Pares (instancia, ficha) del inventario en su orden real
+        return tuple((o.instancia_id, getattr(o.ficha, "id", "")) for o in self._jugador.inventario.objetos_en_orden())
+
+    def _resumir(self, tiempo: int) -> ResumenHistorico:
+        # Proyección de solo lectura de los siete grupos de FR-LIN-004
+        jugador = self._jugador
+        sala = self._sala_actual()
+        inventario = tuple(ObjetoHistorico(i, f) for i, f in self._objetos_inventario())
+        return ResumenHistorico(
+            tiempo, sala.id, jugador.vida, jugador.vida_max, jugador.ataque_efectivo, jugador.defensa_efectiva,
+            jugador.velocidad, inventario, self._efectos_activos(), self._enemigos_vista(sala),
+            self._conocimiento.proyectar(),
+        )
+
     # ------------------------------------------------------------- auxiliares
     def _sala_actual(self):
         return self._mapa.obtener(self._jugador.sala_actual)
 
+    def _efectos_activos(self) -> tuple[str, ...]:
+        # Nombres de los efectos que afectan al jugador ahora
+        veneno = ("Veneno",) if self._jugador.veneno_activo is not None else ()
+        return veneno + (("Antorcha",) if self._antorcha_encendida else ())
+
+    @staticmethod
+    def _enemigos_vista(sala) -> tuple:
+        # Enemigos vivos y activos de la sala con su vida
+        return tuple(
+            EnemigoVista(e.etiqueta(), e.instancia_id, e.vida, e.vida_max, e.comportamiento == "cazador")
+            for e in sala.enemigos_activos if e.esta_vivo()
+        )
+
     def _decir(self, texto: str) -> None:
+        if self._silenciosa:
+            return
         self._bitacora.agregar(texto)
         self._mensajes_nuevos.append(texto)

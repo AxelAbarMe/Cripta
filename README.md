@@ -36,7 +36,9 @@ Todos los comandos se escriben **desde la carpeta raíz del proyecto**. `-m crip
 | `py -m cripta` | Juega en línea: descarga la cripta del API. |
 | `py -m cripta --offline` | Juega sin conexión, con las respuestas del API guardadas en `fixtures/`. |
 | `py -m cripta --cache-size 50` | Cambia cuántas fichas del catálogo se guardan en memoria (por defecto 25; debe ser un entero mayor o igual a 1). |
+| `py -m cripta --checkpoint-cada 50` | Cada cuántas acciones se guarda un punto de control de la línea de tiempo (por defecto 50, debe ser un entero mayor o igual a 1). Un valor inválido se rechaza al iniciar, con su motivo, y la partida no inicia. |
 | `py -m cripta --replay datos/partida.log` | Reproduce una partida guardada, sin interfaz (sección 5). |
+| `py -m cripta --replay datos/partida.log --hasta 150` | Reproduce la bitácora completa y además muestra el estado de la partida en el instante 150 (sección 5). |
 | `py -m cripta --bench` | Corre las mediciones de rendimiento, sin interfaz (sección 6). |
 | `py -m cripta --help` | Muestra la ayuda de las banderas. |
 
@@ -69,11 +71,15 @@ Se escribe el comando y se pulsa Enter. Mayúsculas y minúsculas dan igual. Los
 | `usar`, `equipar`, `soltar` | Actúan sobre el objeto que marca el cursor. |
 | `ordenar peso` / `valor` / `nombre` | Muestra el inventario ordenado por ese criterio. No cambia el orden real del inventario. |
 | `pergamino [1-5]` | Deshace las últimas acciones: cada pergamino deshace una (por defecto 1, máximo 5). Requiere tener pergaminos en el inventario. |
+| `historia <t>` | Muestra el estado de la partida en el instante `t` del reloj (por ejemplo `historia 150`). Si en `t` el jugador debía decidir, muestra el estado justo antes de esa decisión. No gasta tiempo, no se anota en la bitácora y no cambia la partida. |
+| `historia #<k>` | Muestra el estado justo antes de la acción número `k` (por ejemplo `historia #3`). Solo cuentan las acciones ejecutadas y vigentes, desde 1, y el pergamino no se numera. No gasta tiempo ni cambia la partida. |
 | `guardar` | Guarda la partida en `datos/partida.sav`. |
 | `cargar` | Reemplaza la partida actual por la guardada (pide confirmación). Se usa desde dentro de una partida. |
 | `salir` | Vuelve al menú principal (pide confirmación; lo no guardado se pierde). |
 
 `Ctrl+C` o fin de entrada (`Ctrl+Z` y Enter en Windows, `Ctrl+D` en Linux) equivalen a salir.
+
+`historia` muestra siete grupos de datos: el reloj, la sala, la vida y las estadísticas, el inventario, los efectos activos, los enemigos de la sala con su vida y el mapa conocido en ese momento. Se rechaza, con su motivo y sin ningún efecto, un instante posterior al reloj actual, un número de acción que no existe (cero, o mayor que la cantidad de acciones vigentes) o un argumento mal escrito. Después de usar un pergamino, las acciones que revirtió ya no se pueden consultar.
 
 Cada acción tiene un costo de tiempo (mover, atacar y esperar cuestan más que recoger o soltar) y los enemigos actúan según ese mismo reloj. La pantalla muestra la sala, sus salidas, los enemigos, los objetos del suelo, la vida, los efectos activos, el inventario, un minimapa y los últimos 20 mensajes. Al terminar (victoria o derrota) se puede escribir un nombre para la tabla de puntajes.
 
@@ -89,6 +95,15 @@ py -m cripta --offline --replay datos/partida.log
 El replay vuelve a ejecutar las acciones, sin interfaz ni preguntas, e imprime cada paso y el desenlace. Usa la red, salvo que se agregue `--offline` (que solo sirve si la partida fue en una cripta guardada en `fixtures/`). Si la versión de la cripta o del catálogo cambió desde que se jugó, o la bitácora está marcada como parcial, no la reproduce y explica por qué: con otros datos el resultado ya no sería el mismo.
 
 Al guardar, el juego también copia la bitácora en `datos/partida.sav.log`, de modo que una partida cargada se puede seguir reproduciendo desde el principio.
+
+**Consultar un instante con `--hasta`.** Con `--hasta t` el replay reproduce la bitácora completa, sin interfaz, y después muestra el estado en el instante `t` con el mismo componente que el comando `historia <t>` del juego. `t` es un entero mayor o igual a 0 y `--hasta` solo se acepta junto con `--replay`. Si la partida termina antes de `t`, muestra el estado final e indica que terminó antes.
+
+```
+py -m cripta --offline --replay docs/ejemplos/partida_cripta-02.log --hasta 150
+py -m cripta --offline --replay docs/ejemplos/partida_cripta-02.log --hasta 999999
+```
+
+La primera muestra la sección `Historia t=150` con los siete grupos de datos. La segunda muestra el estado final e indica `terminó antes de t=999999`. Esa bitácora incluye un pergamino, así que la consulta ya no ve la acción que el pergamino revirtió.
 
 **Bitácoras de ejemplo.** En `docs/ejemplos/` hay tres partidas ya jugadas que se reproducen sin red, sin necesidad de jugar antes:
 
@@ -119,7 +134,7 @@ py -m cripta --bench --escala 5 --markdown resultados.md
 
 Corre **cargas sintéticas** (datos generados con una semilla fija, sin red ni interfaz) que miden cada subsistema y, cuando corresponde, también la alternativa descartada, para comparar. Son la evidencia citada en el Documento de Decisiones.
 
-- `--solo` corre solo las cargas nombradas: `agenda`, `cache`, `disco`, `inventario`, `historial`, `ordenamiento`, `guardado`, `ciclo`, `partida`, `solicitudes`, `ruta_cazador`, `invalidacion`, `ciclo_referencia`.
+- `--solo` corre solo las cargas nombradas: `agenda`, `cache`, `disco`, `inventario`, `historial`, `historial_cazadores`, `ordenamiento`, `guardado`, `ciclo`, `partida`, `solicitudes`, `ruta_cazador`, `invalidacion`, `ciclo_referencia`, `linea_tiempo`.
 - `--escala X` multiplica el tamaño de las cargas (por defecto 1; con 5 las mediciones son más finas pero tardan más).
 - `--markdown ARCHIVO` además escribe la tabla de resultados en ese archivo.
 
@@ -135,7 +150,7 @@ Todo se escribe en la carpeta `datos/`, que se crea sola y **no se sube a git**:
 |---|---|
 | `datos/cache/` | Copia en disco de las fichas del catálogo y del contenido de las salas, para no volver a descargarlos. |
 | `datos/puntajes/` | Tabla de puntajes (`puntajes.json`) con los resultados de todas las criptas. |
-| `datos/partida.sav` | Partida guardada, en formato binario propio. |
+| `datos/partida.sav` | Partida guardada, en formato binario propio. Usa la versión 2 del formato, que guarda también la línea de tiempo. Un archivo guardado de la Parte I (versión 1) se rechaza al cargar con un error claro de versión, sin modificarlo ni borrarlo, y no se migra. |
 | `datos/partida.sav.log` | Bitácora de la partida guardada (la que se usa al cargarla). |
 | `datos/partida.log` | Bitácora de la partida en curso (la que lee `--replay`). |
 

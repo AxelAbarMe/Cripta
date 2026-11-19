@@ -1,0 +1,52 @@
+# Guía rápida de validación: línea de tiempo
+
+Esta guía describe validaciones para la fase de implementación. Ejecutarlas con la versión integrada de 001 y 002 y sin red cuando la prueba use fixtures.
+
+## Requisitos previos
+
+- Python 3.11 o superior y dependencias del proyecto instaladas.
+- Rama `004-linea-de-tiempo` con las capacidades necesarias integradas.
+- Fixtures de la Parte II disponibles para el benchmark de referencia.
+
+## Validaciones automatizadas
+
+Desde la raíz del repositorio:
+
+```powershell
+py -m unittest tests.modelo.test_linea_tiempo tests.modelo.test_partida_linea_tiempo
+py -m unittest tests.infraestructura.test_guardado_binario tests.servicios.test_servicio_replay
+py -m unittest tests.aceptacion.test_linea_tiempo
+```
+
+Esperado: todas las pruebas pasan e identifican en su docstring o nombre de prueba los requisitos FR que cubren. Deben ejercitar los seis casos B-LIN-001 a B-LIN-006 y los criterios SC-LIN-001 a SC-LIN-007. Los detalles lógicos están en [data-model.md](data-model.md) y los comandos de usuario en [contracts/cli.md](contracts/cli.md).
+
+## Revisión manual de comandos
+
+1. Iniciar una partida con `py -m cripta --offline --checkpoint-cada 100` y ejecutar acciones aceptadas.
+2. Consultar `historia 0` y `historia #1` cuando corresponda. Confirmar que se presentan los siete grupos mínimos y que reloj, estado, log e historial no cambian.
+3. Consultar un tiempo posterior al reloj y un `#k` inválido. Confirmar rechazo con motivo y sin efecto.
+4. Guardar, cargar y repetir una consulta válida. Comparar el resumen antes y después de cargar.
+5. Intentar cargar un guardado P1 de prueba. Confirmar incompatibilidad por versión y verificar que sus bytes siguen intactos; no debe ofrecerse migración.
+6. Reproducir una bitácora con `--replay partida.log --hasta t`. Comparar su resumen con `historia t`. La prueba de equivalencia debe usar `docs/ejemplos/partida_cripta-02.log`, que contiene un pergamino, y verificar que se reproduce completa antes de consultar. Si el log finaliza antes de t, se consulta el reloj final y se indica final anticipado.
+7. Usar un pergamino y comprobar que `partida.log` conserva su línea y las acciones revertidas, mientras `historia #k` numera solo las acciones vigentes y el pergamino no recibe número. Confirmar que el siguiente número continúa desde la última acción vigente. Verificar que `historia` del reloj actual muestra el mismo inventario que la partida viva, incluidos los ajustes de las instancias afectadas, y que el resumen no depende de la posición del cursor.
+8. Verificar en la reconstrucción aislada que `HistorialRetroceso.sin_registrar()` está activo, no se emiten mensajes ni se escribe bitácora, y no se realizan solicitudes ni se consume presupuesto. La restauración debe tomar el contenido estático de las salas materializadas en la partida viva o cargada y aplicar el estado dinámico sin llamar a `precarga.preparar_sala`.
+9. Comparar la memoria estimada de checkpoints con los costos de salida de la proyección 002 incluidos. La posibilidad de recalcularlos desde el esqueleto queda como límite conocido si el costo resulta excesivo.
+
+## Medición requerida
+
+```powershell
+py -m cripta --bench --solo linea_tiempo --escala 1
+```
+
+Esperado: ejecución determinista con semilla declarada, al menos 5 000 acciones sintéticas, cripta de referencia elegida por mayor cantidad de salas, y cinco corridas independientes con idénticas acciones e instantes y una muestra común de consultas que incluye posiciones inmediatamente anteriores a puntos de control. A escala 1, verificar 100, 50, 10, 5 y 0 puntos periódicos para K=50, 100, 500, 1000 y sin puntos periódicos, respectivamente. El reporte incluye memoria, costo medio de registro, mediana y máximo observado de consulta y peor ciclo por escenario. La captura completa se conserva en [la línea base 004](../../docs/bench/resultados_004_linea_base.md). Debe incluir la alternativa de reconstrucción por inversión, búsqueda lineal para convertir t en límite de acción y comparación de restauración actual (que llama `precarga.preparar_sala`) frente a la vía elegida (contenido estático materializado, estado dinámico del checkpoint, sin esa llamada), incluyendo la E/S por consulta. No se presupone resultado ni valor predeterminado. El grupo selecciona K después de medir y verifica consulta <50 ms.
+
+## Compatibilidad de la suite
+
+Tras las validaciones específicas, ejecutar la suite completa prescrita por el proyecto:
+
+```powershell
+py -m unittest discover -s tests -t .
+```
+
+Esperado: suite completa de Parte I y II satisfactoria; las pruebas afectadas deben citar FR. Esta planificación no ejecuta pruebas.
+

@@ -1,6 +1,7 @@
 '''Arranque de Cripta: arma infraestructura, servicio, vista y controlador (la vista solo en la rama interactiva).
 Banderas: --offline (lee fixtures/), --cache-size N (fichas del catálogo en memoria) y --bench (mediciones sin vista).
-Con --bench se aceptan además --escala, --solo y --markdown; --replay RUTA reproduce un log sin vista.
+Con --bench se aceptan además --escala, --solo y --markdown; --replay RUTA reproduce un log sin vista
+(con --hasta T consulta además el estado en el instante T). --checkpoint-cada K configura la línea de tiempo.
 Archivos generados en datos/: cache/, puntajes/, partida.sav y partida.log.
 Uso: py -m cripta [--offline] [--cache-size N]  |  py -m cripta --bench [--escala X]  |  py -m cripta --replay partida.log
 '''
@@ -37,10 +38,21 @@ def _entero_positivo(texto: str) -> int:
     return valor
 
 
-def _reproducir(servicio, ruta: str) -> int:
+def _entero_no_negativo(texto: str) -> int:
+    # Valida --hasta: un instante del reloj virtual, entero mayor o igual a 0
+    try:
+        valor = int(texto)
+    except ValueError:
+        valor = -1
+    if valor < 0:
+        raise argparse.ArgumentTypeError("debe ser un entero mayor o igual a 0")
+    return valor
+
+
+def _reproducir(servicio, ruta: str, hasta: int | None = None) -> int:
     # --replay: sin vista ni interacción (§6). Código 0 solo si la reproducción fue fiel; 2 si falla algo externo
     try:
-        resultado = ServicioReplay(servicio).reproducir(ruta)
+        resultado = ServicioReplay(servicio).reproducir(ruta, hasta=hasta)
     except CriptaError as error:
         print(f"[Error] {error}", file=sys.stderr)
         return 2
@@ -53,10 +65,16 @@ def main(argv=None) -> int:
     parser.add_argument("--offline", action="store_true", help="usa las respuestas guardadas en fixtures/ en vez de la red")
     parser.add_argument("--cache-size", type=_entero_positivo, default=CACHE_TAMANO_DEFAULT, metavar="N",
                         help=f"tope de fichas del catálogo en memoria (por defecto {CACHE_TAMANO_DEFAULT})")
+    parser.add_argument("--checkpoint-cada", type=_entero_positivo, default=None, metavar="K",
+                        help="cada cuántas acciones se guarda un punto de control de la línea de tiempo (entero >= 1)")
     parser.add_argument("--replay", metavar="PARTIDA.LOG", help="reproduce una partida desde su bitácora, sin vista")
+    parser.add_argument("--hasta", type=_entero_no_negativo, default=None, metavar="T",
+                        help="con --replay: consulta el estado en el instante T tras reproducir la bitácora completa")
     parser.add_argument("--bench", action="store_true",
                         help="ejecuta las cargas sintéticas sin vista; admite --escala, --solo y --markdown")
     argumentos, resto = parser.parse_known_args(argv)
+    if argumentos.hasta is not None and argumentos.replay is None:
+        parser.error("--hasta solo se acepta junto con --replay")
 
     if argumentos.bench:
         # Los argumentos que no son del juego (--escala, --solo, --markdown) los interpreta el propio bench
@@ -73,9 +91,10 @@ def main(argv=None) -> int:
         cache_disco=CacheDisco(AlmacenDiscoArchivos(DIRECTORIO_DATOS / "cache")),
         tamano_cache=argumentos.cache_size,
         repositorio_puntajes=repositorio_puntajes,
+        checkpoint_cada=argumentos.checkpoint_cada,
     )
     if argumentos.replay is not None:
-        return _reproducir(servicio, argumentos.replay)
+        return _reproducir(servicio, argumentos.replay, argumentos.hasta)
     ControladorCripta(
         servicio, VistaConsola(),
         ruta_guardado=str(DIRECTORIO_DATOS / "partida.sav"),

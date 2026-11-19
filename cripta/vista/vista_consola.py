@@ -5,8 +5,10 @@ Ctrl+C o fin de entrada equivalen a salir. Requiere una consola de al menos 113 
 '''
 import textwrap
 
+
 from cripta.controlador.controlador_cripta import CRITERIOS_ORDEN, Orden
 from cripta.vista.vista_base import VistaBase
+
 
 ANCHO = 113
 _CELDA = 27
@@ -20,8 +22,8 @@ CURSO = "Estructuras de Datos - II Ciclo 2026"
 _CONTROLES = (
     "n/s/e/o  moverse", "abrir <dir>  abrir puerta", "atacar <#>  ataca enemigo", "esperar  pasar el tiempo",
     "recoger <#>  del suelo", "sig / ant  mover cursor", "usar / equipar / soltar", "ordenar peso|valor|nombre",
-    "pergamino  deshacer", "mapa  ver mapa conocido", "ir a <sala>  viajar", "salir  volver al menu",
-    "guardar  guardar partida", "cargar  cargar partida",
+    "pergamino  deshacer", "mapa  ver mapa conocido", "ir a <sala>  viajar",
+    "guardar / cargar partida", "historia <t> | #<k>", "salir  volver al menu",
 )
 
 
@@ -33,6 +35,7 @@ def _caja(titulo: str, lineas: list[str], ancho: int, borde: str = "-", lado: st
     arriba = esquina + encabezado.ljust(ancho - 2, borde) + esquina
     cuerpo = [f"{lado} {linea[:interior].ljust(interior)} {lado}" for linea in lineas]
     return [arriba] + cuerpo + [esquina + borde * (ancho - 2) + esquina]
+
 
 def _caja_mensajes(mensajes) -> list[str]:
     # Dos columnas: cada mensaje se ajusta a la columna y no se parte entre ellas.
@@ -48,6 +51,7 @@ def _caja_mensajes(mensajes) -> list[str]:
     cuerpo = [f"{a.ljust(ancho)} | {b.ljust(ancho)}" for a, b in zip(izq, der)]
     return _caja("MENSAJES (ultimos 20)", cuerpo or ["(sin mensajes)"], ANCHO)
 
+
 def _tabla(titulo: str, encabezados: tuple, filas: list[tuple]) -> list[str]:
     # Tabla con título; cada columna toma el ancho de su contenido más largo.
     anchos = [max(len(str(fila[i])) for fila in [encabezados] + filas) for i in range(len(encabezados))]
@@ -55,6 +59,7 @@ def _tabla(titulo: str, encabezados: tuple, filas: list[tuple]) -> list[str]:
     if total < len(titulo) + 4:
         anchos[-1] += len(titulo) + 4 - total
         total = len(titulo) + 4
+
 
     def fila(celdas):
         return "| " + " | ".join(str(c).ljust(anchos[i]) for i, c in enumerate(celdas)) + " |"
@@ -79,6 +84,7 @@ class VistaConsola(VistaBase):
         self._pendientes: list[str] = []     # avisos y paneles que salen justo encima de la entrada
         self._en_juego = False
 
+
     # ------------------------------------------------------- entrada
     def _leer(self, indicador: str) -> str | None:
         # Devuelve None si se cierra la entrada (Ctrl+D) o se interrumpe (Ctrl+C).
@@ -87,13 +93,16 @@ class VistaConsola(VistaBase):
         except (EOFError, KeyboardInterrupt):
             return None
 
+
     def _preguntar(self, texto: str) -> str | None:
         # Entrada claramente marcada: una línea [ ENTRADA ] con la pregunta y el indicador >>>.
         self._salida(f"\n[ ENTRADA ] {texto}")
         return self._leer(">>> ")
 
+
     def _continuar(self, texto: str = "Presiona Enter para continuar") -> None:
         self._leer(f"\n[ ENTRADA ] {texto}  >>> ")
+
 
     def _bloque(self, lineas: list[str]) -> None:
         # Imprime el bloque centrado en ANCHO columnas.
@@ -101,11 +110,13 @@ class VistaConsola(VistaBase):
         for linea in lineas:
             self._salida(margen + linea)
 
+
     def _volcar_pendientes(self, en_juego: bool) -> None:
         for linea in self._pendientes:
             self._salida(linea)
         self._pendientes.clear()
         self._en_juego = en_juego
+
 
     # ------------------------------------------------------- menú
     def pedir_opcion_menu(self) -> str:
@@ -126,6 +137,7 @@ class VistaConsola(VistaBase):
                     return nombre
             self._salida("Opcion invalida.")
 
+
     def mostrar_creditos(self) -> None:
         self._volcar_pendientes(False)
         self._salida("")
@@ -133,6 +145,7 @@ class VistaConsola(VistaBase):
                                         "Autores  : " + ", ".join(AUTORES),
                                         f"Creado   : {FECHA_CREACION}", f"Version  : {VERSION_JUEGO}", ""], 60, borde="="))
         self._continuar("Presiona Enter para volver al menu")
+
 
     def mostrar_puntajes_globales(self, puntajes) -> None:
         self._volcar_pendientes(False)
@@ -142,6 +155,7 @@ class VistaConsola(VistaBase):
         else:
             self._bloque(self._tabla_puntajes("PUNTAJES GLOBALES", puntajes, None, None))
         self._continuar("Presiona Enter para volver al menu")
+
 
     def elegir_cripta(self, criptas) -> str | None:
         '''Tabla de criptas; devuelve el id de la elegida, o None con 0 para volver al menú.'''
@@ -157,6 +171,7 @@ class VistaConsola(VistaBase):
                 return criptas[int(texto) - 1].id
             self._salida("Opcion invalida.")
 
+
     # ------------------------------------------------------- juego: entrada
     def pedir_orden(self, vista) -> Orden:
         '''Repite la pregunta hasta recibir un comando válido.'''
@@ -169,11 +184,14 @@ class VistaConsola(VistaBase):
                 return orden
             self._salida("Comando no reconocido: mira los controles de arriba.")
 
+
     def _interpretar(self, partes: list[str]) -> Orden | None:
         # Convierte las palabras escritas en una Orden; None si no se entiende.
         if not partes:
             return None
         comando, argumento = partes[0], partes[1] if len(partes) > 1 else None
+        if comando == "historia":
+            return Orden("historia", " ".join(partes[1:]) or None)   # el controlador interpreta y rechaza
         if comando.upper() in _DIRECCIONES and argumento is None:
             return Orden("mover", comando.upper())
         if comando in ("mover", "abrir"):
@@ -202,12 +220,15 @@ class VistaConsola(VistaBase):
             return Orden("siguiente" if comando == "sig" else "anterior")
         return None
 
+
     def pedir_texto(self, pregunta: str) -> str | None:
         return self._preguntar(pregunta)
+
 
     def confirmar(self, pregunta: str) -> bool:
         respuesta = self._preguntar(f"{pregunta} (s/n)")
         return respuesta is not None and respuesta.strip().lower() in ("s", "si", "sí")
+
 
     # ------------------------------------------------------- juego: pantalla
     def mostrar_estado(self, vista, mensajes: tuple[str, ...]) -> None:
@@ -225,6 +246,7 @@ class VistaConsola(VistaBase):
             escribir(linea)
         self._volcar_pendientes(True)
 
+
     @staticmethod
     def _controles() -> list[str]:
         # Controles siempre visibles: 4 por fila, cada uno en su celda.
@@ -235,6 +257,7 @@ class VistaConsola(VistaBase):
             lineas.append("|" + "|".join((" " + texto).ljust(_CELDA)[:_CELDA] for texto in fila) + "|")
         lineas.append("+" + ("-" * _CELDA + "+") * 4)
         return lineas
+
 
     def _paneles_izquierdos(self, vista) -> list[str]:
         salidas = [f"{s.direccion}->{s.destino} ({s.costo})" + (" [CERRADA]" if s.cerrada else "") for s in vista.salidas]
@@ -257,6 +280,7 @@ class VistaConsola(VistaBase):
                 + _caja("SUELO", suelo or ["(vacio)"], _ANCHO_IZQ) + _caja("JUGADOR", jugador, _ANCHO_IZQ)
                 + _caja("INVENTARIO", inventario, _ANCHO_IZQ))
 
+
     def _paneles_derechos(self, vista) -> list[str]:
         interior = _ANCHO_DER - 4
         mapa = [linea.center(interior) for linea in self._minimapa(vista)]
@@ -269,6 +293,7 @@ class VistaConsola(VistaBase):
             avisos.append(f"[*] OBJETOS: hay {len(vista.objetos_suelo)} en el suelo")
         return _caja("MINIMAPA", mapa, _ANCHO_DER) + _caja("AVISOS", avisos or ["(nada que destacar)"], _ANCHO_DER)
 
+
     @staticmethod
     def _minimapa(vista) -> list[str]:
         # Tu sala va en un cuadro doble (#=#) con @; las vecinas en cuadros simples con dirección:sala,
@@ -279,6 +304,7 @@ class VistaConsola(VistaBase):
                     return s
             return None
 
+
         def cuadro(salida_vecina):
             if salida_vecina is None:
                 return ["         "] * 3
@@ -287,8 +313,10 @@ class VistaConsola(VistaBase):
         centro = ["#=======#", f"#{('@ ' + str(vista.sala_id)).center(7)}#", "#=======#"]
         norte, sur, este, oeste = salida("N"), salida("S"), salida("E"), salida("O")
 
+
         def conector(s):
             return "   " if s is None else ("-X-" if s.cerrada else "---")
+
 
         def vertical(s):
             marca = " " if s is None else ("X" if s.cerrada else "|")
@@ -302,12 +330,15 @@ class VistaConsola(VistaBase):
         abajo = [" " * 12 + linea for linea in cuadro(sur)]
         return [linea.ljust(33) for linea in arriba + [vertical(norte)] + medio + [vertical(sur)] + abajo]
 
+
     # ------------------------------------------------------- avisos
     def mostrar_aviso(self, texto: str) -> None:
         self._avisar(f"[!] {texto}")
 
+
     def mostrar_error(self, texto: str) -> None:
         self._avisar(f"[Error] {texto}")
+
 
     def _avisar(self, linea: str) -> None:
         # En juego el aviso espera y sale justo encima de la entrada; fuera del juego sale de inmediato.
@@ -316,10 +347,12 @@ class VistaConsola(VistaBase):
         else:
             self._salida(linea)
 
+
     def mostrar_inventario_ordenado(self, criterio: str, objetos) -> None:
         lineas = [f"{n}. {o.ficha.nombre}  (peso {o.ficha.peso}, valor {o.ficha.valor})"
                   for n, o in enumerate(objetos, start=1)]
         self._pendientes += _caja(f"INVENTARIO ORDENADO POR {criterio.upper()}", lineas or ["(vacio)"], ANCHO)
+
 
     def mostrar_mapa_conocido(self, proyeccion) -> None:
         lineas = []
@@ -332,6 +365,7 @@ class VistaConsola(VistaBase):
                 puerta = salida.estado_puerta.replace("_", " ")
                 lineas.append(f"  {salida.direccion} -> sala {salida.id_sala_destino}, costo {salida.costo}, puerta {puerta}")
         self._pendientes += _caja("MAPA CONOCIDO", lineas or ["(sin salas conocidas)"], ANCHO)
+
 
     def mostrar_motivos_viaje(self, motivos: tuple[str, ...]) -> None:
         traducciones = (
@@ -347,6 +381,35 @@ class VistaConsola(VistaBase):
                     lineas.append(texto)
                     break
         self._pendientes += _caja("VIAJE DETENIDO", lineas or ["El viaje se detuvo."], ANCHO)
+
+
+    def mostrar_historia(self, resumen, referencia: str) -> None:
+        # Sale con el siguiente estado, debajo de los mensajes, igual que el inventario ordenado
+        general = [f"Tiempo virtual: {resumen.tiempo}  |  Sala {resumen.sala_id}",
+                   f"Vida {resumen.vida}/{resumen.vida_max}",
+                   f"Ataque {resumen.ataque} | Defensa {resumen.defensa} | Velocidad {resumen.velocidad}",
+                   "Efectos: " + (", ".join(resumen.efectos_activos) or "ninguno")]
+        inventario = [f"{n}. {o.ficha_id}  ({o.instancia_id})" for n, o in enumerate(resumen.inventario, start=1)]
+        enemigos = [f"{n}. {e.etiqueta}   PV {e.vida}/{e.vida_max}" + ("  [CAZADOR]" if e.es_cazador else "")
+                    for n, e in enumerate(resumen.enemigos, start=1)]
+        self._pendientes += ([""] + _caja(f"HISTORIA  {referencia}", general, ANCHO)
+                             + _caja("INVENTARIO", inventario or ["(vacio)"], ANCHO)
+                             + _caja("ENEMIGOS", enemigos or ["(ninguno)"], ANCHO)
+                             + _caja("MAPA CONOCIDO", self._lineas_del_mapa(resumen.mapa_conocido), ANCHO))
+
+
+    @staticmethod
+    def _lineas_del_mapa(mapa_conocido) -> list[str]:
+        # Una línea por sala conocida y, si está explorada, una por cada salida con su costo y su puerta.
+        lineas = []
+        for sala in mapa_conocido:
+            nombre = f"{sala.nombre} " if sala.nombre else ""
+            lineas.append(f"Sala {sala.id_sala}: {nombre}({sala.estado})")
+            for s in sala.salidas:
+                costo = "?" if s.costo is None else s.costo
+                lineas.append(f"    {s.direccion}->{s.id_sala_destino} ({costo}) {s.estado_puerta}")
+        return lineas or ["(nada conocido)"]
+
 
     # ------------------------------------------------------- puntajes y final
     def mostrar_resultado(self, desenlace, resumen, nombre, ranking, puntajes) -> None:
@@ -370,12 +433,14 @@ class VistaConsola(VistaBase):
             self._bloque(_caja("PUNTAJES GLOBALES", ["", "Todavia no hay puntajes guardados.", ""], 60, borde="="))
         self._continuar("Presiona Enter para continuar")
 
+
     @staticmethod
     def _posicion(ranking, nombre, resumen) -> int | None:
         for posicion, p in enumerate(ranking, start=1):
             if VistaConsola._es_nuevo(p, nombre, resumen):
                 return posicion
         return None
+
 
     @staticmethod
     def _es_nuevo(p, nombre, resumen) -> bool:
@@ -385,6 +450,7 @@ class VistaConsola(VistaBase):
                 and p.enemigos_derrotados == resumen.enemigos_derrotados
                 and p.tiempo_final == resumen.tiempo_final and p.victoria == resumen.victoria)
 
+
     def _tabla_puntajes(self, titulo, puntajes, nombre, resumen) -> list[str]:
         # La columna vacía lleva >> en la fila del jugador que acaba de terminar.
         filas = [(">>" if self._es_nuevo(p, nombre, resumen) else "", n, p.nombre_jugador[:20], p.cripta_id,
@@ -392,10 +458,12 @@ class VistaConsola(VistaBase):
                  for n, p in enumerate(puntajes, start=1)]
         return _tabla(titulo, ("", "#", "Jugador", "Cripta", "Resultado", "Acciones", "Derrotados", "Tiempo"), filas)
 
+
     def mostrar_final(self, datos) -> None:
         '''Resumen del jugador, de la partida y del reporte de red y caché; Enter vuelve al menú.'''
         self._volcar_pendientes(False)
         v, r = datos.vista, datos.resumen
+
 
         def dato(valor):
             return "-" if valor is None else valor

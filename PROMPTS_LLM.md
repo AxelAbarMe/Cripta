@@ -1216,3 +1216,16 @@ Sigue las instrucciones de prompts/p2/16-implement-003-fase-a-pruebas.md. Solo T
 **Prompt (resumido):** Pruebas de dominio de la resolubilidad (T001 a T004): esqueleto con fixtures sintéticos, recorrido incremental, diagnóstico, determinismo, enemigos y comparación con la alternativa ingenua.
 
 **Para qué se usó:** Escribir primero las pruebas que fijan la API del verificador, antes de implementar el módulo de dominio.
+
+### 2026-11-18 — Antigravity CLI 1.5.10 (Claude Sonnet 4.6 Thinking)
+**Prompt:**
+```text
+/speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/17-implement-003-fase-a-nucleo.md. Solo T005 a T007. No sigas con T008.
+```
+(El texto completo está en prompts/p2/17-implement-003-fase-a-nucleo.md.)
+
+**Prompt (resumido):** Núcleo del verificador de resolubilidad (T005 a T007): clases de datos inmutables, catálogo ordenado con búsqueda binaria propia y recorrido incremental con cola y montículo.
+
+**Para qué se usó:** Implementar el dominio puro de la resolubilidad para que pasen las pruebas escritas en el paso anterior.

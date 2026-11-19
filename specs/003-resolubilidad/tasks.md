@@ -197,7 +197,7 @@ Depende de Fase A completa (el verificador ya funciona); puede solaparse con Fas
 
 
 
-- [ ] T021 Ejecutar `py -m cripta --bench --solo resolubilidad` y `py -m cripta --bench --solo resolubilidad_cota`, y guardar sus resultados medidos en `docs/bench/` — **Nuevo**: archivos de resultados en `docs/bench/`
+- [X] T021 Ejecutar `py -m cripta --bench --solo resolubilidad` y `py -m cripta --bench --solo resolubilidad_cota`, y guardar sus resultados medidos en `docs/bench/` — **Nuevo**: archivos de resultados en `docs/bench/`
   - Requisitos: FR-RES-020, SC-001, SC-002, SC-007
   - Comando: ambos comandos indicados
   - Hecho: ambas cargas terminan y sus resultados quedan guardados en `docs/bench/`.

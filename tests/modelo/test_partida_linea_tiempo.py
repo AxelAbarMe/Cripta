@@ -20,12 +20,15 @@ FICHA_ANTORCHA = {"id": "itm_antorcha", "nombre": "Antorcha", "clase": "antorcha
 
 
 def _armar(cazadores=(), velocidad_cazador=100, velocidad_jugador=100, pergaminos=0, objetos_sala1=(),
-           checkpoint_cada=None, semilla=3):
+           checkpoint_cada=None, semilla=3, puerta_cerrada=False):
     # Cripta sintética 1-2-3 en fila con costo 100 por salida, cazadores sin rango como lista (sala, instancia, None)
     salidas = grafo([(1, "E", 2, 100), (2, "E", 3, 100)])
     salas = [{"id": i, "nombre": f"Sala {i}", "salidas": s} for i, s in salidas.items()]
     contenido = [{"sala": i, "enemigos": [], "objetos": [], "trampas": []} for i in salidas]
     fichas = [dict(FICHA_PERGAMINO), dict(FICHA_ANTORCHA)]
+    if puerta_cerrada:
+        salidas[1]["E"].update(cerrada=True, llave="itm_llave")
+        fichas.append({"id": "itm_llave", "nombre": "Llave", "clase": "llave", "peso": 1, "valor": 0})
     for sala, instancia, rango in cazadores:
         for entrada in contenido:
             if entrada["sala"] == sala:
@@ -48,6 +51,8 @@ def _armar(cazadores=(), velocidad_cazador=100, velocidad_jugador=100, pergamino
         partida = Partida(datos, mapa, catalogo, precarga, semilla, checkpoint_cada=checkpoint_cada)
     for numero in range(pergaminos):
         partida._jugador.inventario.recoger(ObjetoInventario(f"p{numero}", catalogo.obtener("itm_pergamino")))
+    if puerta_cerrada:
+        partida._jugador.inventario.recoger(ObjetoInventario("llave", catalogo.obtener("itm_llave")))
     partida.iniciar()
     return partida
 
@@ -437,6 +442,47 @@ class TestResumenAlRecorrerLaCripta(unittest.TestCase):
         self.assertNotEqual(antes, despues)
         self.assertEqual(len(antes), 2)
         self.assertEqual(len(despues), 3)
+
+
+class TestSalasDePuntosPeriodicos(unittest.TestCase):
+    def test_omite_salas_con_puertas_iniciales_sincronizadas(self):  # FR-LIN-013, FR-LIN-016
+        partida = _armar(checkpoint_cada=1, puerta_cerrada=True)
+        _hacer(partida, "esperar")
+        guardado = partida.a_estado_guardado("v1")
+        self.assertEqual(tuple(s.sala_id for s in guardado.salas), (1, 2, 3))
+        self.assertEqual(tuple(s.sala_id for s in guardado.linea.base.estado.salas), (1, 2, 3))
+        self.assertEqual(tuple(s.sala_id for s in guardado.linea.checkpoints[0].estado.salas), (1,))
+        self.assertFalse(partida._reconstruir(1)._mapa.puerta_transitable(2, "O"))
+
+    def test_conserva_puerta_cambiada_en_el_extremo_no_preparado(self):  # FR-LIN-004, FR-LIN-015
+        partida = _armar(checkpoint_cada=1, puerta_cerrada=True)
+        _hacer(partida, "abrir", "E")
+        punto = partida.linea_tiempo().buscar_checkpoint(1).estado[0]
+        self.assertEqual(tuple(s.sala_id for s in punto.salas), (1, 2))
+        self.assertFalse(punto.salas[1].contenido_cargado)
+        self.assertTrue(partida._reconstruir(1)._mapa.puerta_transitable(2, "O"))
+        _hacer(partida, "mover", "E")
+        self.assertEqual(_foto_resumen(partida.consultar_accion(2))[1], 1)
+        self.assertEqual(_foto_resumen(partida.consultar_instante(partida.vista().tiempo)), _foto_viva(partida))
+
+    def test_conserva_rastro_sin_preparar_la_sala(self):  # FR-LIN-015, FR-LIN-016
+        partida = _armar(checkpoint_cada=1)
+        partida._mapa.obtener(2).marcar_visita(0)
+        _hacer(partida, "esperar")
+        reconstruida = partida._reconstruir(1)._mapa.obtener(2)
+        self.assertEqual(reconstruida.rastro_ultima_visita, 0)
+        self.assertFalse(reconstruida.contenido_cargado)
+
+    def test_conserva_enemigo_activo_y_su_evento_en_sala_no_preparada(self):  # FR-LIN-015, FR-LIN-017
+        partida = _armar(cazadores=[(1, "z1", None)], velocidad_cazador=10, checkpoint_cada=1)
+        enemigo = partida._mapa.obtener(1).enemigos_activos[0]
+        partida._mover_enemigo(enemigo, "E")
+        _hacer(partida, "esperar")
+        reconstruida = partida._reconstruir(1)
+        sala = reconstruida._mapa.obtener(2)
+        self.assertFalse(sala.contenido_cargado)
+        self.assertEqual([e.instancia_id for e in sala.enemigos_activos], ["z1"])
+        self.assertEqual(sala.enemigos_activos[0].evento_pendiente.tiempo, enemigo.evento_pendiente.tiempo)
 
 
 class TestRestauracionYDeterminismo(unittest.TestCase):

@@ -315,6 +315,36 @@ class TestGuardarYCargarLaLinea(unittest.TestCase):
         original = self.jugar()
         self.comparar_toda_la_linea(original, self.cargar_copia(original))
 
+    def test_v2_carga_puntos_completos_y_reducidos_con_la_misma_historia_que_replay(self):  # FR-LIN-008, FR-LIN-010
+        with mock.patch("cripta.servicios.servicio_partida.CHECKPOINT_CADA_DEFECTO", 1):
+            original, servicio_replay = tsr.armar_fixtures(), tsr.armar_fixtures()
+        self.addCleanup(original.cerrar)
+        log = str(tsr.LOG_CON_PERGAMINO)
+        encabezado, acciones = LectorBitacoraPartida(log).leer()
+        original.iniciar_nueva(encabezado["id_cripta"], encabezado["semilla"])
+        partida = original.partida
+        self.assertTrue(original.ejecutar(A.desde_dict(acciones[0])).aceptada)
+        partida.linea_tiempo().buscar_checkpoint(1).estado = partida._capturar()
+        for datos in acciones[1:]:
+            self.assertTrue(original.ejecutar(A.desde_dict(datos)).aceptada)
+
+        ruta = self.dir / "partida.bin"
+        original.guardar(ruta)
+        copia = tsr.armar_fixtures()
+        self.addCleanup(copia.cerrar)
+        copia.cargar(ruta)
+        estado = copia.partida.a_estado_guardado(copia.version_catalogo)
+        self.assertEqual(estado, partida.a_estado_guardado(original.version_catalogo))
+        completo, reducido = estado.linea.checkpoints[:2]
+        self.assertEqual(len(completo.estado.salas), len(estado.salas))
+        self.assertLess(len(reducido.estado.salas), len(estado.salas))
+        self.comparar_toda_la_linea(original, copia)
+
+        instante = reducido.estado.reloj_actual
+        replay = ServicioReplay(servicio_replay).reproducir(log, hasta=instante)
+        self.assertTrue(replay.fiel)
+        self.assertEqual(replay.historia, copia.partida.consultar_instante(instante))
+
     def test_la_linea_recortada_por_un_pergamino_se_conserva(self):  # US4.1, FR-LIN-007, FR-LIN-010
         original = self.jugar()
         _dar_pergamino(original)

@@ -34,6 +34,13 @@ class EscritorBitacoraPartida:
         with self._ruta.open("a", encoding="utf-8") as archivo:
             archivo.write(_a_linea(accion))
 
+    def registrar_comentario(self, comentario: str) -> None:
+        """Anexa una línea de metadatos sin convertirla en una acción JSON."""
+        if not comentario.startswith("#"):
+            raise ValueError("El comentario de bitácora debe empezar con '#'.")
+        with self._ruta.open("a", encoding="utf-8") as archivo:
+            archivo.write(comentario + "\n")
+
 
 class LectorBitacoraPartida:
     """Lee una bitácora para --replay y separa el encabezado de las acciones."""
@@ -54,6 +61,8 @@ class LectorBitacoraPartida:
         registros = []
         for numero, linea in enumerate(lineas, start=1):
             if not linea.strip():
+                continue
+            if linea.lstrip().startswith("#"):
                 continue
             try:
                 registros.append(json.loads(linea))

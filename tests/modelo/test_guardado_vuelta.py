@@ -91,6 +91,19 @@ class PruebaGuardadoVuelta(unittest.TestCase):
         jugar(b, continuacion)
         self.assertEqual(foto(b), foto(p))
 
+    def test_restaurar_sin_conocimiento_observa_la_puerta_con_llave(self):
+        p = crear_partida(semilla=7)
+        jugar(p, [A("mover", "N")])
+        vista_original = p.vista()
+        salida_llave = next(s for s in vista_original.salidas if s.direccion == "E")
+        self.assertTrue(salida_llave.cerrada)
+
+        estado = dataclasses.replace(p.a_estado_guardado(VERSION_CATALOGO), conocimiento=None)
+        b = cargar(estado)
+
+        self.assertEqual(b.vista().salidas, vista_original.salidas)
+        self.assertTrue(next(s for s in b.vista().salidas if s.direccion == "E").cerrada)
+
     def test_antorcha_trampa_y_puerta_con_cierre_automatico_siguen_pendientes(self):
         p = crear_partida(semilla=5)
         jugar(p, [A("recoger", "itm_antorcha"), A("usar", 0), A("mover", "N")])

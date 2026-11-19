@@ -117,6 +117,11 @@ class ServicioPartida:
             self._bitacora.registrar_accion(accion.a_dict())
         return resultado
 
+    def registrar_comentario_viaje(self, destino: int) -> None:
+        """Registra la orden de viaje como metadato antes de sus movimientos."""
+        if self._bitacora is not None:
+            self._bitacora.registrar_comentario(f"# ir a {destino}")
+
     # ----------------------------------------------------------- reporte
     def reporte_final(self) -> str:
         """Lo que pide §5.1 al terminar: solicitudes, presupuesto, aciertos y fallos de caché."""

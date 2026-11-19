@@ -56,7 +56,13 @@ class ConocimientoJugador(Reversible):
             indice = _DIRECCIONES.index(direccion)
             estado = self._puertas[sala_id][indice]
             llave, cierre = self._mapa.datos_de_puerta(sala_id, direccion)
-            if llave is None and cierre is None:
+            opuesta = self._mapa.obtener(salida.sala_destino)
+            salida_opuesta = (opuesta.esqueleto.salida(_OPUESTAS[indice])
+                              if opuesta is not None else None)
+            tiene_puerta_cerrada = salida.cerrada or (
+                salida_opuesta is not None and salida_opuesta.cerrada
+            )
+            if llave is None and cierre is None and not tiene_puerta_cerrada:
                 estado = "abierta"
             salidas.append(SalidaConocida(direccion, salida.sala_destino,
                                          self._costos[sala_id][indice], estado))

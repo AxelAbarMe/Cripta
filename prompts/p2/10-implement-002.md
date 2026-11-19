@@ -1,0 +1,19 @@
+# Implementación 002, paso 4: ruta y proyecciones del modelo (T015, T016, T019, T020 y T021)
+
+Solo T015, T016, T019, T020 y T021 de specs/002-niebla-ir-a/tasks.md, en ese orden. No sigas con T014, T017, T018 ni T022.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-009 a FR-NIE-015, FR-NIE-019 y FR-NIE-021), plan.md, data-model.md, research.md, quickstart.md y contracts/ antes de escribir, y lee cripta/modelo/conocimiento_jugador.py y cripta/estructuras/heap_min.py (tiene esta_vacio y __len__).
+2. Los documentos no definen los nombres de la API de ruta_conocida, de los tipos del resultado y los motivos, ni de los métodos nuevos de Partida. Propón el mínimo siguiendo los patrones del código existente, en español, y anótalo en tu resumen con archivo y motivo. Solo detente y pregunta si algo cambia lo que el jugador observa o una regla de spec.md.
+3. Sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Listas indexadas por id de sala. Errores de programación heredan de IndexError o ValueError. El modelo no importa red, archivos, controlador ni vista y no devuelve texto de interfaz.
+4. No modifiques pruebas existentes. No toques cripta/controlador/, cripta/vista/, cripta/servicios/, cripta/bench/ ni cripta/infraestructura/. No crees ni cambies de rama y no hagas commit ni push. Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios y textos nuevos no uses ";". Comentarios cortos: cabecera de máximo 5 líneas y 1 o 2 líneas por método.
+5. Pruebas con valor: cada caso comprueba valores concretos, incluye un control positivo cuando afirma una ausencia, no asigna atributos privados si existe una acción real, y cita en su docstring el FR-NIE y el escenario que cubre. Usa mapas sintéticos y los ayudantes existentes de tests/.
+6. Después de cada tarea marca su casilla [X] en tasks.md respetando sus finales de línea.
+
+Puntos de control:
+- T015: crea tests/modelo/test_ir_a.py (Nuevo, comprueba con Test-Path que no exista) con las pruebas de costo mínimo, puertas no observadas o cerradas que no se cruzan, desempate por menor id en el primer paso, destino inválido, destino actual y ausencia de ruta inicial. Deben fallar porque ruta_conocida.py aún no existe. Muestra que fallan por esa razón y no por un error de sintaxis o un nombre mal escrito.
+- T016: crea cripta/modelo/ruta_conocida.py. Costo mínimo propio con HeapMinimo, distancias calculadas desde el destino en listas por id, solo salas exploradas y puertas recordadas abiertas, costos tomados del conocimiento y nunca de CriptaMapa.costo_de_conexion, sin abrir puertas aunque haya llave, y sin consultar el mapa real para decidir nada. Deben pasar las pruebas de T015.
+- T019: agrega a test_ir_a.py las pruebas de proyección inmutable del mapa conocido y del resultado y motivos del viaje. Los motivos van en el orden fijo de FR-NIE-013 (llegada al destino, enemigos vivos en la sala, daño recibido) y se incluye la falta de ruta. Deben fallar por lo que aún no existe. Muestra la razón.
+- T020: implementa en cripta/modelo/resultado_partida.py la proyección inmutable del mapa y del resultado y motivos del viaje. Deben pasar las pruebas de T019.
+- T021: en cripta/modelo/partida.py agrega lo mínimo para entregar al controlador (a) la proyección del mapa conocido, (b) el siguiente paso hacia un destino, o el rechazo por destino no explorado, inexistente, sala actual o sin ruta, sin efectos (sin tiempo, sin registro ni cambio del historial) y (c) los motivos de detención tras un paso. Deben pasar T015 y T019. Corre py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, reporta cuántas pruebas pasan, qué hiciste por tarea, los nombres nuevos y confirma que no cambió ningún archivo fuera de cripta/modelo/, tests/modelo/ y tasks.md.

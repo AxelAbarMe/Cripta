@@ -368,8 +368,7 @@ spec.md ni otros archivos.
 5. En T007 cambia "id de ficha" por "id de la sala".
 6. En la trazabilidad de plan.md, usa para FR-TER-007 y FR-TER-021 el archivo de prueba que cita
    cada tarea. En T028 cambia "Ampliar" por "Crear".
-7. Usa en T021, T022 y T025 los nombres reales de cripta/modelo/reloj.py: <pega aquí el resultado
-   de Select-String>."
+7. Usa en T021, T022 y T025 los nombres reales de cripta/modelo/reloj.py: calcular_intervalo, calcular_tiempo_reprogramado, EventoProgramado y RelojEventos."
 
 **Prompt (resumido):** Ramas: quedaron tres Pull Requests: documentación, Fase A y Fases B a E, cada uno desde una rama nueva desde main.
 Paralelismo: quité las notas contradictorias. El orden es A, B, C, D, E.
@@ -1306,6 +1305,440 @@ No agregues reglas fuera de lo pedido. Si algo cambia lo que el jugador observa 
 
 **Para qué se usó:** Cerrar T011, que se había detenido porque el campo rompía dos pruebas de ida y vuelta binaria de la Parte I, y reforzar dos pruebas que pasaban sin comprobar lo pedido.
 
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/10-implement-002.md. Solo T015, T016, T019, T020 y T021. No sigas con T014, T017, T018 ni T022.
+```
+(El texto completo está en prompts/p2/10-implement-002.md.)
+
+**Prompt (resumido):** Pruebas y búsqueda de costo mínimo sobre el conocimiento del jugador (T015 y T016), proyección inmutable del mapa y del resultado del viaje (T019 y T020) y su entrega desde la partida (T021).
+
+**Para qué se usó:** Implementar en el modelo la ruta de «ir a» y las proyecciones que consumen el controlador y la vista, sin abrir puertas y usando solo el conocimiento del jugador.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/11-implement-002.md. Solo T014, T017, T018 y T022. No sigas con T023.
+```
+(El texto completo está en prompts/p2/11-implement-002.md.)
+
+**Prompt (resumido):** Casos de aceptación del viaje (T014), pruebas del controlador (T017 y T018) y el bucle del viaje con la consulta del mapa (T022).
+
+**Para qué se usó:** Implementar en el controlador la orden «ir a» como acciones ordinarias con recálculo por paso, motivos de detención y cancelación por pergamino, y la consulta del mapa conocido.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en una rama de trabajo: no crees ni cambies de rama y no hagas commit ni push. Corrige solo tests/modelo/test_ir_a.py, cripta/modelo/ruta_conocida.py (solo si hace falta), cripta/modelo/partida.py, cripta/modelo/resultado_partida.py, cripta/modelo/conocimiento_jugador.py y tests/modelo/test_conocimiento_jugador.py (solo agregar una prueba nueva, sin modificar las de T001 a T005). No toques tasks.md ni PROMPTS_LLM.md. Mismas reglas de estilo de prompts/p2/10-implement-002.md (CRLF, sin sed -i, sin ";" en comentarios nuevos, sin estructuras prohibidas, nombres nuevos mínimos y anotados).
+1. Dos pruebas de TestRutaConocida no discriminan: esperan "N", que es la primera dirección en el orden N, S, E, O, así que una implementación que tomara la primera salida abierta también pasaría. Reescríbelas. (a) Desempate: dos vecinas con costo total idéntico hacia el destino, donde la de menor id quede en una dirección POSTERIOR a la de mayor id (por ejemplo la de menor id al E y la de mayor id al N). (b) Costo: la primera arista más barata no es la ruta más barata, y la ruta correcta sale por una dirección posterior (E u O). Agrega una aserción de control en cada una. Comprueba de forma temporal, sin dejarlo en el repositorio, que una versión que elige la primera salida abierta haría fallar ambas, y cuéntamelo.
+2. Partida.motivos_despues_de_paso solo se prueba con llegada_destino, y la prueba de orden construye un ResultadoViaje a mano, así que no prueba la lógica. Agrega pruebas con Partida y un mapa sintético, colocando enemigos como en tests/aceptacion/test_niebla_ir_a.py: llegada más enemigo dormido más daño en el orden fijo de FR-NIE-013 (para el daño pasa como vida_anterior un valor mayor que la vida actual), un enemigo activo cuenta, un enemigo muerto no cuenta, sin llegada no aparece llegada_destino y con el jugador muerto el resultado es vacío.
+3. ResultadoViaje.motivos nunca lo llena Partida: quita el campo motivos y su __post_init__, deja en el docstring que motivo es la razón por la que no hay paso, y ajusta las pruebas de T019 para que comprueben los motivos reales de Partida.motivos_despues_de_paso.
+4. Partida.siguiente_paso: un id fuera del mapa (por ejemplo 99) da hoy destino_no_explorado y uno negativo da destino_inexistente. Haz que cualquier id que no exista en el mapa dé destino_inexistente. Agrega pruebas de ambos casos. Agrega también una prueba de sin_ruta con una puerta cerrada y el jugador con la llave en el inventario: el resultado es sin_ruta, la puerta sigue cerrada, y tiempo, mensajes y retrocesos_posibles no cambian (FR-NIE-014).
+5. FR-NIE-025: sala_conocida marca como abierta toda salida sin llave ni cierre automático, incluso si su puerta empieza cerrada (SalidaDTO.cerrada, que puede venir marcada en un solo lado de la conexión). FR-NIE-025 habla de una salida sin puerta que pueda cerrarse, y una puerta que empieza cerrada es una puerta. Haz que esa excepción aplique solo si ninguno de los dos lados trae cerrada. Agrega una prueba nueva en tests/modelo/test_conocimiento_jugador.py: una puerta cerrada sin llave ni cierre no figura abierta antes de observarla y figura cerrada tras observarla, y una salida sin llave, sin cierre y sin cerrada sigue abierta sin observación. Muestra que la prueba falla antes del cambio. Si el cambio altera algo observable fuera de esto, detente y pregunta.
+6. Confirma con conteo de bytes que cripta/modelo/ruta_conocida.py y tests/modelo/test_ir_a.py, y todo .py editado, quedan en CRLF, con la misma cantidad de CR y LF.
+No agregues reglas fuera de lo pedido. Si algo cambia lo que el jugador observa o contradice spec.md, detente y pregunta. Al terminar corre py -m unittest discover -s tests -t . y dime qué cambiaste por punto, los nombres nuevos, y verifica con git diff que solo cambiaron los archivos permitidos.
+```
+
+**Prompt (resumido):** Corrección de la ruta conocida y sus pruebas: casos que distingan el desempate y el costo de elegir la primera salida, pruebas reales de los motivos de detención, limpieza del resultado del viaje, rechazo coherente de destinos inexistentes y puertas que empiezan cerradas sin llave ni cierre.
+
+**Para qué se usó:** Cerrar los hallazgos de la revisión de T015 a T021 y un comentario de la revisión del PR de las fases A y B sobre FR-NIE-025.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/11-implement-002.md. Solo T014, T017, T018 y T022. No sigas con T023.
+```
+(El texto completo está en prompts/p2/11-implement-002.md.)
+
+**Prompt (resumido):** Pruebas de aceptación y del controlador, y implementación de la consulta del mapa conocido y del bucle del viaje «ir a» en el controlador (T014, T017, T018 y T022).
+
+**Para qué se usó:** Agregar las órdenes del mapa e «ir a» al controlador con recálculo de ruta por paso y motivos de detención, y los casos B-NIE-001, B-NIE-002, B-NIE-003 y B-NIE-006, sin tocar la vista, los servicios ni el modelo.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo cripta/controlador/controlador_cripta.py, tests/controlador/test_controlador_cripta.py y tests/aceptacion/test_niebla_ir_a.py.
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en la rama 002-niebla-ir-a-fases-c-d: no crees ni cambies de rama y no hagas commit ni push. No toques tasks.md: T014, T017, T018 y T022 siguen en [X]. Redacta en español.
+Reglas: sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". No agregues reglas del juego. Si algo cambia lo que el jugador observa o contradice FR-NIE-013, detente y pregunta en vez de ajustar la prueba a lo observado.
+
+1. Paso rechazado. Hoy _ejecutar_accion devuelve False tanto si el movimiento se rechaza como si se acepta y la partida sigue, así que un paso rechazado haría repetir el mismo paso sin fin. Primero escribe una prueba con un servicio falso que rechaza el movimiento y que lanza AssertionError si lo llaman más de 3 veces, para que falle sin colgar la suite. Debe verificar que el viaje se detiene, que no se piden más pasos, que se muestra el motivo de rechazo una sola vez y que no se llama a mostrar_motivos_viaje. Muéstrame que falla. Después corrige el controlador con el cambio mínimo, sin alterar el comportamiento de _ejecutar_accion para las demás órdenes, y anota el nombre nuevo si lo hay.
+2. B-NIE-006. Usa una ruta de al menos 3 pasos, ejecuta 2 pasos con _ejecutar_paso_viaje y comprueba que el jugador está en la tercera sala. Registra el tiempo tras el primer paso. Lanza el pergamino con Orden("pergamino") por el controlador, no con partida.ejecutar_accion. Comprueba que el jugador queda en la sala del primer paso con ese tiempo, que revirtió solo un paso y que no se movió ni se llamó a mostrar_motivos_viaje después.
+3. B-NIE-003. El enemigo dormido va en una sala intermedia y el destino es una sala posterior, no la sala del enemigo. Ejecuta el viaje por el controlador. Espera primero lo que dice FR-NIE-013 y comprueba que el jugador queda en la sala del enemigo, que el enemigo está activo y que los motivos incluyen enemigos_vivos y no incluyen llegada_destino. Agrega el control positivo: el mismo mapa sin enemigo llega al destino.
+4. B-NIE-002. Agrega el control positivo (antes de observar el cierre, siguiente_paso devuelve dirección) y quita la asignación directa de partida._jugador.sala_actual: usa acciones reales de mover para entrar y volver. La única manipulación directa permitida es cambiar el estado real de la puerta en el mapa para simular el cierre no observado. Si no se puede sin tocar archivos no permitidos, detente y explícalo.
+5. Quita el ";" del docstring de _ejecutar_paso_viaje y revisa con git diff que ninguna línea agregada en cripta/ ni tests/ tenga ";" en comentarios o docstrings.
+Al terminar corre py -m unittest tests.aceptacion.test_niebla_ir_a tests.controlador.test_controlador_cripta y luego py -m unittest discover -s tests -t . y reporta cuántas pasan. Dime qué cambiaste por punto, los nombres nuevos y verifica con git diff que solo cambiaron esos tres archivos.
+```
+
+**Prompt (resumido):** Corrección del viaje «ir a» tras la revisión: detener el viaje si un paso es rechazado y reforzar los casos B-NIE-002, B-NIE-003 y B-NIE-006 con controles positivos y rutas de varios pasos.
+
+**Para qué se usó:** Evitar un posible bucle sin fin cuando un movimiento es rechazado (nuevo `_ejecutar_accion_viaje`) y hacer que los casos de aceptación comprueben lo que describen. Esta corrección no tiene archivo en prompts/p2/.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo cripta/controlador/controlador_cripta.py y tests/controlador/test_controlador_cripta.py.
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en la rama 002-niebla-ir-a-fases-c-d: no crees ni cambies de rama y no hagas commit ni push. No toques tasks.md. Redacta en español.
+Reglas: sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". No agregues reglas del juego. Si algo cambia lo que el jugador observa, detente y pregunta.
+
+1. Defecto: _ejecutar_accion_viaje devuelve True cuando el desenlace no es "en_curso" pero no llama a self._finalizar(resultado.desenlace), como sí hace _ejecutar_accion. Si el jugador muere o gana durante un viaje, la partida vuelve al menú sin pedir nombre, sin registrar el puntaje y sin las pantallas de resultado y final. Primero escribe en tests/controlador/test_controlador_cripta.py una prueba que lo demuestre: un viaje cuyo paso termina la partida debe dejar en la vista exactamente un mostrar_resultado y un mostrar_final, y ningún mostrar_motivos_viaje. Hazla con el servicio real (preparar_controlador) y, si no es viable, con un servicio falso cuyo ejecutar devuelva un desenlace distinto de en_curso. Muéstrame que falla porque no se finaliza.
+2. Corrige con el cambio mínimo: la rama de fin de partida de _ejecutar_accion_viaje llama a self._finalizar(resultado.desenlace) antes de devolver True. No dupliques lógica y no cambies _ejecutar_accion.
+3. La prueba actual de muerte reemplaza _ejecutar_accion_viaje por un lambda y no cubre la finalización. Aclara en su docstring que solo comprueba que _ejecutar_paso_viaje no consulta motivos cuando el paso termina la partida, y que la finalización la cubre la prueba nueva.
+Al terminar corre py -m unittest tests.aceptacion.test_niebla_ir_a tests.controlador.test_controlador_cripta y luego py -m unittest discover -s tests -t . y reporta cuántas pasan. Dime qué cambiaste por punto, los nombres nuevos y verifica con git diff que en este paso solo cambiaron esos dos archivos.
+```
+
+**Prompt (resumido):** Corrección del viaje «ir a»: finalizar la partida cuando un paso del viaje termina con muerte o victoria, con su prueba.
+
+**Para qué se usó:** Evitar que un viaje que termina la partida vuelva al menú sin registrar el puntaje ni mostrar las pantallas de resultado y final.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/12-implement-002.md. Solo T023 y T024. No sigas con T025.
+```
+(El texto completo está en prompts/p2/12-implement-002.md.)
+
+**Prompt (resumido):** Pruebas de la vista con datos del conocimiento (T023) y cambio de Partida.vista() para que las salidas de la sala actual salgan del conocimiento del jugador (T024).
+
+**Para qué se usó:** Que las salidas, costos y puertas que muestra la vista sean las que el jugador conoce y no las del mapa real, sin filtrar nombres de salas avistadas o desconocidas.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo cripta/modelo/persistencia_modelo.py, tests/modelo/test_guardado_vuelta.py, tests/vista/test_vista_consola.py y specs/002-niebla-ir-a/tasks.md. Si el arreglo exige tocar otro archivo de cripta/modelo/, úsalo solo si es el cambio mínimo y anótalo.
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Estoy en la rama 002-niebla-ir-a-fases-c-d: no crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Redacta en español.
+Reglas: sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". No agregues reglas del juego. No modifiques pruebas existentes, solo agrega. Si algo cambia lo que el jugador observa más allá de lo descrito, detente y pregunta.
+
+Contexto: tras T024, Partida.vista() toma las salidas del conocimiento. test_por_el_archivo_binario falla porque el archivo binario aún no guarda el conocimiento (el formato es de la capacidad 004). La partida cargada reconstruye un conocimiento sin observación de las puertas y su vista no coincide con la original. Dijiste que corregirlo queda fuera de lo autorizado, pero no es así: persistencia_modelo.py está en cripta/modelo/ y sí está autorizado. Lo prohibido sigue siendo guardado_binario.py, estado_guardado.py y toda codificación de bytes.
+
+1. Cuando el estado restaurado no trae conocimiento (el caso del archivo binario), reconstruye una base coherente: la sala actual explorada con sus puertas observadas desde el mapa real, igual que en una entrada ordinaria, reutilizando el método existente del conocimiento. No cambies la forma de EstadoPartida ni escribas bytes. Cuando el estado sí trae conocimiento (la ruta en memoria), no cambies nada.
+2. Primero escribe en tests/modelo/test_guardado_vuelta.py una prueba nueva, sin tocar las existentes: una partida jugada hasta una sala con una salida cerrada con llave, cargada desde un estado sin conocimiento (el mismo camino del archivo binario, o el estado con el campo del conocimiento en su valor por defecto), debe mostrar en vista() las mismas salidas, costos y cerradas que la original, con su control positivo (la salida con llave sale cerrada). Muéstrame que falla por la razón actual y no por un error de la prueba.
+3. Con el arreglo, test_por_el_archivo_binario debe pasar sin modificarlo, igual que toda la suite.
+4. En la prueba de T023 de tests/vista/test_vista_consola.py quitaste las aserciones de salidas_antes, que eran el control positivo previo al cambio de la puerta real. Restáuralas si siguen siendo válidas, o explica por qué no.
+5. Dime cómo mapea Partida.vista() una puerta no_observada a SalidaVista.cerrada y si ese caso puede darse en la sala actual. No lo cambies, solo repórtalo.
+6. Marca T024 como [X] en tasks.md solo si la suite completa pasa.
+Al terminar corre py -m unittest tests.modelo.test_guardado_vuelta tests.vista.test_vista_consola y luego py -m unittest discover -s tests -t . (si py no puede ejecutarse usa .venv/Scripts/python.exe -m unittest) y reporta cuántas pasan. Dime qué cambiaste por punto, los nombres nuevos y verifica con git diff que en este paso solo cambiaron los archivos autorizados.
+```
+
+**Prompt (resumido):** Corrección de la carga desde archivo binario: reconstruir el conocimiento de la sala actual con sus puertas observadas cuando el estado no lo trae, para que la vista cargada coincida con la original.
+
+**Para qué se usó:** Mantener en verde la prueba de guardado y carga por archivo binario tras hacer que la vista salga del conocimiento, hasta que la 004 codifique el conocimiento completo en el formato binario.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo plan.md y tasks.md dentro de specs/002-niebla-ir-a/. No toques otras carpetas, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a. Redacta en español. No agregues reglas del juego. No marques ni desmarques ninguna casilla. Respeta los finales de línea CRLF. Si algo falta o cambia el resultado observable, detente y pregunta.
+1. tasks.md T025 y T027: el contrato de presentación debe nombrar los dos métodos que el controlador ya pide a la vista: mostrar_mapa_conocido(proyeccion) y mostrar_motivos_viaje(motivos). Indica que motivos es una tupla de códigos y que la vista debe presentar llegada_destino, enemigos_vivos, daño_recibido y también sin_ruta, porque el controlador entrega sin_ruta por ese método cuando la ruta desaparece a mitad del viaje.
+2. tasks.md T029 y T030: la vista de consola debe interpretar el comando mapa y el comando «ir a <sala>» (la sala es un identificador entero) y devolver las órdenes ya definidas en el controlador, Orden("mapa") y Orden("ir_a", id). Un argumento ausente o no entero no produce orden. Los controles visibles de la pantalla deben listar ambos comandos. Hoy ninguna tarea cubre este punto aunque FR-NIE-007 y FR-NIE-009 lo exigen.
+3. tasks.md T026 y T028 y plan.md: hoy nadie llama al registro del comentario. ServicioPartida.ejecutar(Accion("mover")) no sabe que un movimiento pertenece a un viaje, así que el comentario único de FR-NIE-016 exige un método nuevo en ServicioPartida (el nombre lo propone la implementación) y que ControladorCripta lo llame una sola vez antes del primer paso, solo si la ruta tiene al menos un paso. Agrega a T028 la ruta cripta/controlador/controlador_cripta.py (Modificado) y la mención de ese método. Agrega a T026 la prueba del controlador en tests/controlador/test_controlador_cripta.py (Modificado) que verifica una sola llamada antes del primer paso y ninguna cuando la orden se rechaza. Revisa si [P] sigue siendo correcto en T026. En la tabla de impacto de plan.md ajusta las filas de servicio_partida.py y controlador_cripta.py para reflejarlo.
+4. Comprueba con Test-Path que todas las rutas que citas existen y que su estado Nuevo o Modificado es correcto. Revisa que research.md, contracts/ y quickstart.md no contradigan estos cambios. Si alguno los contradice, no lo edites: dímelo.
+Al terminar, dime qué cambiaste por punto y verifica con git diff que solo cambiaron archivos de specs/002-niebla-ir-a/ y que ninguna casilla cambió de estado.
+```
+
+**Prompt (resumido):** Ajuste del plan y las tareas de la Fase D de niebla de guerra e «ir a»: nombres de los métodos de presentación, interpretación de los comandos mapa e «ir a» en la vista de consola, y llamada del controlador al registro del comentario del viaje.
+
+**Para qué se usó:** Cerrar dos huecos detectados antes de implementar la Fase D: ninguna tarea cubría la interpretación de los comandos en la vista ni la llamada que escribe el comentario de viaje en partida.log.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/13-implement-002.md. Solo T025, T027, T029 y T030. No sigas con T026 ni T028.
+
+# Implementación 002, paso 7: contrato y presentación de la vista (T025, T027, T029 y T030)
+
+Solo T025, T027, T029 y T030 de specs/002-niebla-ir-a/tasks.md. No sigas con T026 ni T028.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-007, FR-NIE-008, FR-NIE-009 y FR-NIE-013), plan.md, data-model.md, research.md, quickstart.md y contracts/ antes de escribir. Lee cripta/vista/vista_base.py, cripta/vista/vista_consola.py, tests/vista/test_vista_consola.py, el tipo de la proyección del mapa en cripta/modelo/resultado_partida.py y Partida.mapa_conocido() en cripta/modelo/partida.py. La vista solo lee esos datos y nunca toca el modelo, el servicio ni el mapa real.
+2. Si necesitas un nombre nuevo que los documentos no definan, propón el mínimo siguiendo los patrones del código existente, en español, y anótalo en tu resumen con archivo y motivo. Solo detente y pregunta si algo cambia lo que el jugador observa o una regla de spec.md.
+3. Sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Errores de programación heredan de IndexError o ValueError.
+4. No modifiques pruebas existentes, solo agrega. No toques cripta/controlador/, cripta/modelo/, cripta/servicios/, cripta/infraestructura/ ni cripta/bench/. Si un defecto de esas capas lo exige, detente y explícalo. No crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". Comentarios cortos: cabecera de máximo 5 líneas y 1 o 2 líneas por método.
+5. Pruebas con valor: cada caso comprueba valores concretos, incluye un control positivo cuando afirma una ausencia, no asigna atributos privados si existe una acción real, y cita en su docstring el FR-NIE y el escenario que cubre.
+6. Marca cada casilla [X] en tasks.md cuando su tarea esté terminada y verificada.
+
+Contexto de diseño, ya decidido en plan.md y tasks.md:
+- El controlador ya llama a mostrar_mapa_conocido(proyeccion) y mostrar_motivos_viaje(motivos). motivos es una tupla de códigos (llegada_destino, enemigos_vivos, daño_recibido y sin_ruta) que la vista traduce a texto en español, conservando el orden recibido.
+- VistaBase es una clase abstracta. Los dos métodos nuevos se declaran como abstractos, así que VistaConsola no se podrá instanciar hasta implementarlos. Por eso T027 y T030 se hacen juntas y no debes correr la suite completa entre ambas. Actualiza en VistaBase el texto que dice cuántos métodos tiene la vista.
+- Los avisos y paneles de la consola salen por self._pendientes, justo encima de la entrada, como mostrar_inventario_ordenado. Presenta el mapa y los motivos con ese mismo patrón y con las cajas existentes (_caja y ANCHO).
+- El mapa conocido muestra solo lo que trae la proyección: salas exploradas con su nombre, salidas, costos y estado recordado de las puertas, y salas avistadas solo como existencia. Nunca muestra el nombre de una sala avistada o desconocida.
+- Comandos de consola: mapa devuelve Orden("mapa") e ir a <sala> devuelve Orden("ir_a", id) solo si el argumento es un entero. Ausente o no entero no produce orden y se informa como comando no reconocido. Solo se acepta la forma de tres palabras ir a <sala>. Los controles visibles de la pantalla deben listar ambos comandos sin romper la disposición actual de las celdas.
+
+Puntos de control:
+- T025: agrega a tests/vista/test_vista_consola.py la prueba del contrato: una subclase de VistaBase que implementa los métodos actuales pero no los dos nuevos no se puede instanciar, y con los dos sí. Debe fallar porque VistaBase aún no los declara. Muestra la razón.
+- T029: agrega a tests/vista/test_vista_consola.py las pruebas de presentación del mapa (explorada con nombre, salidas, costos y puertas, avistada solo como existencia, ningún nombre oculto, con control positivo), de los motivos (cada código con su texto, orden conservado, sin_ruta incluido), de interpretación de comandos (mapa, ir a 3, ir a, ir a x, ir a -3, ir 3) y de los controles visibles. Deben fallar por lo que aún no existe, no por errores de sintaxis ni nombres mal escritos. Muestra las razones.
+- T027 y T030, juntas: declara los dos métodos abstractos en cripta/vista/vista_base.py e impleméntalos en cripta/vista/vista_consola.py junto con la interpretación de comandos y los controles. Deben pasar T025 y T029. Corre py -m unittest tests.vista.test_vista_consola y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, reporta cuántas pruebas pasan, qué hiciste por tarea, los nombres nuevos y confirma que no cambió ningún archivo fuera de cripta/vista/, tests/vista/ y tasks.md.
+```
+
+**Prompt (resumido):** Contrato de presentación de la vista (T025 y T027), pruebas de presentación del mapa conocido, de los motivos de detención y de los comandos mapa e «ir a» (T029), e implementación en la vista de consola (T030).
+
+**Para qué se usó:** Que el jugador pueda consultar el mapa conocido y lanzar «ir a <sala>» desde la consola, y ver por qué se detuvo el viaje, sin que la vista acceda al mapa real ni muestre nombres de salas no exploradas. Codex no pudo mostrar las pruebas en rojo antes de implementar porque el sandbox bloqueó py.exe en la primera ejecución.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo tests/vista/test_vista_consola.py. No toques otros archivos, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a. Redacta en español. Ajusta solo las pruebas que agregó la corrida anterior (TestContratoNiebla y TestPresentacionNiebla) y no modifiques las pruebas existentes. No marques ni desmarques ninguna casilla. Los .py van en CRLF. En comentarios, docstrings y textos nuevos no uses ";". Si algo cambia el resultado observable o exige tocar otro archivo, detente y pregunta.
+1. test_mapa_muestra_datos_explorados_y_solo_existencia_avistada: hoy comprueba caracteres sueltos ("E", "N", "2", "3") que aparecen en cualquier texto, y assertNotIn("Secreto", texto) no prueba nada porque la proyección de la prueba no contiene ese nombre. Reemplaza esas aserciones por comprobaciones de las líneas completas que produce mostrar_mapa_conocido: la sala explorada con su nombre, cada salida con dirección, sala destino, costo y estado de la puerta, y la sala avistada como existente y sin explorar. Agrega la ausencia real con control positivo: arma una proyección con una sala avistada que traiga un nombre ("Secreto") si SalaConocida lo permite, comprueba que la vista no lo imprime y que el nombre de la sala explorada sí se imprime. Si SalaConocida rechaza un nombre en una sala avistada, elimina la aserción vacía, anota en el docstring que la proyección ya lo garantiza y dímelo.
+2. test_controles_visibles_listan_mapa_e_ir_a_sin_salirse_de_celda: el límite 4 * 29 + 1 es un número suelto. Derívalo de la constante o del cálculo que usa VistaConsola._controles() para armar las celdas, o comprueba la disposición real (filas y celdas por fila) sin números mágicos. Dime además cuántas filas tenía la cuadrícula de controles antes de la corrida anterior y cuántas tiene ahora, y si el cambio altera la altura de la pantalla.
+3. Corre py -m unittest tests.vista.test_vista_consola y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, dime qué cambiaste por punto y confirma que en esta corrección no editaste ningún archivo salvo tests/vista/test_vista_consola.py.
+```
+
+**Prompt (resumido):** Corrección de las pruebas de presentación del mapa conocido y de los controles visibles de la vista de consola: aserciones sobre líneas completas, ausencia de nombres ocultos con control positivo y disposición de controles sin números mágicos.
+
+**Para qué se usó:** Reforzar dos pruebas de la corrida 13 que no comprobaban lo que declaraban: la ausencia de nombres de salas no exploradas y la disposición de los controles.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/14-implement-002.md. Solo T026 y T028. No sigas con T031.
+
+# Implementación 002, paso 8: comentario de viaje en partida.log (T026 y T028)
+
+Solo T026 y T028 de specs/002-niebla-ir-a/tasks.md. No sigas con T031.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-011, FR-NIE-016 y FR-NIE-017), plan.md (filas de servicio_partida.py, controlador_cripta.py, partida_log.py y servicio_replay.py de la tabla de impacto), research.md, data-model.md, quickstart.md y contracts/ antes de escribir. Lee cripta/servicios/servicio_partida.py, cripta/controlador/controlador_cripta.py (el bucle del viaje), cripta/infraestructura/partida_log.py, cripta/servicios/servicio_replay.py, tests/infraestructura/test_partida_log.py, tests/controlador/test_controlador_cripta.py y tests/servicios/test_servicio_replay.py. Comprueba con Test-Path que cada ruta existe y que su estado Nuevo o Modificado es correcto antes de editarla.
+2. Si necesitas un nombre nuevo que los documentos no definan, propón el mínimo siguiendo los patrones del código existente, en español, y anótalo en tu resumen con archivo y motivo. Solo detente y pregunta si algo cambia lo que el jugador observa o una regla de spec.md.
+3. Sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). Errores de programación heredan de IndexError o ValueError. CriptaError es solo para errores externos de disco o archivos.
+4. No modifiques pruebas existentes, solo agrega. No toques cripta/modelo/, cripta/vista/ ni cripta/bench/. Si un defecto de esas capas lo exige, detente y explícalo. No crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". Comentarios cortos: cabecera de máximo 5 líneas y 1 o 2 líneas por método.
+5. Pruebas con valor: cada caso comprueba valores concretos, incluye un control positivo cuando afirma una ausencia, no asigna atributos privados si existe una acción real, y cita en su docstring el FR-NIE y el escenario que cubre.
+6. Marca cada casilla [X] en tasks.md cuando su tarea esté terminada y verificada.
+
+Contexto de diseño, ya decidido en plan.md y tasks.md:
+- Una orden ir_a válida ejecuta cada paso como una acción ordinaria mover mediante ServicioPartida.ejecutar(Accion("mover")). Cada paso aceptado ya deja su línea de movimiento en partida.log, y los turnos de los enemigos no producen líneas.
+- FR-NIE-016: antes del primer paso se escribe un único comentario que empieza con # y registra la orden. El comentario no es una acción: el lector de partida.log lo trata como metadato y el replay lo omite y reproduce solo las acciones.
+- ServicioPartida recibe un método nuevo que escribe ese comentario (el nombre lo propone la implementación). ControladorCripta lo llama una sola vez, antes del primer paso, y solo si la ruta tiene al menos un paso. Una orden rechazada o sin efecto (destino no explorado, destino actual o sin ruta) no escribe nada. Una acción individual del jugador nunca lleva comentario.
+- Si spec.md o contracts/ definen el texto del comentario, úsalo exacto. Si no lo definen, propón el mínimo que identifique la sala destino y repórtalo.
+- La lectura de archivos partida.log de la Parte I no debe romperse.
+
+Puntos de control:
+- T026: agrega primero las pruebas. En tests/infraestructura/test_partida_log.py: el comentario se escribe antes del primer movimiento y una sola vez, una acción individual no lo lleva, no se escribe comentario si no hay pasos, y el replay de un archivo con comentario reproduce solo acciones y llega al mismo estado. En tests/controlador/test_controlador_cripta.py: con un servicio que registra sus llamadas, una sola llamada al método nuevo antes del primer paso y ninguna cuando la orden se rechaza. Antes de implementar, corre py -m unittest tests.infraestructura.test_partida_log tests.controlador.test_controlador_cripta y muestra por qué fallan, que debe ser por lo que aún no existe y no por errores de sintaxis ni nombres mal escritos. Si el sandbox bloquea py.exe, pide aprobación para correr ese comando antes de continuar y no implementes hasta mostrar el rojo.
+- T028: implementa el método nuevo en cripta/servicios/servicio_partida.py, su llamada en cripta/controlador/controlador_cripta.py, y el tratamiento del comentario como metadato no accionable en cripta/infraestructura/partida_log.py y cripta/servicios/servicio_replay.py, sin instanciar la vista. Deben pasar las pruebas de T026. Corre py -m unittest tests.infraestructura.test_partida_log tests.servicios.test_servicio_replay tests.controlador.test_controlador_cripta y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, reporta cuántas pruebas pasan, qué hiciste por tarea, los nombres nuevos, el texto exacto del comentario y de dónde salió, y confirma que no cambió ningún archivo fuera de cripta/servicios/, cripta/controlador/, cripta/infraestructura/partida_log.py, tests/ y tasks.md.
+```
+
+**Prompt (resumido):** Pruebas y implementación del comentario único de viaje en partida.log (T026 y T028): método nuevo en el servicio de partida, una sola llamada del controlador antes del primer paso, y tratamiento del comentario como metadato por el lector y el replay.
+
+**Para qué se usó:** Que una orden «ir a» deje en partida.log un solo comentario antes del primer movimiento, sin registrar nada cuando la orden se rechaza, y que el replay reproduzca solo las acciones.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo tests/controlador/test_controlador_cripta.py, tests/infraestructura/test_partida_log.py y tests/servicios/test_servicio_replay.py. Solo si el punto 5 demuestra un defecto, puedes tocar también cripta/servicios/servicio_replay.py o cripta/infraestructura/partida_log.py con el cambio mínimo. No toques otros archivos, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a. Redacta en español. Ajusta solo las pruebas que agregó la corrida anterior (TestComentarioViaje, TestComentarioViajeControlador y test_comentario_de_viaje_no_altera_replay) y no modifiques las pruebas existentes. No marques ni desmarques ninguna casilla. Los .py van en CRLF. En comentarios, docstrings y textos nuevos no uses ";". Si algo cambia el resultado observable o exige tocar otro archivo, detente y pregunta.
+1. tests/controlador/test_controlador_cripta.py, test_comentario_se_registra_una_vez_antes_del_primer_paso: la ruta tiene un solo paso, así que no distingue una llamada por viaje de una llamada por paso. Agrega un caso con una ruta de al menos 3 pasos y comprueba que el orden es una llamada al comentario, el primer paso y los pasos siguientes sin más comentarios, por ejemplo [("comentario", destino), ("paso", ...), ("paso", ...), ("paso", ...)]. Prepara la partida con acciones reales cuando existan y no asignes atributos privados del modelo salvo que no haya otra forma, en cuyo caso dilo.
+2. Agrega en tests/controlador/test_controlador_cripta.py una prueba de integración con el servicio real y su bitácora real, sin sustituir registrar_comentario_viaje: tras una orden ir_a con al menos 2 pasos, partida.log tiene el encabezado, luego una única línea "# ir a N" y después exactamente una línea de movimiento por paso, sin líneas de turnos de enemigos. Tras una orden rechazada (destino inexistente) y tras una orden al destino actual, el archivo contiene solo el encabezado. Si montar el servicio con bitácora exige tocar otro archivo, detente y dímelo.
+3. tests/infraestructura/test_partida_log.py, test_sin_pasos_no_escribe_comentario: no ejecuta nada y ya pasaba antes de implementar, así que no prueba lo que declara, y compara contra un JSON escrito a mano que depende del orden de las claves. Elimínala, porque la cubre la prueba del punto 2. Las otras dos pruebas de TestComentarioViaje se quedan.
+4. tests/servicios/test_servicio_replay.py, test_comentario_de_viaje_no_altera_replay: la última aserción compara la sala de una partida consigo misma. Reemplázala por comparar el estado final del replay del log con comentario contra el del replay del log sin comentario, con los datos que ResultadoReplay ya expone.
+5. Números de línea: ServicioReplay numera las acciones con enumerate(..., start=2) suponiendo una línea del log por acción, pero ahora el log puede traer comentarios. Primero agrega en tests/servicios/test_servicio_replay.py una prueba con un log que tenga "# ir a 2" y después una acción inválida y comprueba que el número de línea reportado es la línea real del archivo. Corre solo esa prueba y muestra si falla y por qué. Si falla, corrígelo con el cambio mínimo en los archivos permitidos sin cambiar la firma ni el resultado de LectorBitacoraPartida.leer() que usan las pruebas existentes. Si no falla, dilo y deja la prueba como control. Si el arreglo exige cambiar esa firma, detente y pregúntame.
+6. Corre py -m unittest tests.infraestructura.test_partida_log tests.servicios.test_servicio_replay tests.controlador.test_controlador_cripta y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+Al terminar, dime qué cambiaste por punto y confirma qué archivos editaste en esta corrección y que ningún otro cambió.
+```
+
+**Prompt (resumido):** Corrección de las pruebas del comentario de viaje: ruta de varios pasos, integración con el servicio y la bitácora reales, eliminación de una prueba vacía, comparación real del replay y verificación de los números de línea con comentarios.
+
+**Para qué se usó:** Reforzar las pruebas de T026 que no demostraban que el comentario se escribe una sola vez por viaje ni su efecto en partida.log, y comprobar que el replay informa la línea correcta cuando el log trae comentarios.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/15-implement-002.md. Solo T031 a T036. No sigas con T037.
+
+# Implementación 002, paso 9: cargas de medición niebla_rutas (T031 a T036)
+
+Solo T031 a T036 de specs/002-niebla-ir-a/tasks.md. No sigas con T037 ni con la Fase F.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-018, SC-NIE-002 y SC-NIE-004), plan.md (sección de mediciones --bench y la tabla de impacto), research.md, quickstart.md, data-model.md y contracts/ antes de escribir. Lee cripta/bench/cargas_bench.py (sus ayudantes _medir y _comparar, el registro CARGAS y las cargas de ruta_cazador, invalidacion y ciclo_referencia como patrón), cripta/servicios/servicio_bench.py, tests/bench/test_cargas_bench.py, cripta/modelo/conocimiento_jugador.py y cripta/modelo/ruta_conocida.py. Comprueba con Test-Path si tests/servicios/test_servicio_bench.py existe. Si existe, trátalo como Modificado y repórtalo. Si no existe, créalo como Nuevo.
+2. Si necesitas un nombre nuevo que los documentos no definan, propón el mínimo siguiendo los patrones del código existente, en español, y anótalo en tu resumen con archivo y motivo. Solo detente y pregunta si algo cambia lo que el jugador observa o una regla de spec.md.
+3. Sin heapq, bisect, collections, networkx, set ni dict como índice o caché, ni list.sort() o sorted(). La selección lineal, la pasada completa y la copia completa son alternativas de medición del harness en cripta/bench/, nunca de implementación en cripta/modelo/. Errores de programación heredan de IndexError o ValueError.
+4. No modifiques pruebas existentes, solo agrega. Edita únicamente cripta/bench/cargas_bench.py, cripta/servicios/servicio_bench.py, tests/servicios/test_servicio_bench.py, tests/bench/ si hace falta y tasks.md. No toques cripta/modelo/, cripta/vista/, cripta/controlador/ ni cripta/infraestructura/. Si un defecto de esas capas lo exige, detente y explícalo. No crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Los .py van en CRLF. Edita con tu herramienta de edición, no con sed -i. En comentarios, docstrings y textos nuevos no uses ";". Comentarios cortos: cabecera de máximo 5 líneas y 1 o 2 líneas por método.
+5. Pruebas con valor: cada caso comprueba valores concretos, incluye un control positivo cuando afirma una ausencia, no asigna atributos privados si existe una acción real, y cita en su docstring el FR-NIE y el escenario o SC que cubre.
+6. Marca cada casilla [X] en tasks.md cuando su tarea esté terminada y verificada. No marques T037.
+7. Ninguna cifra de rendimiento se escribe antes de medir: no pongas resultados de medición en código, docstrings, tasks.md ni documentos. Las cargas solo miden y reportan cuando se ejecutan.
+
+Contexto de diseño, ya decidido en plan.md y tasks.md:
+- La carga niebla_rutas se selecciona con py -m cripta --bench --solo niebla_rutas --escala 1, se ejecuta sin red y sin instanciar la vista, y usa random.Random(semilla) propio. El reloj de pared se usa solo para medir y nunca decide nada del juego.
+- Referencia: mapa conocido completo de la cripta de referencia. La cripta de referencia es la de mayor total de salas entre los fixtures de fixtures/, elegida dinámicamente leyendo los datos, sin fijar su id en el código. No reutilices ni modifiques la constante CRIPTA_REFERENCIA de las cargas de la 001. La carga comprueba existencia, integridad y versión del fixture antes de medir. Informa salas y salidas leídas del fixture, mediana y máximo del cálculo del primer paso de «ir a» y si cumple 5 ms.
+- Alternativas de ruta: la búsqueda real con HeapMinimo de cripta/modelo/ruta_conocida.py frente a una selección lineal manual escrita en el harness, sobre el mismo grafo y las mismas consultas, y deben dar el mismo primer paso. También se compara, sobre consultas idénticas, la ruta con los costos guardados en el conocimiento frente a la consulta a CriptaMapa.costo_de_conexion. La selección lineal se reporta aunque resulte más rápida en esta escala.
+- Revelación: varios R de salas nuevas sobre mapas de tamaños distintos, midiendo solo la actualización, con la revelación incremental frente a una pasada ingenua por todo el mapa escrita solo en el harness.
+- Reversión: registra y revierte cambios de antorcha y compara el tiempo y el número de inversas contra una copia completa del conocimiento como alternativa de medición.
+- tests/bench/test_cargas_bench.py recorre todas las cargas de CARGAS a escala mínima y sin red. niebla_rutas debe poder correr así.
+- Cada carga reporta unidades, entorno, semilla o configuración, salas y salidas, mediana y máximo.
+
+Puntos de control:
+- T031 y T032: agrega primero las pruebas en tests/servicios/test_servicio_bench.py. T031: las parejas de revelación (incremental frente a pasada ingenua) y de reversión (inversas frente a copia completa) producen estados equivalentes en consultas deterministas. T032: la ruta con heap y la selección lineal dan el mismo primer paso, incluida la elección dinámica del fixture de mayor total de salas sin fijar su id, y la ruta con costos guardados y la que consulta CriptaMapa.costo_de_conexion dan el mismo resultado sobre consultas idénticas. Antes de implementar corre py -m unittest tests.servicios.test_servicio_bench y muestra por qué fallan, que debe ser por lo que aún no existe y no por errores de sintaxis ni nombres mal escritos. Si el sandbox bloquea py.exe, pide aprobación para correr ese comando antes de continuar y no implementes hasta mostrar el rojo.
+- T033, T034, T035 y T036: implementa en cripta/bench/cargas_bench.py la selección lineal y la comparación de rutas con costos guardados frente a costo_de_conexion, la revelación incremental frente a la pasada completa y la reversión frente a la copia completa, y registra niebla_rutas en cripta/servicios/servicio_bench.py sin instanciar la vista. Deben pasar las pruebas de T031 y T032. Corre py -m unittest tests.servicios.test_servicio_bench tests.bench.test_cargas_bench y luego py -m unittest discover -s tests -t . y confirma que todo pasa.
+- Al final corre una sola vez py -m cripta --bench --solo niebla_rutas --escala 1 solo para comprobar que termina sin error y sin instanciar la vista. Pega la salida en tu respuesta y no copies ninguna cifra en ningún archivo, porque la medición oficial es T037.
+Al terminar, reporta cuántas pruebas pasan, qué hiciste por tarea, los nombres nuevos, cuál fixture eligió la carga y por qué criterio, si test_servicio_bench.py era Nuevo o Modificado, y confirma que no cambió ningún archivo fuera de cripta/bench/cargas_bench.py, cripta/servicios/servicio_bench.py, tests/ y tasks.md.
+```
+
+**Prompt (resumido):** Pruebas del harness y cargas de medición niebla_rutas (T031 a T036): selección lineal frente a heap, costos guardados frente a consulta del mapa, revelación incremental frente a pasada completa, reversión frente a copia completa, y registro de la carga sin vista.
+
+**Para qué se usó:** Dejar listas y verificadas las alternativas de medición de la capacidad de niebla de guerra e «ir a» antes de la medición oficial con --bench.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo cripta/bench/cargas_bench.py y tests/servicios/test_servicio_bench.py. No toques otros archivos, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a. Redacta en español. Ajusta solo lo que agregó la corrida anterior (bench_niebla_rutas y sus ayudantes, y las pruebas de test_servicio_bench.py). No marques ni desmarques ninguna casilla. Los .py van en CRLF. En comentarios, docstrings y textos nuevos no uses ";". No escribas cifras de medición en ningún archivo. Si algo cambia el resultado observable o exige tocar otro archivo, detente y pregunta.
+1. Ruta con heap: hoy se mide el lote de las 12 consultas y se informa su total como mediana y máximo. Mide cada consulta por separado con varias repeticiones, informa mediana y máximo por cálculo de un primer paso, cuántas de las consultas tienen ruta, y una línea que diga si cumple o no el límite de 5 ms tomando el máximo por cálculo, con una constante LIMITE_PASO_MS como LIMITE_CICLO_MS. Mide solo las consultas que tienen ruta. Si ninguna la tiene, lanza ValueError.
+2. Revelación y reversión: _comparar_revelacion y _comparar_reversion llaman a _elegir_fixture_referencia() dentro de lo que se mide, así que el tiempo incluye leer el fixture y armar el mapa. Haz que reciban la referencia ya armada una sola vez y mide solo la actualización de la revelación y solo registrar y revertir en la reversión.
+3. Revelación: informa por separado, para cada R, la mediana y el máximo de la revelación incremental y los de la pasada ingenua, junto con la equivalencia. La alternativa descartada se reporta aunque resulte más rápida.
+4. Reversión: informa por separado la mediana y el máximo de registrar y revertir por inversas y los de copiar y restaurar la copia completa, a partir de varias repeticiones y no de una sola corrida, junto con el número de inversas y la equivalencia. Se reporta aunque la copia resulte más rápida.
+5. La fila «costos guardados frente a costo_de_conexion» informa 0.000 ms y solo comprueba equivalencia. Reemplázala por una comparación de tiempos de la misma búsqueda con costos guardados y con consulta a CriptaMapa.costo_de_conexion, sobre las mismas consultas, con mediana y máximo de cada una, y conserva la comprobación de equivalencia con la ruta real.
+6. Selección lineal justa: hoy _seleccion_lineal y _siguiente_paso_costos_mapa recorren todas las salas y todas sus salidas por cada nodo extraído, lo que da O(V por E) y no el O(V al cuadrado más E) que declara plan.md, y llaman a conocimiento.proyectar() dentro de cada consulta. Reescríbelas para que difieran de la búsqueda real en cripta/modelo/ruta_conocida.py solo en cómo eligen el siguiente nodo (escaneo lineal de las distancias) y relajen únicamente las aristas del nodo extraído con el mismo criterio de puertas, desempate y costos que usa ruta_conocida.py. Saca proyectar() del tiempo medido o aplícalo igual en ambas alternativas. Explica qué cambiaste y por qué.
+7. _elegir_fixture_referencia toma candidatos[0] y eso depende del orden de iterdir() cuando hay empate de salas_total. Desempata de forma explícita por el menor identificador, sin sorted ni list.sort, y que el resultado no dependa del orden de lectura del directorio.
+8. Quita el segundo if repetido dentro de la pasada ingenua y sustituye los ";" que hay dentro de los textos de salida nuevos por otro separador.
+9. Primero ajusta tests/servicios/test_servicio_bench.py a las nuevas firmas y agrega lo necesario, y corre py -m unittest tests.servicios.test_servicio_bench para mostrar el rojo por lo que aún no existe. Después implementa. Corre py -m unittest tests.servicios.test_servicio_bench tests.bench.test_cargas_bench, luego py -m unittest discover -s tests -t . y una sola vez py -m cripta --bench --solo niebla_rutas --escala 1 solo para comprobar que termina, y pega su salida sin copiar cifras en ningún archivo.
+Al terminar, dime qué cambiaste por punto, si servicio_bench.py necesitó algún cambio y confirma qué archivos editaste en esta corrección y que ningún otro cambió.
+```
+
+**Prompt (resumido):** Corrección de la carga niebla_rutas: medición por cálculo con veredicto de 5 ms, fixture fuera del tiempo medido, alternativas descartadas reportadas por separado, selección lineal justa y desempate determinista del fixture.
+
+**Para qué se usó:** Hacer que las mediciones de la Fase E midan lo que declaran y que las alternativas descartadas se comparen en igualdad de condiciones, antes de la medición oficial de T037.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+Corrige solo cripta/bench/cargas_bench.py y tests/servicios/test_servicio_bench.py. No toques otros archivos, no crees ni cambies de rama y no hagas commit ni push. SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a. Redacta en español. Ajusta solo lo de niebla_rutas. No marques ni desmarques ninguna casilla. Los .py van en CRLF. En comentarios, docstrings y textos nuevos no uses ";". No escribas cifras de medición en ningún archivo. Si algo cambia el resultado observable o exige tocar cripta/modelo/, detente y pregunta. Sé conciso.
+1. Consultas representativas: hoy las consultas son pares de salas vecinas y el mapa conocido tiene puertas cerradas que lo parten en regiones pequeñas, así que la búsqueda explora muy poco y el veredicto de 5 ms no representa el peor caso de FR-NIE-018. En _elegir_fixture_referencia, antes de marcar las salas como exploradas, abre todas las puertas de la instancia de CriptaMapa que arma el harness (solo esa instancia, nunca el fixture en disco) para tener el peor caso conectado, usando la API pública del mapa. Elige hasta 12 consultas distintas con pares de origen y destino al azar con random.Random(SEMILLA_NIEBLA), con un número máximo de intentos, quedándote solo con los que tienen ruta, de forma determinista. Informa en las notas cuántas puertas se abrieron y cuántos pares se probaron y cuántos tenían ruta. Si no existe una API pública para abrir todas las puertas, detente y dímelo.
+2. Comparación de costos justa: hoy el lado «costos guardados» usa siguiente_paso de producción y el lado «consulta al mapa» usa una búsqueda con heap del harness, así que no comparan lo mismo. Agrega en el harness una variante de _siguiente_paso_costos_mapa con la misma estructura y que use salida.costo, y compara solo esas dos para el origen del costo, con mediana y máximo por cálculo de cada una y equivalencia con la ruta real. Informa aparte, en su propia fila, la función de producción siguiente_paso con su mediana y máximo por cálculo y el veredicto de 5 ms. Lee cripta/modelo/ruta_conocida.py y explícame en tu respuesta qué trabajo hace la función de producción que no hacen las variantes del harness, y por qué mide más que la selección lineal. No modifiques cripta/modelo/.
+3. Etiquetas: hoy las filas de ruta y de revelación pasan a Resultado una mediana por cálculo con el número de consultas como operaciones, y por eso el resumen de la primera línea muestra «totales» y «µs/op» incorrectos. Haz que cada fila por cálculo use una sola operación, de modo que la primera línea y la de la flecha digan lo mismo.
+4. Copia completa: en el camino de copiar y restaurar de _comparar_reversion, deja el registrador del conocimiento sin asignar mientras se mide la alternativa, de modo que no registre cambios en el historial. La medición de inversas conserva su registrador.
+5. tests/servicios/test_servicio_bench.py: en la prueba de rutas, recorre todas las consultas de la referencia y no solo la primera, y comprueba que la lista no está vacía, que cada consulta tiene ruta con siguiente_paso, y que dos llamadas a _elegir_fixture_referencia dan las mismas consultas. Agrega también la prueba de la variante con costo guardado frente a la de consulta al mapa sobre todas las consultas. Muestra primero en rojo lo que cambia y por qué.
+6. Corre py -m unittest tests.servicios.test_servicio_bench tests.bench.test_cargas_bench, luego py -m unittest discover -s tests -t . y una sola vez py -m cripta --bench --solo niebla_rutas --escala 1 solo para comprobar que termina, y pega su salida sin copiar cifras en ningún archivo.
+Al terminar, dime qué cambiaste por punto, la explicación del punto 2 y confirma qué archivos editaste en esta corrección y que ningún otro cambió.
+```
+
+**Prompt (resumido):** Segunda corrección de la carga niebla_rutas: consultas con ruta sobre el mapa conectado, comparación de costos que solo cambia el origen del costo, filas por cálculo con una operación, copia completa sin registrador y pruebas sobre todas las consultas.
+
+**Para qué se usó:** Que la medición de FR-NIE-018 represente el peor caso de un mapa conectado y que las alternativas descartadas se comparen en igualdad de condiciones antes de la medición oficial.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Sigue las instrucciones de prompts/p2/16-implement-002.md. Solo T037, T038, T039 y T041. No marques T040.
+
+# Implementación 002, paso 10: cierre de la capacidad (T037, T038, T039 y T041)
+
+Solo T037, T038, T039 y T041 de specs/002-niebla-ir-a/tasks.md. No marques T040, que depende de la 004.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-018, SC-NIE-002, SC-NIE-004 y los supuestos de decisión del grupo), plan.md, research.md, quickstart.md y las tareas T037 a T041. Lee DECISIONES.md completo para seguir su estilo y su sección «Cómo leer este documento», con las secciones 5.1, 5.2 y 5.6 de la capacidad 001 como modelo, y los tres archivos docs/bench/resultados_002_a.md, _b.md y _c.md. Comprueba con Test-Path que existen.
+2. Solo editas DECISIONES.md (CRLF), specs/002-niebla-ir-a/tasks.md (LF) y, para el punto 6, specs/002-niebla-ir-a/plan.md (CRLF). No toques código ni pruebas. No crees ni cambies de rama y no hagas commit ni push. No toques PROMPTS_LLM.md. Edita con tu herramienta de edición, no con sed -i. En el texto nuevo no uses ";".
+3. Todas las cifras salen de los tres archivos de resultados o de los datos de este prompt. No inventes ni redondees de más. Usa la mediana de las tres corridas y cita las tres.
+4. Si algo cambia lo que dicen spec.md o plan.md, o falta información, detente y pregunta.
+
+Tareas:
+- T037: la medición la hizo el grupo y su salida está en los tres archivos de resultados. Comprueba que las tres dicen CUMPLE el límite de 5 ms y marca T037 como [X].
+- T038: corre py -m unittest discover -s tests -t . y reporta cuántas pruebas pasan. Marca T038 como [X] solo si todas pasan.
+- T039: ejecuta los tres comandos de auditoría de T039 y analiza cada coincidencia por su contexto para descartar falsos positivos. Si hay un uso prohibido real, detente y repórtalo sin corregir. Marca T039 como [X] solo si no hay usos prohibidos reales ni vista instanciada en replay o bench.
+- T041: añade a DECISIONES.md solo la sección «5.3 Niebla de guerra e «ir a»», entre la 5.2 y la 5.6, con la estructura de la Parte I (Problema, Alternativas consideradas, Decisión, Análisis de complejidad, Evidencia empírica, Límites conocidos). Enlaza a specs/002-niebla-ir-a/spec.md y plan.md y di si la decisión final coincide con la del plan.md original y, si no, qué medición lo motivó. Marca T041 como [X].
+- Punto 6: servicio_bench.py no cambió porque ServicioBench ya ejecuta las cargas registradas en CARGAS de cargas_bench.py. Ajusta el texto de T036 en tasks.md (sin cambiar su casilla) y la fila de servicio_bench.py de la tabla de impacto de plan.md para que digan Sin cambios y por qué.
+- En «Cómo leer este documento» agrega niebla_rutas a la lista de cargas y la sección 5.3 a la fila del Equipo B de la tabla de equipos, y añade una frase que diga que las cifras de la sección 5.3 se midieron con Python 3.14.7, sin cambiar la versión que ya figura para las otras secciones.
+
+Datos para la sección 5.3 (Equipo B, Intel Core Ultra 7, 16 GB, Windows, Python 3.14.7):
+- Comando: py -m cripta --bench --solo niebla_rutas --escala 1, tres corridas guardadas en docs/bench/resultados_002_a.md, _b.md y _c.md. Cripta de referencia: cripta-06, elegida por el mayor total de salas sin fijar su id en el código, con 300 salas y 760 salidas. El harness abre las 28 puertas cerradas de su propia instancia del mapa para tener el peor caso conectado y usa 12 consultas con ruta, elegidas al azar con semilla 20261118. Cada consulta se mide tres veces por alternativa. Las cifras son por cálculo del primer paso de «ir a».
+- Ruta de producción (heap con costos guardados): medianas por cálculo de las tres corridas 3.100, 3.038 y 3.095 ms, mediana 3.095 ms. Máximos por cálculo 4.834, 3.799 y 4.599 ms, mediana 4.599 ms. El peor máximo fue 4.834 ms, a 0.166 ms del límite. CUMPLE 5 ms en las tres corridas.
+- Selección lineal manual: medianas 5.013, 4.799 y 4.758 ms, mediana 4.799 ms, 1.55 veces más lenta que producción. Máximos 7.142, 6.122 y 5.284 ms, mediana 6.122 ms.
+- Heap del harness con costos guardados: medianas 3.205, 3.069 y 3.062 ms, mediana 3.069 ms. Máximos 4.503, 3.709 y 3.398 ms, mediana 3.709 ms.
+- Heap del harness con consulta a CriptaMapa.costo_de_conexion: medianas 4.287, 4.217 y 4.194 ms, mediana 4.217 ms, 1.37 veces más lento que con costos guardados. Máximos 5.398, 4.906 y 7.101 ms, mediana 5.398 ms, con un máximo que supera 5 ms. Las tres variantes dan el mismo primer paso que la ruta de producción.
+- Revelación por entrada, mediana de las tres corridas. R=10: incremental 0.032 ms (máximo 0.053) y pasada ingenua 0.360 ms (máximo 0.417), 11.3 veces más lenta. R=50: incremental 0.028 ms (máximo 0.052) y pasada ingenua 0.362 ms (máximo 0.563), 12.9 veces. R=200: incremental 0.016 ms (máximo 0.068) y pasada ingenua 0.366 ms (máximo 0.577), 22.9 veces. Estados equivalentes en todas.
+- Reversión con 20 entradas y 409 inversas: registrar y revertir por inversas 0.800 ms (máximo 0.878) y copiar y restaurar la copia completa 1.185 ms (máximo 1.197), 1.48 veces más lenta. Estados equivalentes.
+
+Contenido de la sección 5.3, sin reglas nuevas:
+- Problema: operaciones reales con su frecuencia. Cada entrada a una sala observa sus puertas y revela vecinas si hay antorcha. Cada paso de «ir a» calcula un primer paso con solo el conocimiento del jugador. El pergamino revierte la entrada y sus cambios de conocimiento.
+- Alternativas, al menos dos por subproblema: representación del conocimiento (listas contiguas por id, elegida, frente a recalcular desde el mapa real en cada consulta); revelación (incremental, elegida, frente a pasada completa); reversión (inversas puntuales por celda, elegida, frente a copia completa del conocimiento); ruta (búsqueda propia con HeapMinimo desde el destino, elegida, frente a selección lineal y frente a reutilizar BuscadorRutas de la 001, descartada porque calcula sobre el mapa real, poda por rango de cazadores y guarda una caché pensada para sus eventos); costo de la salida (guardado en el conocimiento, elegido, frente a CriptaMapa.costo_de_conexion).
+- Decisión y complejidad según plan.md: revelación O(R), búsqueda con heap O((V+E) log V), selección lineal O(V al cuadrado más E). Di que la decisión final coincide con la de plan.md y que la hipótesis de research.md de que la selección lineal podría ganar en mapas pequeños no se cumplió con las 300 salas conectadas de cripta-06.
+- Evidencia: las tablas con las medianas de las tres corridas, con enlace a los tres archivos de resultados. Cuenta con honestidad que una primera versión de la carga usaba pares de salas vecinas con las puertas cerradas, que partían el mapa en regiones diminutas, y que se corrigió abriendo las puertas del harness y eligiendo pares al azar con ruta, para medir el peor caso.
+- Límites conocidos: el margen del límite de 5 ms es estrecho, con 4.834 ms en la peor corrida. La función de producción proyecta el conocimiento y reconstruye las aristas entrantes en cada llamada, y que esa preparación domine el tiempo es una hipótesis sin medir. En la revelación, R es la cantidad de entradas al azar con reemplazo y no R salas nuevas, y solo se mide un tamaño de mapa. Se mide el cálculo del paso y no un viaje completo en una partida real. El guardado binario del conocimiento depende de la 004 y T040 sigue pendiente, así que hasta entonces cargar una partida de archivo no conserva el mapa explorado. Partida.vista() muestra como cerrada una puerta no observada, algo que no debería darse en la sala actual. La salida sin puerta cerrable se considera abierta al revelarse la sala, decisión del grupo pendiente de confirmar con el profesor. Los costos de salida del conocimiento ocupan memoria proporcional a las salidas.
+
+Al terminar, dime qué cambiaste por punto, cuántas pruebas pasan, el resultado de la auditoría con sus falsos positivos descartados, y confirma con git diff que solo cambiaron DECISIONES.md, tasks.md y plan.md, y que en tasks.md solo cambiaron las casillas de T037, T038, T039 y T041 y el texto de T036.
+```
+
+**Prompt (resumido):** Cierre de la capacidad de niebla de guerra e «ir a»: marca de la medición oficial, suite completa, auditoría de usos prohibidos y sección 5.3 de DECISIONES.md con las cifras medidas, más el ajuste del texto sobre servicio_bench.py.
+
+**Para qué se usó:** Dejar documentadas las decisiones, las alternativas descartadas y los resultados medidos de la capacidad, y cerrar las tareas de la Fase F que no dependen de la 004.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Retoma la corrida 16 de la capacidad 002, que se detuvo en T039 sin cambiar ningún archivo. Este mensaje reemplaza lo que prompts/p2/16-implement-002.md diga distinto y no necesitas releer ese prompt. Solo T037, T038, T039 y T041 de specs/002-niebla-ir-a/tasks.md. No marques T040, que depende de la 004.
+
+Reglas generales:
+1. Lee spec.md (FR-NIE-018, SC-NIE-002, SC-NIE-004 y los supuestos de decisión del grupo), plan.md, research.md, quickstart.md y las tareas T037 a T041. Lee DECISIONES.md completo para seguir su estilo y su sección «Cómo leer este documento», con las secciones 5.1, 5.2 y 5.6 de la capacidad 001 como modelo, y los tres archivos docs/bench/resultados_002_a.md, resultados_002_b.md y resultados_002_c.md. Comprueba con Test-Path que existen. Para describir el método de la medición puedes leer cripta/bench/cargas_bench.py, sin editarlo.
+2. Solo editas DECISIONES.md, specs/002-niebla-ir-a/tasks.md y specs/002-niebla-ir-a/plan.md, respetando los finales de línea de cada archivo. No toques código, pruebas, PROMPTS_LLM.md ni la carpeta prompts. No crees ni cambies de rama y no hagas commit ni push. Edita con tu herramienta de edición, no con sed -i. En el texto nuevo no uses ";".
+3. Todas las cifras salen exclusivamente de los tres archivos de resultados. Calcula tú la mediana de las tres corridas de cada cifra y cita las tres. No uses cifras de memoria ni redondees de más. Al final entrega una tabla con cada cifra que usaste en la sección 5.3 (alternativa, valor de cada corrida y mediana de las tres) para que el grupo la revise.
+4. Si algo cambia lo que dicen spec.md o plan.md, o falta información, detente y pregunta.
+5. Si py.exe devuelve acceso denegado, solicita autorización para ejecutarlo fuera del sandbox, como en las corridas anteriores. No des por pasada ninguna prueba que no hayas corrido.
+
+Tareas:
+- T037: la medición la hizo el grupo y su salida está en los tres archivos de resultados. Comprueba que las tres dicen CUMPLE el límite de 5 ms y marca T037 como [X].
+- T038: corre py -m unittest discover -s tests -t . y reporta cuántas pruebas pasan. El grupo ya la corrió y dio 385 en OK. Marca T038 como [X] solo si todas pasan.
+- T039: ejecuta los tres comandos de auditoría de T039 y analiza cada coincidencia por su contexto. Decisión del grupo sobre cripta/servicios/servicio_bench.py: es código de la 001 ya aprobado y fusionado, esta rama no lo modifica y no se corrige aquí. La constitución prohíbe dict, set y sorted en los problemas evaluados, y ese archivo los usa para validar nombres de subsistemas de la línea de comandos, ordenar un mensaje de error y devolver el contenedor del reporte, que no son un índice, una caché ni un ordenamiento de un problema evaluado. Lista cada coincidencia de ese archivo con su línea y la razón por la que no aplica, y no la corrijas. Si aparece una coincidencia real en conocimiento_jugador.py, ruta_conocida.py o cargas_bench.py, o una vista instanciada en replay o bench, detente y repórtalo sin corregir. Marca T039 como [X] solo si no hay usos prohibidos reales en los archivos de la 002 ni vista instanciada en replay o bench.
+- T041: añade a DECISIONES.md solo la sección «5.3 Niebla de guerra e «ir a»», entre la 5.2 y la 5.6, con la estructura de la Parte I (Problema, Alternativas consideradas, Decisión, Análisis de complejidad, Evidencia empírica, Límites conocidos). Enlaza a specs/002-niebla-ir-a/spec.md y plan.md y di si la decisión final coincide con la del plan.md original y, si no, qué medición lo motivó. Marca T041 como [X].
+- Punto 6: servicio_bench.py no cambió porque ServicioBench ya ejecuta las cargas registradas en CARGAS de cargas_bench.py. Ajusta el texto de T036 en tasks.md, sin cambiar su casilla, y la fila de servicio_bench.py de la tabla de impacto de plan.md para que digan Sin cambios y por qué.
+- En «Cómo leer este documento»: agrega niebla_rutas a la lista de cargas. En la tabla de equipos agrega 5.3 a la columna «Se usó en» de la fila del Equipo A y no cambies su columna de Python. Añade una frase que diga que las cifras de la sección 5.3 se midieron en el Equipo A con Python 3.14.7, a diferencia de la versión que figura en su fila.
+
+Datos verificados para la sección 5.3 (Equipo A: Ryzen 5 5600GT, 32 GB, Windows, Python 3.14.7):
+- Comando: py -m cripta --bench --solo niebla_rutas --escala 1, tres corridas guardadas en docs/bench/resultados_002_a.md, resultados_002_b.md y resultados_002_c.md.
+- Cripta de referencia: cripta-06, elegida por el mayor total de salas sin fijar su id en el código, con 300 salas y 760 salidas. El harness abre las 28 puertas cerradas de su propia instancia del mapa para tener el peor caso conectado, prueba 12 pares y los 12 tienen ruta, elegidos al azar con semilla 20261118. Cuántas veces se mide cada consulta por alternativa lo tomas de cargas_bench.py y solo lo escribes si el código lo confirma.
+- Las cifras de ruta son por cálculo del primer paso de «ir a». Todas las cifras que cite la sección salen de los tres archivos de resultados y se reportan como mediana de las tres corridas, con su máximo.
+- La ruta de producción es un heap con costos guardados. El peor máximo por cálculo de producción entre las tres corridas fue 4.834 ms, a 0.166 ms del límite de 5 ms, y cumple en las tres.
+
+Contenido de la sección 5.3, sin reglas nuevas:
+- Problema: operaciones reales con su frecuencia. Cada entrada a una sala observa sus puertas y revela vecinas si hay antorcha. Cada paso de «ir a» calcula un primer paso con solo el conocimiento del jugador. El pergamino revierte la entrada y sus cambios de conocimiento.
+- Alternativas, al menos dos por subproblema: representación del conocimiento (listas contiguas por id, elegida, frente a recalcular desde el mapa real en cada consulta). Revelación (incremental, elegida, frente a pasada completa). Reversión (inversas puntuales por celda, elegida, frente a copia completa del conocimiento). Ruta (búsqueda propia con HeapMinimo desde el destino, elegida, frente a selección lineal y frente a reutilizar BuscadorRutas de la 001, descartada porque calcula sobre el mapa real, poda por rango de cazadores y guarda una caché pensada para sus eventos). Costo de la salida (guardado en el conocimiento, elegido, frente a CriptaMapa.costo_de_conexion).
+- Decisión y complejidad según plan.md: revelación O(R), búsqueda con heap O((V+E) log V), selección lineal O(V al cuadrado más E). Di si la decisión final coincide con la de plan.md y si la hipótesis de research.md de que la selección lineal podría ganar en mapas pequeños se cumplió o no con las 300 salas conectadas de cripta-06, según las cifras de los archivos.
+- Evidencia: tablas con las medianas y los máximos de las tres corridas para la ruta de producción, la selección lineal, el heap del harness con costos guardados, el heap del harness con consulta a CriptaMapa.costo_de_conexion, la revelación incremental frente a la pasada ingenua en cada tamaño R que midan los archivos y la reversión por inversas frente a la copia completa, con las razones calculadas desde las medianas y enlaces a los tres archivos de resultados. Si algún máximo supera 5 ms, dilo. Cuenta con honestidad que una primera versión de la carga usaba pares de salas vecinas con las puertas cerradas, que partían el mapa en regiones diminutas, y que se corrigió abriendo las puertas del harness y eligiendo pares al azar con ruta, para medir el peor caso.
+- Límites conocidos: el margen del límite de 5 ms es estrecho. La función de producción proyecta el conocimiento y reconstruye las aristas entrantes en cada llamada, y que esa preparación domine el tiempo es una hipótesis sin medir. En la revelación, R es la cantidad de entradas al azar con reemplazo y no R salas nuevas, y solo se mide un tamaño de mapa. Se mide el cálculo del paso y no un viaje completo en una partida real. El guardado binario del conocimiento depende de la 004 y T040 sigue pendiente, así que hasta entonces cargar una partida de archivo no conserva el mapa explorado. Partida.vista() muestra como cerrada una puerta no observada, algo que no debería darse en la sala actual. La salida sin puerta cerrable se considera abierta al revelarse la sala, decisión del grupo pendiente de confirmar con el profesor. Los costos de salida del conocimiento ocupan memoria proporcional a las salidas. Comprueba cada uno de estos límites contra el código y los documentos actuales, y si alguno ya no es cierto, ajústalo o quítalo y dilo en tu resumen.
+
+Al terminar, dime qué cambiaste por punto, cuántas pruebas pasan, el resultado de la auditoría con cada coincidencia de servicio_bench.py y su razón, la tabla de cifras de la regla 3, y confirma con git diff que solo cambiaron DECISIONES.md, tasks.md y plan.md, y que en tasks.md solo cambiaron las casillas de T037, T038, T039 y T041 y el texto de T036.
+```
+
+**Prompt (resumido):** Reanudación de la corrida 16 con cifras tomadas solo de los archivos de resultados, atribución al Equipo A con Python 3.14.7, tratamiento de los hallazgos de servicio_bench.py como código de la 001 ya aprobado y solicitud de autorización para ejecutar py fuera del sandbox.
+
+**Para qué se usó:** Completar el cierre de la capacidad (T037, T038, T039 y T041) después de que la primera ejecución se detuviera en T039 sin cambios, corrigiendo el equipo de medición y evitando cifras copiadas de un resumen.
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/002-niebla-ir-a
+Ajuste final de la sección 5.3 de DECISIONES.md de la capacidad 002. Solo editas DECISIONES.md, respetando sus finales de línea CRLF. No toques otros archivos, no marques ni desmarques casillas de tasks.md, no cambies de rama y no hagas commit ni push. No uses ";" en el texto nuevo. No corras la suite, es solo documentación.
+1. En «Análisis de complejidad» elimina la última oración, la que dice que las consultas observadas y los valores de V y E se describen con la evidencia y no son nuevas reglas.
+2. En «Límites conocidos» reescribe con redacción clara el punto sobre Partida.vista(), después de comprobar en cripta/modelo/partida.py y cripta/modelo/resultado_partida.py cómo se presenta hoy una puerta no observada en la sala actual. Si en la sala actual todas las puertas ya se observan al entrar y ese caso no ocurre, quita el punto o redáctalo como el límite real que exista. Separa en un punto propio la decisión del grupo sobre la salida sin puerta cerrable, que se considera abierta al explorar su sala y está pendiente de confirmar con el profesor.
+3. Comprueba en cripta/bench/cargas_bench.py cuántos cálculos se miden por consulta y por alternativa. Corrige el texto de la sección 5.3 solo si el código dice otra cosa.
+Al terminar, dime qué cambiaste por punto y confirma con git diff que solo cambió DECISIONES.md.
+```
+
+**Prompt (resumido):** Ajuste final de la sección 5.3 de DECISIONES.md: quitar una frase residual, aclarar el límite sobre Partida.vista() y separar la decisión del grupo sobre la salida sin puerta cerrable, y comprobar el número de cálculos por consulta contra el código.
+
+**Para qué se usó:** Corregir tres defectos de redacción y de precisión detectados en la revisión de la sección 5.3 antes de cerrar la capacidad.
 ### 2026-11-18 — Codex CLI 0.169.0 (GPT-6.2 Sol)
 **Prompt:**
 ```text
@@ -1503,6 +1936,29 @@ $speckit-implement Completa la elección de K para la 004. Confirmo K=50 como va
 
 **Para qué se usó:** Que la documentación dejara de decir que el criterio de la cripta de referencia estaba pendiente y que las listas de cargas coincidieran con las registradas en CARGAS.
 
+
+### 2026-11-18 — Codex CLI 0.169.0 (GPT-6 Luna)
+**Prompt:** "Estoy en la rama 002-niebla-ir-a-fases-c-d con un git merge origin/main en curso que quedó con conflictos. No crees ni cambies de rama, no abortes el merge, no hagas commit ni push y no uses git add. Resuelve solo estos archivos: DECISIONES.md, cripta/bench/cargas_bench.py, cripta/controlador/controlador_cripta.py, cripta/servicios/servicio_replay.py, cripta/vista/vista_base.py, cripta/vista/vista_consola.py, tests/controlador/test_controlador_cripta.py, tests/servicios/test_servicio_bench.py y tests/vista/test_vista_consola.py. No toques PROMPTS_LLM.md, que ya resolví a mano. Contexto: el lado HEAD trae la capacidad 002 (niebla de guerra, mapa conocido, ir a, carga niebla_rutas, comentario de viaje en partida.log) y origin/main trae la capacidad 004 (comandos historia, --checkpoint-cada, --replay --hasta, cargas linea_tiempo e historial_cazadores, guardado binario versión 2). Se conserva todo de ambos lados, sin perder código de ninguno. 1. En cada bloque conserva lo de los dos lados y une imports, parámetros, métodos abstractos, comandos y pruebas, sin duplicados. 2. DECISIONES.md: en el primer bloque (lista de cargas de «Cómo se reproduce») deja una sola lista con todas las cargas registradas en CARGAS de cargas_bench.py. En el segundo bloque deja la sección 5.3 de la 002 y después la 5.5 de la 004, sin cambiar su texto. 3. cargas_bench.py: la tupla CARGAS conserva niebla_rutas, historial_cazadores y linea_tiempo. No reintroduzcas la constante CRIPTA_REFERENCIA y conserva elegir_cripta_de_referencia y cripta_de_referencia. 4. tests/servicios/test_servicio_bench.py es un conflicto add/add: conserva las clases de pruebas de los dos lados con un solo bloque de imports. 5. servicio_replay.py: conserva --hasta de la 004 y el comentario de viaje de la 002, y que los números de línea del replay sigan contando igual. 6. Sin heapq, bisect, collections, networkx, set ni dict como índice, y sin sorted ni list.sort() en lo que escribas. En comentarios y textos nuevos no uses ';'. Conserva los finales de línea CRLF de cada archivo. No uses sed -i. 7. No agregues reglas del juego. Si una resolución no es obvia o cambia el resultado observable, detente y pregunta. Al terminar verifica: git diff --name-only --diff-filter=U sin resultados, ninguna marca <<<<<<<, ======= ni >>>>>>> en esos archivos (git grep -n -e '^<<<<<<<' -e '^=======' -e '^>>>>>>>' -- cripta tests DECISIONES.md), y corre py -m unittest discover -s tests -t . completo. Dime cuántas pruebas pasan y, si falla alguna, en qué archivo y por qué, sin corregirla fuera de los conflictos. Dime qué decidiste por archivo."
+
+**Prompt (resumido):** Resolver los conflictos del merge de origin/main (capacidad 004) en la rama de la 002, conservando el código de ambos lados, y correr la suite completa.
+
+**Para qué se usó:** Fusionar la línea de tiempo con la niebla de guerra y el viaje ir a en los comandos, la vista, el replay, las cargas del bench, DECISIONES.md y las pruebas, sin perder lo de ninguna de las dos capacidades.
+
+
+### 2026-11-18 — Antigravity CLI (Gemini)
+**Prompt:** "/speckit-implement Sigue las instrucciones de prompts/p2/18-implement-002.md. Solo T040. No hagas commit ni push. Solo T040 de specs/002-niebla-ir-a/tasks.md. Estoy en la rama 002-niebla-ir-a-fases-c-d con el merge de main ya resuelto y commiteado. No crees ni cambies de rama y no hagas commit ni push. Lee solo los archivos que se nombran aquí y no corras scripts de verificación amplios. 1. Lee la tarea T040, FR-NIE-006 y SC-NIE-005 de specs/002-niebla-ir-a/spec.md, cripta/infraestructura/guardado_binario.py, cripta/infraestructura/estado_guardado.py, cripta/modelo/persistencia_modelo.py, tests/servicios/test_servicio_partida_guardado.py y tests/infraestructura/test_guardado_binario.py. La 004 ya subió el formato binario a la versión 2 y guarda el conocimiento del jugador y la línea de tiempo. No cambies el formato ni la versión y no definas bytes. 2. Primero la prueba. En tests/servicios/test_servicio_partida_guardado.py (Modificado) agrega, solo si no existe ya una equivalente, una prueba que juegue una partida con niebla (salas exploradas y avistadas, una puerta observada y recordada, la antorcha encendida en algún momento), la guarde con ServicioPartida en el archivo binario, la cargue en un servicio nuevo y compruebe que el conocimiento (estado de cada sala, observaciones de puertas y costos de salida) coincide con el de la partida original, que ir a calcula la misma ruta y que historia de un instante anterior muestra el mismo mapa conocido que antes de guardar. Cita FR-NIE-006 y SC-NIE-005 en el comentario de la prueba. 3. Si ya existen pruebas que cubren parte de eso (revisa test_proyecta_y_restaura_conocimiento_y_permite_retroceso_nuevo, test_conocimiento_completo_de_puertas_se_conserva_al_restaurar y las de la 004), no las dupliques: dime cuáles cubren qué y agrega solo lo que falte. 4. Si la prueba nueva falla porque el código no restaura algo, detente y dime qué falta, sin corregir código fuera de lo pedido. 5. Corre py -m unittest tests.servicios.test_servicio_partida_guardado y después py -m unittest discover -s tests -t . completo, y dime los resultados. 6. Marca T040 en tasks.md y cambia «Depende de 004» por un texto que diga que la 004 ya está fusionada, sin tocar otras tareas. Revisa si DECISIONES.md 5.3 o plan.md dicen que el guardado binario del conocimiento está pendiente de la 004 y, si lo dicen, corrígelo con una frase. 7. Sin heapq, bisect, collections, networkx, set ni dict como índice, y sin sorted ni list.sort(). En comentarios y textos nuevos no uses ';'. Conserva CRLF. No uses sed -i. 8. No agregues reglas del juego. Si falta algo o cambia el resultado observable, detente y pregunta. Al terminar dime qué cambiaste por punto y verifica con git diff que solo cambiaron tests/servicios/test_servicio_partida_guardado.py, specs/002-niebla-ir-a/tasks.md y, si hizo falta, DECISIONES.md o specs/002-niebla-ir-a/plan.md."
+
+**Prompt (resumido):** T040 de la 002: prueba binaria de guardar y cargar el conocimiento del jugador sobre el formato versión 2 de la 004, y marcar la tarea.
+
+**Para qué se usó:** Confirmar que el conocimiento, la ruta de ir a y la historia de la 004 se restauran tras guardar y cargar, y cerrar T040 de la 002. Se pasó a Antigravity porque la cuota de Codex se agotó.
+
+
+### 2026-11-18 — Antigravity CLI (Gemini)
+**Prompt:** "Corrige solo estos archivos: cripta/controlador/controlador_cripta.py, cripta/bench/cargas_bench.py y tests/servicios/test_servicio_partida_guardado.py. No toques otros archivos. Estoy en la rama 002-niebla-ir-a-fases-c-d. No crees ni cambies de rama y no hagas commit ni push. Lee solo esos tres archivos y tests/servicios/test_servicio_bench.py. No corras scripts de verificación amplios. Es la revisión del PR de la capacidad 002. 1. dict como tabla de búsqueda en el controlador. En cripta/controlador/controlador_cripta.py el método _avisar_motivo_viaje arma mensajes = {...} y lo consulta con mensajes.get(motivo, ...). La constitución prohíbe el dict como tabla de búsqueda. Reemplázalo por una cadena de if o por una tupla de pares (motivo, mensaje) recorrida a mano con un for. Deja exactamente los mismos cuatro mensajes (destino_inexistente, destino_no_explorado, sala_actual, sin_ruta) y el mismo mensaje por defecto «No se puede iniciar el viaje.», sin cambiar lo que ve el jugador. Si no existe una prueba que cubra los cuatro motivos y el motivo desconocido, agrégala primero en tests/controlador/test_controlador_cripta.py, solo para eso, y comprueba que pasa antes y después del cambio. 2. Elección de la cripta en niebla_rutas. En cripta/bench/cargas_bench.py la carga niebla_rutas elige la cripta con su propia función _elegir_fixture_referencia, mientras la 004 agregó la función común elegir_cripta_de_referencia (y cripta_de_referencia). El criterio es el mismo (la de más salas, desempate por menor id), así que quita el código duplicado: que niebla_rutas obtenga el id con cripta_de_referencia() y use lo demás sin cambios. Si tests/servicios/test_servicio_bench.py importa _elegir_fixture_referencia, ajusta esa prueba para que use la función común, o deja _elegir_fixture_referencia como un envoltorio de una línea que llame a la común. Si el cambio altera lo que mide o devuelve niebla_rutas, o el resultado de alguna prueba de equivalencia, detente y pregunta. 3. Punto y coma en un comentario. En tests/servicios/test_servicio_partida_guardado.py hay un comentario nuevo con ';' («vecinas avistadas; puerta observada»). Reescríbelo con coma o dos frases. Busca también cualquier otro ';' en los comentarios que agregué en este archivo y quítalo. Reglas: sin heapq, bisect, collections, networkx, set ni dict como índice, y sin sorted ni list.sort(). En comentarios y textos nuevos no uses ';'. Conserva los finales de línea CRLF de cada archivo. No uses sed -i. No agregues reglas del juego. Si falta algo o cambia el resultado observable, detente y pregunta. Al terminar corre py -m unittest discover -s tests -t . completo y dime cuántas pasan. Comprueba con Select-String que no queda un dict como tabla de búsqueda en controlador_cripta.py. Dime qué cambiaste por punto y verifica con git diff que solo cambiaron los archivos indicados."
+
+**Prompt (resumido):** Corregir los puntos de la revisión del PR de la 002: quitar el dict como tabla de búsqueda del aviso de viaje, reutilizar la función común de cripta de referencia en niebla_rutas y quitar un ";" de un comentario.
+
+**Para qué se usó:** Cumplir la regla de la constitución sobre el dict en el controlador, eliminar código duplicado en el bench y corregir el comentario.
 ### 2026-11-17 — Codex CLI 0.169.0 (GPT-6 Luna)
 **Prompt:**
 ```text

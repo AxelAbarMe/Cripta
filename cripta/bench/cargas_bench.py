@@ -3,11 +3,13 @@ Documento de Decisiones lo exige (§8.5), mide TAMBIÉN la alternativa descartad
 los mismos datos, para que la comparación sea justa. Ninguna toca red, vista ni una
 cripta real: todo son datos generados aquí (o en tests/cripta_artificial.py) con una semilla fija (reproducible).
 
+
 `escala` multiplica los tamaños de las cargas (1.0 = rápido; 5.0 = mediciones más finas).
 """
 import copy
 import gc
 import os
+import platform
 import random
 import sys
 import tempfile
@@ -23,6 +25,7 @@ from cripta.dto.pagina_esqueleto_dto import PaginaEsqueletoDTO
 from cripta.dto.sala_dto import SalaDTO
 from cripta.dto.salida_dto import SalidaDTO
 from cripta.estructuras.lista_doble_enlazada import ListaDobleEnlazada
+from cripta.estructuras.heap_min import HeapMinimo
 from cripta.estructuras.ordenamiento_selector import elegir_algoritmo, ordenar_auto
 from cripta.estructuras.ordenamientos import Ordenamiento
 from cripta.estructuras.vector import VectorOrdenado
@@ -48,7 +51,10 @@ from cripta.modelo.cripta_mapa import CriptaMapa
 from cripta.modelo.partida import Partida
 from cripta.modelo.reloj import RelojEventos, calcular_intervalo
 from cripta.modelo.resolubilidad import VerificadorResolubilidad
+from cripta.modelo.conocimiento_jugador import ConocimientoJugador
+from cripta.modelo.ruta_conocida import siguiente_paso
 from cripta.servicios.servicio_partida import ServicioPartida
+
 
 SEMILLA_BENCH = 20260928
 
@@ -61,6 +67,7 @@ class Resultado:
     operaciones: int
     nota: str = ""
     es_razon: bool = False
+
 
     @property
     def micros_por_operacion(self) -> float:
@@ -90,11 +97,14 @@ def _comparar(descartada: str, t_descartada: float, elegida: str, t_elegida: flo
 class _AgendaLineal:
     """ALTERNATIVA DESCARTADA: lista sin orden, el mínimo se busca recorriéndola."""
 
+
     def __init__(self):
         self.eventos = []  # (tiempo, secuencia, id)
 
+
     def programar(self, tiempo, secuencia, ident):
         self.eventos.append((tiempo, secuencia, ident))
+
 
     def extraer_minimo(self):
         mejor = 0
@@ -111,6 +121,7 @@ def bench_agenda(escala: float = 1.0):
         azar = random.Random(SEMILLA_BENCH)
         tiempos = [azar.randint(0, 500) for _ in range(pendientes)]
 
+
         def con_heap():
             reloj = RelojEventos()
             for k in range(pendientes):
@@ -118,6 +129,7 @@ def bench_agenda(escala: float = 1.0):
             for _ in range(operaciones):
                 evento = reloj.ejecutar_siguiente()
                 reloj.programar(evento.tiempo + 66, evento.accion)
+
 
         def con_lista():
             agenda = _AgendaLineal()
@@ -129,6 +141,7 @@ def bench_agenda(escala: float = 1.0):
                 agenda.programar(tiempo + 66, secuencia, ident)
                 secuencia += 1
 
+
         th, tl = _medir(con_heap, 2), _medir(con_lista, 2)
         resultados.append(Resultado("agenda", f"{pendientes} pendientes: heap (elegida)", th, operaciones))
         resultados.append(Resultado("agenda", f"{pendientes} pendientes: lista lineal (descartada)", tl, operaciones,
@@ -136,6 +149,7 @@ def bench_agenda(escala: float = 1.0):
     # cancelaciones (borrado perezoso) y reprogramaciones
     reloj = RelojEventos()
     eventos = [reloj.programar(i % 400, lambda: None) for i in range(operaciones)]
+
 
     def cancelar_y_reprogramar():
         for i, ev in enumerate(eventos):
@@ -164,9 +178,11 @@ def bench_cache(escala: float = 1.0):
         for f in fichas:
             vector.insertar(f)
 
+
         def busqueda_binaria():
             for ident in pedidas:
                 vector.buscar(ident)
+
 
         def busqueda_lineal():
             for ident in pedidas:
@@ -174,10 +190,12 @@ def bench_cache(escala: float = 1.0):
                     if f.id == ident:
                         break
 
+
         tb, tl = _medir(busqueda_binaria), _medir(busqueda_lineal)
         resultados.append(Resultado("caché", f"buscar en {tamano} fichas: VectorOrdenado (elegida)", tb, consultas))
         resultados.append(Resultado("caché", f"buscar en {tamano} fichas: recorrido lineal (descartada)", tl, consultas,
                                     _comparar("el recorrido lineal", tl, "VectorOrdenado", tb)))
+
 
         # "usé esta ficha" -> pasa a ser la más reciente
         lista = ListaDobleEnlazada()
@@ -185,14 +203,17 @@ def bench_cache(escala: float = 1.0):
         plana = list(range(tamano))
         indices = [azar.randrange(tamano) for _ in range(consultas)]
 
+
         def lru_lista_doble():
             for i in indices:
                 lista.mover_al_inicio(nodos[i])
+
 
         def lru_lista_plana():
             for i in indices:
                 plana.remove(i)
                 plana.insert(0, i)
+
 
         t1, t2 = _medir(lru_lista_doble), _medir(lru_lista_plana)
         resultados.append(Resultado("caché", f"marcar uso LRU con {tamano} fichas: lista doble (elegida)", t1, consultas))
@@ -210,9 +231,11 @@ def bench_recuperacion_disco(escala: float = 1.0):
             disco.guardar_ficha("cat-bench", entidad_desde_json(
                 {"id": f"itm_{i:04d}", "clase": "arma", "nombre": f"Arma {i}", "peso": 2, "valor": 15, "ataque_bonus": 3}))
 
+
         def recuperar():
             for i in range(cantidad):
                 disco.leer_ficha("cat-bench", f"itm_{i:04d}")
+
 
         t = _medir(recuperar)
     return [Resultado("disco", "recuperar ficha liberada (lectura de disco + parseo)", t, cantidad,
@@ -238,10 +261,12 @@ def bench_inventario(escala: float = 1.0):
     for n in (10, 10000):
         repeticiones = max(200, int(2000 * escala)) if n == 10 else max(50, int(300 * escala))
 
+
         def preparar_lista_doble():
             lista = ListaDobleEnlazada()
             nodos = [lista.agregar(i) for i in range(n)]
             return lista, nodos
+
 
         def con_lista_doble(datos):
             lista, nodos = datos
@@ -250,14 +275,17 @@ def bench_inventario(escala: float = 1.0):
                 lista.eliminar_nodo(nodo)              # soltar el objeto que se está viendo: O(1)
                 nodos[(n // 2 + k) % n] = lista.agregar(k)
 
+
         def preparar_list():
             return list(range(n))
+
 
         def con_list(plana):
             for k in range(repeticiones):
                 pos = (n // 2 + k) % n
                 plana.pop(pos)                        # desplaza todo lo posterior: O(n)
                 plana.append(k)
+
 
         t1 = _medir_sin_contar_preparacion(preparar_lista_doble, con_lista_doble)
         t2 = _medir_sin_contar_preparacion(preparar_list, con_list)
@@ -279,6 +307,7 @@ def bench_historial(escala: float = 1.0):
     estado = {"salas": [{"id": i, "objetos": list(range(5)), "trampas": [i, i + 1], "puertas": [False] * 4} for i in range(salas)],
               "actores": [{"vida": 12, "sala": i % salas, "t": i} for i in range(60)], "reloj": 0}
 
+
     def inversas():
         historial = HistorialRetroceso()
         vida = [30]
@@ -289,12 +318,14 @@ def bench_historial(escala: float = 1.0):
                 historial.registrar(lambda: vida.__setitem__(0, vida[0] + 1))
             historial.cerrar_intervalo()
 
+
     def copias():
         guardadas = []
         for _ in range(acciones):
             guardadas.append(copy.deepcopy(estado))
             if len(guardadas) > 5:
                 guardadas.pop(0)
+
 
     def deshacer():
         historial = HistorialRetroceso()
@@ -307,6 +338,7 @@ def bench_historial(escala: float = 1.0):
             historial.cerrar_intervalo()
         for _ in range(5):
             historial.deshacer_ultimo_intervalo()
+
 
     t1, t2, t3 = _medir(inversas), _medir(copias, 1), _medir(deshacer)
     return [
@@ -322,8 +354,10 @@ class _Costoso:
     """Elemento cuya comparación se cuenta: modela un orden caro de evaluar."""
     comparaciones = 0
 
+
     def __init__(self, valor):
         self.valor = valor
+
 
     def __lt__(self, otro):
         _Costoso.comparaciones += 1
@@ -334,12 +368,14 @@ def bench_ordenamiento(escala: float = 1.0):
     resultados = []
     azar = random.Random(SEMILLA_BENCH)
 
+
     def casi_ordenado(n):
         datos = list(range(n))
         for _ in range(max(1, n // 50)):
             i, j = azar.randrange(n), azar.randrange(n)
             datos[i], datos[j] = datos[j], datos[i]
         return datos
+
 
     for n in (10, 50, 200, 1000):
         casos = (("aleatorio", azar.sample(range(n * 10), n)), ("casi ordenado (2%)", casi_ordenado(n)),
@@ -355,6 +391,7 @@ def bench_ordenamiento(escala: float = 1.0):
                     for _ in range(repeticiones):
                         getattr(Ordenamiento(list(datos)), metodo)()
                 tiempos.append((etiqueta, _medir(correr, 2) / repeticiones))
+
 
             def auto():
                 for _ in range(repeticiones):
@@ -439,6 +476,7 @@ def bench_ciclo_eventos(escala: float = 1.0):
         reloj = RelojEventos()
         enemigos = [Enemigo(f"e-{i}", ficha, 1) for i in range(actores)]
 
+
         def turno(enemigo):
             def accion():
                 if not enemigo.esta_vivo():
@@ -447,8 +485,10 @@ def bench_ciclo_eventos(escala: float = 1.0):
                 reloj.programar_en(calcular_intervalo(100, enemigo.velocidad), accion)
             return accion
 
+
         for i, enemigo in enumerate(enemigos):
             reloj.programar(66 + i % 5, turno(enemigo))
+
 
         # varios ciclos consecutivos; se reporta el peor
         peores = 0.0
@@ -466,6 +506,7 @@ def bench_ciclo_eventos(escala: float = 1.0):
         resultados.append(Resultado("ciclo de eventos", f"{actores} actores activos, peor de 20 ciclos ({n_eventos} eventos)", peores, 1,
                                     f"{peores * 1000:.2f} ms  -> {cumple} el límite de 20 ms (§5.2)"))
     return resultados
+
 
 # ===================================== 8. CICLO CON LA PARTIDA REAL (§5.2)
 def _recorrido_en_zigzag(filas: int, columnas: int):
@@ -486,12 +527,14 @@ def _jugar_y_medir(lado: int):
     from tests.cliente_falso import ClienteFalso
     from tests.cripta_artificial import construir
 
+
     datos = construir(lado, lado)
     cliente = ClienteFalso(datos["fichas"], datos["contenido"], datos["paginas"], datos["general"])
     servicio = ServicioPartida(ClienteGeneral(cliente), ContadorSolicitudes(), asincrono=False)
     servicio.iniciar_nueva(datos["general"]["id"], semilla=SEMILLA_BENCH)
     jugador = servicio.partida._jugador
     jugador.vida_max = jugador.vida = 10 ** 9      # que los enemigos no terminen la partida antes de medir
+
 
     tiempos = []
     acciones = [Accion("mover", d) for d in _recorrido_en_zigzag(lado, lado)] + [Accion("esperar")] * 50
@@ -510,6 +553,16 @@ def _mediana(valores):
     ordenados = list(valores)
     ordenar_auto(ordenados)
     return ordenados[len(ordenados) // 2]
+
+
+def _resumen_mediciones(funcion, repeticiones: int = 3):
+    """Devuelve mediana y máximo de corridas completas medidas por reloj de pared."""
+    tiempos = []
+    for _ in range(repeticiones):
+        inicio = time.perf_counter()
+        funcion()
+        tiempos.append(time.perf_counter() - inicio)
+    return _mediana(tiempos), max(tiempos)
 
 
 def bench_partida_real(escala: float = 1.0, corridas: int = 3):
@@ -549,6 +602,7 @@ def bench_solicitudes(escala: float = 1.0):
     from tests.cliente_falso import ClienteFalso
     from tests.cripta_artificial import construir
 
+
     resultados = []
     for lado in (10, max(15, int(20 * escala))):
         datos = construir(lado, lado)
@@ -562,6 +616,7 @@ def bench_solicitudes(escala: float = 1.0):
             servicio.ejecutar(Accion("mover", direccion))
         servicio.cerrar()
 
+
         salas_visitadas = len(pasos) + 1                # la sala inicial más una por cada movimiento
         lotes_contenido = cliente.contar("obtener_contenido")
         lotes_catalogo = cliente.contar("obtener_catalogo")
@@ -571,6 +626,7 @@ def bench_solicitudes(escala: float = 1.0):
                 for ficha_id in ids:
                     if not fichas.contiene(ficha_id):
                         fichas.insertar(ficha_id)
+
 
         resultados.append(Resultado(
             "solicitudes", f"{lado * lado} salas, {salas_visitadas} visitadas: contenido", 0.0, 1,
@@ -601,6 +657,7 @@ PERIODO_CIERRE_TICKS = 15
 TICK_REAPERTURA = 7
 PASOS_CALENTAMIENTO_REFERENCIA = 150
 LIMITE_CICLO_MS = 20.0
+LIMITE_PASO_MS = 5.0
 DIRECTORIO_FIXTURES_BENCH = Path(__file__).resolve().parents[2] / "fixtures"
 
 
@@ -617,6 +674,7 @@ def cripta_de_referencia():
 class _Medidor:
     """Acumula segundos y cantidad de llamadas de lo que se mide."""
 
+
     def __init__(self):
         self.segundos = 0.0
         self.llamadas = 0
@@ -625,16 +683,19 @@ class _Medidor:
 class _BuscadorContado(BuscadorRutas):
     """BuscadorRutas que cuenta decisiones y ejecuciones de Dijkstra, y su tiempo si se pide."""
 
+
     def __init__(self, medir_tiempo: bool = False):
         super().__init__()
         self.busquedas = _Medidor()
         self.decisiones = 0
         self._medir_tiempo = medir_tiempo
 
+
     def decidir_paso(self, cazador, sala_jugador_id, mapa):
         # Cuenta la decisión y delega en la búsqueda original
         self.decisiones += 1
         return super().decidir_paso(cazador, sala_jugador_id, mapa)
+
 
     def _calcular(self, mapa, sala_jugador_id, rango_max):
         # Cuenta la ejecución y, si se pide, acumula su tiempo
@@ -649,6 +710,7 @@ class _BuscadorContado(BuscadorRutas):
 
 class _BuscadorRecalculaSiempre(_BuscadorContado):
     """ALTERNATIVA DESCARTADA: cada decisión de cazador ejecuta su propia búsqueda con su rango."""
+
 
     def calcular_o_reutilizar(self, mapa, sala_jugador_id, rango_max):
         # Nunca reutiliza la tabla ni la comparte entre cazadores
@@ -693,6 +755,7 @@ def _envolver_consulta_de_costos(mapa) -> _Medidor:
     """Mide costo_de_conexion envolviendo la llamada en esta instancia, sin tocar CriptaMapa."""
     medidor = _Medidor()
     original = mapa.costo_de_conexion
+
 
     def medida(sala_id, direccion):
         t0 = time.perf_counter()
@@ -952,6 +1015,331 @@ def bench_ciclo_referencia(escala: float = 1.0, corridas: int = 3):
         f"-> {cumple} el límite de {LIMITE_CICLO_MS:.0f} ms")]
 
 
+SEMILLA_NIEBLA = 20261118
+
+
+def _elegir_fixture_referencia():
+    """Carga el fixture íntegro de mayor tamaño sin fijar el identificador."""
+    elegido = cripta_de_referencia().id
+    cliente = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))
+    general = cliente.obtener_general(elegido)
+    version = cliente.obtener_version_cripta(elegido)
+    if general.version != version.version:
+        raise ValueError(f"Versión inconsistente en el fixture {elegido}")
+    mapa = CriptaMapa()
+    for pagina in range(1, general.paginas + 1):
+        mapa.agregar_pagina(cliente.obtener_pagina_esqueleto(elegido, pagina))
+    mapa.sincronizar_puertas()
+    salas = mapa.todas_las_salas()
+    if len(salas) != general.salas_total:
+        raise ValueError(f"El fixture {elegido} declara {general.salas_total} salas y contiene {len(salas)}")
+    puertas_abiertas = 0
+    for sala in salas:
+        for direccion, _destino in mapa.vecinos(sala.id):
+            if not mapa.puerta_transitable(sala.id, direccion):
+                mapa.abrir_puerta(sala.id, direccion)
+                puertas_abiertas += 1
+    conocimiento = ConocimientoJugador(mapa, general.sala_inicial)
+    for sala in salas:
+        conocimiento.al_entrar(sala.id, False)
+    salidas = sum(len(mapa.vecinos(sala.id)) for sala in salas)
+    azar = random.Random(SEMILLA_NIEBLA)
+    consultas = []
+    pares_probados = 0
+    max_intentos = 1200
+    pares_vistos = []
+    while len(consultas) < 12 and pares_probados < max_intentos:
+        origen = salas[azar.randrange(len(salas))].id
+        destino = salas[azar.randrange(len(salas))].id
+        consulta = (origen, destino)
+        pares_probados += 1
+        if origen == destino or consulta in pares_vistos:
+            continue
+        pares_vistos.append(consulta)
+        if siguiente_paso(conocimiento, origen, destino) is not None:
+            consultas.append(consulta)
+    return {"id": elegido, "salas": len(salas), "salidas": salidas,
+            "mapa": mapa, "conocimiento": conocimiento, "consultas": consultas,
+            "semilla": SEMILLA_NIEBLA, "puertas_abiertas": puertas_abiertas,
+            "pares_probados": pares_probados, "pares_con_ruta": len(consultas)}
+
+
+def _seleccion_lineal(conocimiento, origen, destino, proyeccion=None):
+    """Calcula el primer paso por selección lineal, solo como referencia de medición."""
+    if origen == destino or conocimiento.estado_de_sala(destino) != "explorada":
+        return None
+    salas = conocimiento.proyectar() if proyeccion is None else proyeccion
+    maximo = max((sala.id_sala for sala in salas), default=-1)
+    distancias = [None] * (maximo + 1)
+    visitadas = [False] * (maximo + 1)
+    entrantes = [[] for _ in distancias]
+    for sala in salas:
+        if sala.estado != "explorada":
+            continue
+        for salida in sala.salidas:
+            if salida.estado_puerta == "abierta":
+                entrantes[salida.id_sala_destino].append((sala.id_sala, salida.costo))
+    distancias[destino] = 0
+    while True:
+        actual = None
+        for sala_id in range(len(distancias)):
+            if (distancias[sala_id] is not None and not visitadas[sala_id]
+                    and (actual is None or (distancias[sala_id], sala_id) <
+                         (distancias[actual], actual))):
+                actual = sala_id
+        if actual is None:
+            break
+        visitadas[actual] = True
+        for anterior, costo in entrantes[actual]:
+            nuevo = distancias[actual] + costo
+            if distancias[anterior] is None or nuevo < distancias[anterior]:
+                distancias[anterior] = nuevo
+    mejor = None
+    paso = None
+    sala_origen = conocimiento.sala_conocida(origen)
+    for salida in sala_origen.salidas:
+        resto = distancias[salida.id_sala_destino]
+        if salida.estado_puerta != "abierta" or resto is None:
+            continue
+        total = salida.costo + resto
+        if (mejor is None or total < mejor or
+                (total == mejor and salida.id_sala_destino < paso[0])):
+            mejor = total
+            paso = (salida.id_sala_destino, salida.direccion)
+    return paso[1] if paso is not None else None
+
+
+def _comparar_costos_con_mapa(referencia):
+    """Contrasta los costos conocidos con consultas al mapa real para consultas iguales."""
+    conocimiento, mapa = referencia["conocimiento"], referencia["mapa"]
+    for origen, destino in referencia["consultas"]:
+        guardado = _siguiente_paso_costos_guardados(conocimiento, origen, destino)
+        if guardado != _siguiente_paso_costos_mapa(conocimiento, mapa, origen, destino):
+            return False
+    return True
+
+
+def _siguiente_paso_costos_guardados(conocimiento, origen, destino, proyeccion=None):
+    """Busca con heap usando los costos guardados en la proyección conocida."""
+    if (conocimiento.estado_de_sala(origen) != "explorada"
+            or conocimiento.estado_de_sala(destino) != "explorada" or origen == destino):
+        return None
+    salas = conocimiento.proyectar() if proyeccion is None else proyeccion
+    distancias = [None] * (max(s.id_sala for s in salas) + 1)
+    entrantes = [[] for _ in distancias]
+    for sala in salas:
+        if sala.estado != "explorada":
+            continue
+        for salida in sala.salidas:
+            if salida.estado_puerta == "abierta":
+                entrantes[salida.id_sala_destino].append((sala.id_sala, salida.costo))
+    distancias[destino] = 0
+    pendientes = HeapMinimo()
+    pendientes.insertar((0, destino))
+    while not pendientes.esta_vacio():
+        costo_actual, actual = pendientes.eliminar_minimo()
+        if costo_actual != distancias[actual]:
+            continue
+        for anterior, costo in entrantes[actual]:
+            nuevo = costo_actual + costo
+            if distancias[anterior] is None or nuevo < distancias[anterior]:
+                distancias[anterior] = nuevo
+                pendientes.insertar((nuevo, anterior))
+    mejor = None
+    paso = None
+    for salida in conocimiento.sala_conocida(origen).salidas:
+        resto = distancias[salida.id_sala_destino]
+        if salida.estado_puerta != "abierta" or resto is None:
+            continue
+        total = salida.costo + resto
+        if mejor is None or total < mejor or (total == mejor and salida.id_sala_destino < paso[0]):
+            mejor, paso = total, (salida.id_sala_destino, salida.direccion)
+    return paso[1] if paso else None
+
+
+def _siguiente_paso_costos_mapa(conocimiento, mapa, origen, destino, proyeccion=None):
+    """Busca con heap consultando al mapa el costo de cada arista relajada."""
+    if (conocimiento.estado_de_sala(origen) != "explorada"
+            or conocimiento.estado_de_sala(destino) != "explorada" or origen == destino):
+        return None
+    salas = conocimiento.proyectar() if proyeccion is None else proyeccion
+    distancias = [None] * (max(s.id_sala for s in salas) + 1)
+    entrantes = [[] for _ in distancias]
+    for sala in salas:
+        if sala.estado != "explorada":
+            continue
+        for salida in sala.salidas:
+            if salida.estado_puerta == "abierta":
+                entrantes[salida.id_sala_destino].append((sala.id_sala, salida.direccion))
+    distancias[destino] = 0
+    pendientes = HeapMinimo()
+    pendientes.insertar((0, destino))
+    while not pendientes.esta_vacio():
+        costo_actual, actual = pendientes.eliminar_minimo()
+        if costo_actual != distancias[actual]:
+            continue
+        for anterior, direccion in entrantes[actual]:
+            costo = mapa.costo_de_conexion(anterior, direccion)
+            nuevo = costo_actual + costo
+            if distancias[anterior] is None or nuevo < distancias[anterior]:
+                distancias[anterior] = nuevo
+                pendientes.insertar((nuevo, anterior))
+    mejor = None
+    paso = None
+    for salida in conocimiento.sala_conocida(origen).salidas:
+        resto = distancias[salida.id_sala_destino]
+        if salida.estado_puerta != "abierta" or resto is None:
+            continue
+        total = mapa.costo_de_conexion(origen, salida.direccion) + resto
+        if mejor is None or total < mejor or (total == mejor and salida.id_sala_destino < paso[0]):
+            mejor, paso = total, (salida.id_sala_destino, salida.direccion)
+    return paso[1] if paso else None
+
+
+def _resumen_tiempos(tiempos):
+    return _mediana(tiempos), max(tiempos)
+
+
+def _comparar_revelacion(referencia, escala, semilla, repeticiones=3):
+    """Mide actualización incremental y pasada ingenua para los mismos ingresos."""
+    mapa = referencia["mapa"]
+    salas = mapa.todas_las_salas()
+    azar = random.Random(semilla)
+    entradas = [salas[azar.randrange(len(salas))].id for _ in range(max(1, int(escala)))]
+    tiempos_incrementales = []
+    tiempos_ingenuos = []
+    equivalente = True
+    for _ in range(repeticiones):
+        incremental = ConocimientoJugador(mapa, salas[0].id)
+        ingenuo = ["desconocida"] * (max(s.id for s in salas) + 1)
+        ingenuo[salas[0].id] = "explorada"
+        for _direccion, destino in mapa.vecinos(salas[0].id):
+            ingenuo[destino] = "avistada"
+        for entrada in entradas:
+            t0 = time.perf_counter()
+            incremental.al_entrar(entrada, True)
+            tiempos_incrementales.append(time.perf_counter() - t0)
+            t0 = time.perf_counter()
+            ingenuo[entrada] = "explorada"
+            for _direccion, destino in mapa.vecinos(entrada):
+                ingenuo[destino] = "explorada"
+            for sala in salas:
+                for _direccion, destino in mapa.vecinos(sala.id):
+                    if ingenuo[sala.id] == "explorada" and ingenuo[destino] == "desconocida":
+                        ingenuo[destino] = "avistada"
+            tiempos_ingenuos.append(time.perf_counter() - t0)
+        equivalente = equivalente and all(
+            incremental.estado_de_sala(s.id) == ingenuo[s.id] for s in salas
+        )
+    return equivalente, _resumen_tiempos(tiempos_incrementales), _resumen_tiempos(tiempos_ingenuos)
+
+
+def _comparar_reversion(referencia, escala, semilla, repeticiones=3):
+    """Mide registrar y revertir frente a registrar y restaurar una copia."""
+    mapa = referencia["mapa"]
+    salas = mapa.todas_las_salas()
+    azar = random.Random(semilla)
+    entradas = [salas[azar.randrange(len(salas))].id for _ in range(max(1, int(escala)))]
+    tiempos_inversas = []
+    tiempos_copia = []
+    equivalente = True
+    cantidad = 0
+    for _ in range(repeticiones):
+        conocimiento = ConocimientoJugador(mapa, salas[0].id)
+        historial = HistorialRetroceso()
+        conocimiento.registrador = historial.registrar_cambio
+        inicial = copy.deepcopy(conocimiento.exportar_celdas())
+        historial.iniciar_intervalo()
+        t0 = time.perf_counter()
+        for entrada in entradas:
+            conocimiento.al_entrar(entrada, True)
+        historial.cerrar_intervalo()
+        cantidad = historial.deshacer_ultimo_intervalo()
+        tiempos_inversas.append(time.perf_counter() - t0)
+        equivalente = equivalente and conocimiento.exportar_celdas() == inicial
+        t0 = time.perf_counter()
+        conocimiento.registrador = None
+        copia = copy.deepcopy(inicial)
+        for entrada in entradas:
+            conocimiento.al_entrar(entrada, True)
+        conocimiento.importar_celdas(copia)
+        tiempos_copia.append(time.perf_counter() - t0)
+        equivalente = equivalente and conocimiento.exportar_celdas() == inicial
+    return equivalente, _resumen_tiempos(tiempos_inversas), _resumen_tiempos(tiempos_copia), cantidad
+
+
+def bench_niebla_rutas(escala: float = 1.0):
+    """Mide rutas, revelación incremental y reversión con fixtures offline."""
+    referencia = _elegir_fixture_referencia()
+    consultas = referencia["consultas"]
+    dato = (f"fixture={referencia['id']}, salas={referencia['salas']}, salidas={referencia['salidas']}, "
+            f"puertas abiertas={referencia['puertas_abiertas']}, pares probados={referencia['pares_probados']}, "
+            f"pares con ruta={referencia['pares_con_ruta']}, semilla={referencia['semilla']}, "
+            f"Python={platform.python_version()}")
+    conocimiento = referencia["conocimiento"]
+    consultas_con_ruta = [(origen, destino) for origen, destino in consultas
+                          if siguiente_paso(conocimiento, origen, destino) is not None]
+    if not consultas_con_ruta:
+        raise ValueError("Ninguna consulta de niebla_rutas tiene una ruta")
+    tiempos_produccion = []
+    tiempos_lineal = []
+    tiempos_guardados = []
+    tiempos_mapa = []
+    equivalentes_costos = True
+    for origen, destino in consultas_con_ruta:
+        for tiempos, funcion in (
+                (tiempos_produccion, lambda: siguiente_paso(conocimiento, origen, destino)),
+                (tiempos_lineal, lambda: _seleccion_lineal(conocimiento, origen, destino)),
+                (tiempos_guardados, lambda: _siguiente_paso_costos_guardados(
+                    conocimiento, origen, destino)),
+                (tiempos_mapa, lambda: _siguiente_paso_costos_mapa(
+                    conocimiento, referencia["mapa"], origen, destino))):
+            for _ in range(3):
+                inicio = time.perf_counter()
+                obtenido = funcion()
+                tiempos.append(time.perf_counter() - inicio)
+                if tiempos is tiempos_guardados or tiempos is tiempos_mapa:
+                    equivalentes_costos = equivalentes_costos and obtenido == siguiente_paso(
+                        conocimiento, origen, destino)
+    mediana_produccion, maximo_produccion = _resumen_tiempos(tiempos_produccion)
+    mediana_lineal, maximo_lineal = _resumen_tiempos(tiempos_lineal)
+    mediana_guardados, maximo_guardados = _resumen_tiempos(tiempos_guardados)
+    mediana_mapa, maximo_mapa = _resumen_tiempos(tiempos_mapa)
+    cumple = "CUMPLE" if maximo_produccion * 1000 <= LIMITE_PASO_MS else "NO CUMPLE"
+    resultado = [Resultado("niebla_rutas", f"ruta de producción, {len(consultas_con_ruta)} consultas con ruta",
+                           mediana_produccion, 1,
+                           f"mediana por cálculo {_ms(mediana_produccion)} ms, máximo por cálculo "
+                           f"{_ms(maximo_produccion)} ms. {cumple} el límite de {LIMITE_PASO_MS:.0f} ms. {dato}")]
+    resultado.append(Resultado("niebla_rutas", "selección lineal manual, mismas consultas",
+                               mediana_lineal, 1,
+                               f"mediana por cálculo {_ms(mediana_lineal)} ms, máximo por cálculo "
+                               f"{_ms(maximo_lineal)} ms. {dato}"))
+    resultado.append(Resultado("niebla_rutas", "costos guardados frente a costo_de_conexion",
+                               mediana_guardados, 1,
+                               f"costos guardados: mediana {_ms(mediana_guardados)} ms y máximo "
+                               f"{_ms(maximo_guardados)} ms. Consulta al mapa: mediana {_ms(mediana_mapa)} ms "
+                               f"y máximo {_ms(maximo_mapa)} ms. Equivalencia con ruta real: "
+                               f"{equivalentes_costos}. {dato}"))
+    for tamano in (max(1, int(10 * escala)), max(1, int(50 * escala)), max(1, int(200 * escala))):
+        semilla = referencia["semilla"] + tamano
+        ok, incremental, ingenua = _comparar_revelacion(referencia, tamano, semilla)
+        resultado.append(Resultado("niebla_rutas", f"revelación, R={tamano}", incremental[0], 1,
+                                   f"incremental: mediana {_ms(incremental[0])} ms y máximo "
+                                   f"{_ms(incremental[1])} ms. Pasada ingenua: mediana "
+                                   f"{_ms(ingenua[0])} ms y máximo {_ms(ingenua[1])} ms. "
+                                   f"Equivalencia: {ok}. {dato}"))
+    cantidad = max(1, int(20 * escala))
+    ok, inversas_tiempo, copia_tiempo, inversas = _comparar_reversion(
+        referencia, cantidad, referencia["semilla"])
+    resultado.append(Resultado("niebla_rutas", "reversión por inversas frente a copia completa",
+                               inversas_tiempo[0], max(1, inversas),
+                               f"registrar y revertir por inversas: mediana {_ms(inversas_tiempo[0])} ms "
+                               f"y máximo {_ms(inversas_tiempo[1])} ms. Copiar y restaurar: mediana "
+                               f"{_ms(copia_tiempo[0])} ms y máximo {_ms(copia_tiempo[1])} ms. "
+                               f"inversas={inversas}. Equivalencia: {ok}. {dato}"))
+    return resultado
+
+
 def bench_historial_cazadores(escala: float = 1.0):
     """Costo del retroceso con cazadores activos (P2 5.6) sobre la cripta de referencia, frente a la carga historial.
     Cada acción se ejecuta, se revierte con la acción pergamino real y se vuelve a ejecutar."""
@@ -976,10 +1364,12 @@ def bench_historial_cazadores(escala: float = 1.0):
         inversas, tiempos = [], []
         deshacer = historial.deshacer_ultimo_intervalo
 
+
         def deshacer_contando():
             cantidad = deshacer()
             inversas.append(cantidad)
             return cantidad
+
 
         historial.deshacer_ultimo_intervalo = deshacer_contando
         try:
@@ -1034,13 +1424,16 @@ ESTIMACION_MEMORIA = ("estimación de memoria: suma de sys.getsizeof de cada obj
 class _ClienteMedido:
     """Cliente de fixtures que cuenta sus llamadas y sube la vida máxima del jugador en los datos generales."""
 
+
     def __init__(self, base, vida_maxima: int):
         self._base = base
         self._vida_maxima = vida_maxima
         self.llamadas = 0
 
+
     def __getattr__(self, nombre):
         metodo = getattr(self._base, nombre)
+
 
         def llamar(*argumentos):
             self.llamadas += 1
@@ -1053,6 +1446,7 @@ class _ClienteMedido:
 
 class _CorridaLinea:
     """Una partida de medición ya jugada: la partida, lo que costó cada acción y los registros para la inversión."""
+
 
     def __init__(self):
         self.cliente = None
@@ -1143,10 +1537,12 @@ def _jugar_linea(acciones: int, k: int | None, id_cripta: str, medir_inversion: 
         registrar = partida._registrar_en_linea
         ejecutar = partida.ejecutar_accion
 
+
         def registrar_midiendo(*argumentos):
             inicio = time.perf_counter()
             registrar(*argumentos)
             corrida.registro += time.perf_counter() - inicio
+
 
         def ejecutar_midiendo(accion):
             inicio = time.perf_counter()
@@ -1155,6 +1551,7 @@ def _jugar_linea(acciones: int, k: int | None, id_cripta: str, medir_inversion: 
             if resultado.aceptada:
                 corrida.tiempos.append(duracion)
             return resultado
+
 
         partida._registrar_en_linea = registrar_midiendo
         partida.ejecutar_accion = ejecutar_midiendo
@@ -1296,12 +1693,14 @@ def _comparar_busquedas(corrida, linea):
     tiempos_de_acciones = linea._tiempos
     puntos = linea._puntos
 
+
     def binaria_instante():
         inspecciones, resultados = 0, []
         for t in instantes:
             resultados.append(linea.contar_hasta_instante(t, True))
             inspecciones += linea.inspecciones_ultima_busqueda
         return inspecciones, resultados
+
 
     def lineal_instante():
         inspecciones, resultados = 0, []
@@ -1315,6 +1714,7 @@ def _comparar_busquedas(corrida, linea):
             resultados.append(cuenta)
         return inspecciones, resultados
 
+
     def binaria_checkpoint():
         inspecciones, resultados = 0, []
         for k in numeros:
@@ -1322,6 +1722,7 @@ def _comparar_busquedas(corrida, linea):
             inspecciones += linea.inspecciones_ultima_busqueda
             resultados.append(None if punto is None else punto.numero_acciones)
         return inspecciones, resultados
+
 
     def lineal_checkpoint():
         inspecciones, resultados = 0, []
@@ -1334,6 +1735,7 @@ def _comparar_busquedas(corrida, linea):
                 elegido = punto.numero_acciones
             resultados.append(elegido)
         return inspecciones, resultados
+
 
     salida = []
     for nombre, elegida, descartada, tamano in (("límite temporal a acción", binaria_instante, lineal_instante, n),
@@ -1431,6 +1833,7 @@ def _comparar_restauracion(corrida, linea):
         tiempos_materializada.append(time.perf_counter() - inicio)
         llamadas_materializada += corrida.cliente.llamadas - antes
 
+
         servicio = ServicioPartida(ClienteGeneral(corrida.cliente), ContadorSolicitudes(), asincrono=False)
         general, version = corrida.servicio.datos_generales, corrida.servicio.version_catalogo
         mapa = servicio._armar(general, version)     # el esqueleto se carga fuera de la medición
@@ -1478,6 +1881,7 @@ def bench_linea_tiempo(escala: float = 1.0):
             elif carga != base:
                 raise ValueError(f"La corrida {etiqueta} generó acciones o instantes distintos a la primera")
             resultados.append(_resultado_de_escenario(etiqueta, corrida, posiciones))
+
 
     with _jugar_linea(acciones, K_COMPARACION_LINEA, referencia.id, medir_inversion=True) as corrida:
         linea = corrida.partida.linea_tiempo()
@@ -1625,6 +2029,7 @@ CARGAS = (
     ("ruta_cazador", bench_ruta_cazador),
     ("invalidacion", bench_invalidacion),
     ("ciclo_referencia", bench_ciclo_referencia),
+    ("niebla_rutas", bench_niebla_rutas),
     ("linea_tiempo", bench_linea_tiempo),
     ("resolubilidad", bench_resolubilidad),
     ("resolubilidad_cota", bench_resolubilidad_cota),

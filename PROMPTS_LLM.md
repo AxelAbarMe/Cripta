@@ -1255,3 +1255,16 @@ Sigue las instrucciones de prompts/p2/19-implement-003-fase-b-servicio.md. Solo 
 **Prompt (resumido):** Pruebas y servicio de aplicación de la resolubilidad (T010 y T011): obtención de llaves por red con caché y presupuesto, y verificación sobre el mapa construido.
 
 **Para qué se usó:** Conectar el verificador de dominio con el cliente, la caché de disco y el contador de solicitudes.
+
+### 2026-11-18 — Codex CLI v0.170.0 (GPT-6-Luna default)
+**Prompt:**
+```text
+$speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/20-correcciones-003-fase-a.md. Corrige solo cripta/modelo/resolubilidad.py y tests/modelo/test_resolubilidad.py.
+```
+(El texto completo está en prompts/p2/20-correcciones-003-fase-a.md.)
+
+**Prompt (resumido):** Correcciones de la Fase A tras la revisión del Pull Request: coincidencia entre el recorrido incremental y el ingenuo, ciclo de la llave de salida y fixture consistente para el doble ciclo.
+
+**Para qué se usó:** Corregir tres defectos probados con contraejemplos antes de medir el rendimiento.

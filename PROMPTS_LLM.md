@@ -1242,3 +1242,16 @@ Sigue las instrucciones de prompts/p2/18-implement-003-fase-a-ciclos.md. Revisa 
 **Prompt (resumido):** Revisión del núcleo del verificador, detección de ciclos de dependencia de llaves (T008) y cierre de la alternativa ingenua (T009).
 
 **Para qué se usó:** Continuar la Fase A después de que la ejecución anterior se cortó por límite de cupo del modelo.
+
+### 2026-11-18 — Antigravity CLI 1.5.10 (Gemini 3.8 Flash)
+**Prompt:**
+```text
+/speckit-implement
+SPECIFY_FEATURE_DIRECTORY=specs/003-resolubilidad
+Sigue las instrucciones de prompts/p2/19-implement-003-fase-b-servicio.md. Solo T010 y T011. No sigas con T012.
+```
+(El texto completo está en prompts/p2/19-implement-003-fase-b-servicio.md.)
+
+**Prompt (resumido):** Pruebas y servicio de aplicación de la resolubilidad (T010 y T011): obtención de llaves por red con caché y presupuesto, y verificación sobre el mapa construido.
+
+**Para qué se usó:** Conectar el verificador de dominio con el cliente, la caché de disco y el contador de solicitudes.

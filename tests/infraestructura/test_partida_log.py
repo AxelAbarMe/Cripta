@@ -144,5 +144,28 @@ class TestEnemigosNoEscribenEnLaBitacora(unittest.TestCase):
         self.assertEqual(list(registradas), [a.a_dict() for a in acciones])
 
 
+class TestComentarioViaje(unittest.TestCase):
+    def setUp(self):
+        carpeta = tempfile.TemporaryDirectory()
+        self.addCleanup(carpeta.cleanup)
+        self.ruta = str(Path(carpeta.name) / "partida.log")
+        self.escritor = EscritorBitacoraPartida(self.ruta, ENCABEZADO)
+
+    def test_comentario_precede_un_movimiento_y_no_es_accion(self):
+        """FR-NIE-016, escenario de viaje con pasos: comentario previo omitido al leer."""
+        self.escritor.registrar_comentario("# ir a 2")
+        self.escritor.registrar_accion({"tipo": "mover", "direccion": "E"})
+        lineas = Path(self.ruta).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(lineas[1], "# ir a 2")
+        _, acciones = LectorBitacoraPartida(self.ruta).leer()
+        self.assertEqual(acciones, ({"tipo": "mover", "direccion": "E"},))
+
+    def test_accion_individual_no_lleva_comentario(self):
+        """FR-NIE-016, escenario de acción individual: control sin metadato de viaje."""
+        self.escritor.registrar_accion({"tipo": "esperar"})
+        lineas = Path(self.ruta).read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lineas), 2)
+        self.assertEqual(LectorBitacoraPartida(self.ruta).leer()[1], ({"tipo": "esperar"},))
+
 if __name__ == "__main__":
     unittest.main()

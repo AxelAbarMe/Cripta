@@ -92,6 +92,30 @@ class PruebaReplay(unittest.TestCase):
         with self.assertRaises(CriptaBitacoraError):
             self._reproducir(Path(self._carpeta.name) / "nada.log")
 
+    def test_accion_invalida_despues_de_comentario_reporta_linea_real(self):
+        """FR-NIE-016, comentario cuenta en la ubicación real de la acción inválida."""
+        texto = self.ruta.read_text(encoding="utf-8").splitlines()
+        texto.insert(1, "# ir a 2")
+        texto.append('{"tipo": "volar"}')
+        ruta = Path(self._carpeta.name) / "invalida_con_comentario.log"
+        ruta.write_text("\n".join(texto) + "\n", encoding="utf-8")
+        resultado = self._reproducir(ruta)
+        self.assertFalse(resultado.fiel)
+        self.assertIn("línea 5", resultado.problemas[0])
+
+    def test_comentario_de_viaje_no_altera_replay(self):
+        """FR-NIE-016, escenario de viaje: replay omite comentario y conserva el estado final."""
+        texto = self.ruta.read_text(encoding="utf-8").splitlines()
+        texto.insert(1, "# ir a 2")
+        ruta_comentada = Path(self._carpeta.name) / "con_comentario.log"
+        ruta_comentada.write_text("\n".join(texto) + "\n", encoding="utf-8")
+        resultado = self._reproducir(ruta_comentada)
+        resultado_sin_comentario = self._reproducir(self.ruta)
+        self.assertTrue(resultado.fiel)
+        self.assertEqual((resultado.acciones_reproducidas, resultado.acciones_en_log), (2, 2))
+        self.assertEqual(resultado.desenlace, resultado_sin_comentario.desenlace)
+        self.assertEqual(resultado.puntaje, resultado_sin_comentario.puntaje)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,10 +11,15 @@ from types import SimpleNamespace
 
 from cripta.controlador.controlador_cripta import ControladorCripta, Orden
 from cripta.excepciones import CriptaApiError
+from cripta.modelo.accion import Accion
 from cripta.modelo.inventario import ObjetoInventario
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
 from cripta.infraestructura.puntajes_disco import RepositorioPuntajes
+from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
+from cripta.servicios.servicio_partida import ServicioPartida
 from cripta.vista.vista_base import VistaBase
+from tests.cliente_falso import ClienteFalso
+from tests.cripta_artificial import construir
 from tests.servicios.test_servicio_partida import ClienteContado
 from tests.servicios.test_servicio_partida_guardado import armar
 
@@ -461,6 +466,75 @@ class TestGuardarYCargar(BaseControlador):
         self.jugar(vista)
         self.assertEqual(len(vista.errores), 1)
         self.assertEqual(vista.ultimo_vista.tiempo, 100)
+
+
+class TestComentarioViajeControlador(BaseControlador):
+    def _preparar_sin_enemigos(self, semilla=5, preparar_ruta=True):
+        self.servicio.cerrar()
+        datos = construir(1, 4, con_enemigos=False)
+        cliente = ClienteFalso(datos["fichas"], datos["contenido"], datos["paginas"], datos["general"])
+        self.servicio = ServicioPartida(cliente, ContadorSolicitudes(), asincrono=False,
+                                        repositorio_puntajes=self.repositorio)
+        ruta = str(self.dir / "p.log")
+        self.servicio.iniciar_nueva("c1", semilla, ruta)
+        partida = self.servicio.partida
+        if preparar_ruta:
+            for sala in (2, 3, 4):
+                partida._conocimiento.al_entrar(sala, False)
+        return ControladorCripta(self.servicio, VistaFalsa(), ruta_guardado=str(self.dir / "p.sav"),
+                                 ruta_bitacora=ruta, semilla=semilla)
+
+    def test_comentario_se_registra_una_vez_antes_del_primer_paso(self):
+        """FR-NIE-016, escenario de viaje: servicio registra comentario antes de mover."""
+        controlador = self._preparar_sin_enemigos(preparar_ruta=False)
+        partida = self.servicio.partida
+        for direccion in ("E", "E", "E", "O", "O", "O"):
+            self.assertTrue(self.servicio.ejecutar(Accion("mover", direccion)).aceptada)
+        orden = []
+        self.servicio.registrar_comentario_viaje = lambda destino: orden.append(("comentario", destino))
+        ejecutar = self.servicio.ejecutar
+
+        def ejecutar_con_registro(accion):
+            orden.append(("paso", accion.tipo, accion.argumento))
+            return ejecutar(accion)
+
+        self.servicio.ejecutar = ejecutar_con_registro
+        controlador._procesar(Orden("ir_a", 4), partida.vista())
+        self.assertEqual(orden, [("comentario", 4), ("paso", "mover", "E"),
+                                 ("paso", "mover", "E"), ("paso", "mover", "E")])
+
+    def test_integracion_viaje_escribe_comentario_y_un_movimiento_por_paso(self):
+        """FR-NIE-016, viaje real deja una línea de comentario y tres movimientos."""
+        controlador = self._preparar_sin_enemigos()
+        partida = self.servicio.partida
+        controlador._procesar(Orden("ir_a", 4), partida.vista())
+        lineas = (self.dir / "p.log").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(lineas[1], "# ir a 4")
+        self.assertEqual([linea.count('"tipo": "mover"') for linea in lineas[2:]], [1, 1, 1])
+        self.assertEqual(len(lineas), 5)
+        self.assertTrue(lineas[0].find('"tipo": "encabezado"') >= 0)
+
+    def test_integracion_ordenes_sin_pasos_dejan_solo_encabezado(self):
+        """FR-NIE-016, destinos rechazado y actual no agregan registros a la bitácora real."""
+        controlador = self._preparar_sin_enemigos()
+        partida = self.servicio.partida
+        controlador._procesar(Orden("ir_a", 9999), partida.vista())
+        lineas = (self.dir / "p.log").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lineas), 1)
+        controlador._procesar(Orden("ir_a", 1), partida.vista())
+        lineas = (self.dir / "p.log").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lineas), 1)
+        self.assertIn('"tipo": "encabezado"', lineas[0])
+
+    def test_orden_rechazada_no_registra_comentario(self):
+        """FR-NIE-016, escenario de orden rechazada: no hay comentario ni movimiento."""
+        vista = VistaFalsa()
+        controlador = self.preparar_controlador(vista)
+        llamadas = []
+        self.servicio.registrar_comentario_viaje = lambda destino: llamadas.append(destino)
+        controlador._procesar(Orden("ir_a", 9999), self.servicio.partida.vista())
+        self.assertEqual(llamadas, [])
+        self.assertEqual(len(vista.avisos), 1)
 
 
 if __name__ == "__main__":

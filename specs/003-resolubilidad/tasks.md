@@ -45,22 +45,22 @@ aislada de red, disco y vista. Las pruebas van primero.
 
 ### Pruebas de dominio — se escriben primero
 
-- [ ] T001 [US1][US2][US3] Crear el esqueleto de `tests/modelo/test_resolubilidad.py` con los fixtures sintéticos reutilizables (cripta lineal simple, cripta con ciclo, cripta con enemigo errante, cripta con varios órdenes válidos); todos los casos de prueba del bloque T002–T004 se colocan en este archivo — **Nuevo**: `tests/modelo/test_resolubilidad.py`
+- [X] T001 [US1][US2][US3] Crear el esqueleto de `tests/modelo/test_resolubilidad.py` con los fixtures sintéticos reutilizables (cripta lineal simple, cripta con ciclo, cripta con enemigo errante, cripta con varios órdenes válidos); todos los casos de prueba del bloque T002–T004 se colocan en este archivo — **Nuevo**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-001 a FR-RES-012, FR-RES-018, FR-RES-019, FR-RES-022, SC-003, SC-004
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: el archivo existe, `discover` lo encuentra, todos los casos fallan con `ImportError` o `AttributeError` (aún no hay implementación).
 
-- [ ] T002 [US1][US2] Escribir casos de prueba del recorrido incremental básico en `tests/modelo/test_resolubilidad.py`: cripta resoluble directa, llaves no consumibles, trampas no bloquean, puerta abierta a sala_salida sin llave_salida = NO resoluble (caso límite de spec.md), cripta desconectada sin puertas, sala inicial sin salidas transitables, llave_salida inmediatamente accesible — **Modificado**: `tests/modelo/test_resolubilidad.py`
+- [X] T002 [US1][US2] Escribir casos de prueba del recorrido incremental básico en `tests/modelo/test_resolubilidad.py`: cripta resoluble directa, llaves no consumibles, trampas no bloquean, puerta abierta a sala_salida sin llave_salida = NO resoluble (caso límite de spec.md), cripta desconectada sin puertas, sala inicial sin salidas transitables, llave_salida inmediatamente accesible — **Modificado**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-001, FR-RES-002, FR-RES-003, FR-RES-006, SC-004
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: todos los métodos de este bloque existen en el archivo y fallan (implementación ausente).
 
-- [ ] T003 [US3][US4][US5] Escribir casos de prueba de diagnóstico, determinismo y enemigos en `tests/modelo/test_resolubilidad.py`: llave de salida tras su propia puerta (Apéndice B), llaves obtenibles del campo `suelta` de cualquier enemigo (Apéndice B), varios órdenes válidos producen misma secuencia (Apéndice B, SC-003), cadena doble de ciclos independientes, puerta cerrada sin llave, llave exigida sin ubicación (FR-RES-022), puertas bilaterales (FR-RES-019) — **Modificado**: `tests/modelo/test_resolubilidad.py`
+- [X] T003 [US3][US4][US5] Escribir casos de prueba de diagnóstico, determinismo y enemigos en `tests/modelo/test_resolubilidad.py`: llave de salida tras su propia puerta (Apéndice B), llaves obtenibles del campo `suelta` de cualquier enemigo (Apéndice B), varios órdenes válidos producen misma secuencia (Apéndice B, SC-003), cadena doble de ciclos independientes, puerta cerrada sin llave, llave exigida sin ubicación (FR-RES-022), puertas bilaterales (FR-RES-019) — **Modificado**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-005, FR-RES-007, FR-RES-008, FR-RES-009, FR-RES-010, FR-RES-011, FR-RES-012, FR-RES-019, FR-RES-022, SC-003, SC-004
   - Comando: `py -m unittest tests.modelo.test_resolubilidad -k ApendiceB`
   - Hecho: métodos nombrados con sufijo `_ApendiceB` existen y fallan.
 
-- [ ] T004 [US1][US3] Escribir casos de prueba del recorrido incremental único (`FR-RES-018`) y de la alternativa ingenua `verificar_ingenuo_reiniciado` en `tests/modelo/test_resolubilidad.py`: ambos métodos producen el mismo `ResultadoResolubilidad.es_resoluble` sobre la misma cripta; `verificar_ingenuo_reiniciado` existe como método separado — **Modificado**: `tests/modelo/test_resolubilidad.py`
+- [X] T004 [US1][US3] Escribir casos de prueba del recorrido incremental único (`FR-RES-018`) y de la alternativa ingenua `verificar_ingenuo_reiniciado` en `tests/modelo/test_resolubilidad.py`: ambos métodos producen el mismo `ResultadoResolubilidad.es_resoluble` sobre la misma cripta; `verificar_ingenuo_reiniciado` existe como método separado — **Modificado**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-018, FR-RES-020
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: métodos existen y fallan por `AttributeError`.

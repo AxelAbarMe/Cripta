@@ -36,6 +36,7 @@ from cripta.modelo.accion import Accion
 from cripta.modelo.buscador_rutas import BuscadorRutas
 from cripta.modelo.enemigo import Enemigo
 from cripta.modelo.historial_retroceso import HistorialRetroceso
+from cripta.modelo.inventario import ObjetoInventario
 from cripta.modelo.jugador import Jugador
 from cripta.modelo.linea_tiempo import LineaTiempo
 from cripta.modelo.partida import Partida
@@ -591,10 +592,19 @@ VELOCIDAD_CAZADOR_INVALIDACION = 25
 PUERTAS_INESTABLES = 5
 PERIODO_CIERRE_TICKS = 15
 TICK_REAPERTURA = 7
-CRIPTA_REFERENCIA = "cripta-06"
 PASOS_CALENTAMIENTO_REFERENCIA = 150
 LIMITE_CICLO_MS = 20.0
 DIRECTORIO_FIXTURES_BENCH = Path(__file__).resolve().parents[2] / "fixtures"
+
+
+def elegir_cripta_de_referencia(criptas):
+    """La cripta con más salas del listado. Un empate lo decide el menor id. Ningún id está fijado en el código."""
+    return min(criptas, key=lambda cripta: (-cripta.salas, cripta.id))
+
+
+def cripta_de_referencia():
+    """La cripta de referencia de las cargas con partida real, elegida entre las de fixtures."""
+    return elegir_cripta_de_referencia(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH)).listar_criptas())
 
 
 class _Medidor:
@@ -688,17 +698,25 @@ def _envolver_consulta_de_costos(mapa) -> _Medidor:
     return medidor
 
 
-def _dar_paso_aleatorio(partida, mapa, azar, prohibido: int) -> None:
-    """Mueve al jugador por una salida abierta al azar, o espera si no puede moverse."""
+def _paso_aleatorio_aceptado(partida, mapa, azar, prohibido: int):
+    """Mueve al jugador por una salida abierta al azar, o espera si no puede moverse. Devuelve la acción ejecutada."""
     origen = partida._jugador.sala_actual
     opciones = [d for d, destino in mapa.vecinos(origen)
                 if destino != prohibido and mapa.puerta_transitable(origen, d)]
     if opciones:
         inicio = azar.randrange(len(opciones))
         for k in range(len(opciones)):
-            if partida.ejecutar_accion(Accion("mover", opciones[(inicio + k) % len(opciones)])).aceptada:
-                return
-    partida.ejecutar_accion(Accion("esperar"))
+            accion = Accion("mover", opciones[(inicio + k) % len(opciones)])
+            if partida.ejecutar_accion(accion).aceptada:
+                return accion
+    accion = Accion("esperar")
+    partida.ejecutar_accion(accion)
+    return accion
+
+
+def _dar_paso_aleatorio(partida, mapa, azar, prohibido: int) -> None:
+    """Mueve al jugador por una salida abierta al azar, o espera si no puede moverse."""
+    _paso_aleatorio_aceptado(partida, mapa, azar, prohibido)
 
 
 def _tiempos_de_pasos(partida, mapa, azar, ciclos: int, prohibido: int):
@@ -868,7 +886,7 @@ def _correr_referencia(ciclos: int, calentamiento: int):
     """Una corrida sobre la cripta de referencia. Devuelve tiempos, activos y perseguidores por ciclo."""
     servicio = ServicioPartida(ClienteGeneral(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))),
                                ContadorSolicitudes(), asincrono=False)
-    servicio.iniciar_nueva(CRIPTA_REFERENCIA, semilla=SEMILLA_BENCH)
+    servicio.iniciar_nueva(cripta_de_referencia().id, semilla=SEMILLA_BENCH)
     partida = servicio.partida
     mapa = partida._mapa
     partida._jugador.vida_max = partida._jugador.vida = 10 ** 9
@@ -919,12 +937,76 @@ def bench_ciclo_referencia(escala: float = 1.0, corridas: int = 3):
     cumple = "CUMPLE" if peor * 1000 < LIMITE_CICLO_MS else "NO CUMPLE"
     detalle = ", ".join(_ms(p) for p in peores)
     return [Resultado(
-        "ciclo_referencia", f"{CRIPTA_REFERENCIA}, {activos} cazadores activos al medir, "
+        "ciclo_referencia", f"{cripta_de_referencia().id}, {activos} cazadores activos al medir, "
                             f"en persecución por ciclo: promedio {sum(en_rango) / len(en_rango):.1f} y máximo {max(en_rango)}, "
                             f"{ciclos} ciclos x {corridas} corridas",
         peor, 1,
         f"ciclo típico {_ms(_mediana(medianas))} ms, peor caso {_ms(peor)} ms (peor de cada corrida: {detalle} ms) "
         f"-> {cumple} el límite de {LIMITE_CICLO_MS:.0f} ms")]
+
+
+def bench_historial_cazadores(escala: float = 1.0):
+    """Costo del retroceso con cazadores activos (P2 5.6) sobre la cripta de referencia, frente a la carga historial.
+    Cada acción se ejecuta, se revierte con la acción pergamino real y se vuelve a ejecutar."""
+    acciones = max(60, int(500 * escala))
+    calentamiento = max(60, int(PASOS_CALENTAMIENTO_REFERENCIA * escala))
+    cripta = cripta_de_referencia()
+    servicio = ServicioPartida(ClienteGeneral(ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))),
+                               ContadorSolicitudes(), asincrono=False)
+    servicio.iniciar_nueva(cripta.id, semilla=SEMILLA_BENCH)
+    try:
+        partida = servicio.partida
+        mapa = partida._mapa
+        partida._jugador.vida_max = partida._jugador.vida = 10 ** 9
+        prohibido = servicio.datos_generales.sala_salida
+        azar = random.Random(SEMILLA_CARGAS_TERRENO)
+        _activar_cazadores_reales(partida, mapa)
+        cazadores = len(_cazadores_activos(mapa))
+        for _ in range(calentamiento):
+            _dar_paso_aleatorio(partida, mapa, azar, prohibido)
+        ficha = servicio._catalogo.obtener("itm_pergamino_retroceso")
+        historial = partida._historial
+        inversas, tiempos = [], []
+        deshacer = historial.deshacer_ultimo_intervalo
+
+        def deshacer_contando():
+            cantidad = deshacer()
+            inversas.append(cantidad)
+            return cantidad
+
+        historial.deshacer_ultimo_intervalo = deshacer_contando
+        try:
+            gc.collect()
+            for numero in range(acciones):
+                accion = _paso_aleatorio_aceptado(partida, mapa, azar, prohibido)
+                partida._jugador.inventario.recoger(ObjetoInventario(f"pergamino-bench-{numero}", ficha))
+                inicio = time.perf_counter()
+                revertida = partida.ejecutar_accion(Accion("pergamino"))
+                tiempos.append(time.perf_counter() - inicio)
+                if not revertida.aceptada or not partida.ejecutar_accion(accion).aceptada:
+                    raise ValueError(f"No se pudo revertir y repetir la acción {numero + 1} de la medición")
+        finally:
+            del historial.deshacer_ultimo_intervalo
+    finally:
+        servicio.cerrar()
+    sintetica = bench_historial(escala)
+    registrar = next(r for r in sintetica if r.caso.startswith("registrar acción (6 inversas)"))
+    deshacer_sintetico = next(r for r in sintetica if r.caso.startswith("deshacer 5 acciones"))
+    deshacer_us = deshacer_sintetico.micros_por_operacion
+    medio_us = _mediana(tiempos) * 1e6
+    por_inversa = sum(tiempos) * 1e6 / sum(inversas)
+    contexto = f"{cripta.id}, {cazadores} cazadores activos al medir, {acciones} acciones"
+    return [
+        Resultado("historial_cazadores", f"{contexto}: operaciones inversas por acción", 0.0, 1,
+                  f"mediana {_mediana(inversas)} y máximo {max(inversas)} inversas por acción, mínimo {min(inversas)}. "
+                  f"La carga sintética historial usa 6 inversas por acción y no tiene cazadores", es_razon=True),
+        Resultado("historial_cazadores", f"{contexto}: revertir el último intervalo como el pergamino",
+                  sum(tiempos), acciones,
+                  f"tiempo de la acción pergamino completa: mediana {medio_us:.1f} µs y máximo {max(tiempos) * 1e6:.1f} µs, "
+                  f"{por_inversa:.2f} µs por inversa en promedio. Carga sintética historial (6 inversas por acción, "
+                  f"sin cazadores): deshacer {deshacer_us:.2f} µs por acción, {deshacer_us / 6:.2f} µs por inversa, "
+                  f"registrar {registrar.micros_por_operacion:.2f} µs por acción. "
+                  f"Con cazadores la mediana de revertir es {medio_us / deshacer_us:.1f}x la sintética")]
 
 
 # ================================== 11. LÍNEA DE TIEMPO (capacidad 004, FR-LIN-014 a FR-LIN-018)
@@ -1367,8 +1449,7 @@ def _comparar_restauracion(corrida, linea):
 def bench_linea_tiempo(escala: float = 1.0):
     """Mide la línea de tiempo con cinco corridas comparables y conserva las alternativas de la fase E."""
     acciones = _acciones_de_la_carga(escala)
-    cliente = ClienteOffline(str(DIRECTORIO_FIXTURES_BENCH))
-    referencia = min(cliente.listar_criptas(), key=lambda cripta: (-cripta.salas, cripta.id))
+    referencia = cripta_de_referencia()
     base = None
     resultados = []
     for etiqueta, k in ESCENARIOS_K_LINEA:
@@ -1406,6 +1487,7 @@ CARGAS = (
     ("disco", bench_recuperacion_disco),
     ("inventario", bench_inventario),
     ("historial", bench_historial),
+    ("historial_cazadores", bench_historial_cazadores),
     ("ordenamiento", bench_ordenamiento),
     ("guardado", bench_guardado),
     ("ciclo", bench_ciclo_eventos),

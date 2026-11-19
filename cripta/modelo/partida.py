@@ -53,6 +53,7 @@ from cripta.modelo.persistencia_modelo import (
     crear_estado,
     linea_a_guardada,
     linea_desde_guardada,
+    puertas_cerradas,
     restaurar_jugador,
     restaurar_conocimiento,
     restaurar_sala,
@@ -104,6 +105,7 @@ class Partida:
         self._datos = datos_generales            # CriptaGeneralDTO
         self._mapa = mapa
         self._mapa.sincronizar_puertas()         # la puerta cerrada en un lado debe estarlo en los dos 
+        self._puertas_iniciales = tuple(puertas_cerradas(sala) for sala in mapa.todas_las_salas())
         self._catalogo = servicio_catalogo
         self._precarga = servicio_precarga
         self._semilla = semilla
@@ -811,14 +813,15 @@ class Partida:
         if not self._iniciada:
             raise RuntimeError("Hay que llamar a iniciar() antes de consultar la historia.")
 
-    def _capturar(self):
-        # Estado completo en datos planos más el contador de instancias, que el estado guardado no trae
+    def _capturar(self, *, periodico: bool = False):
+        # La base conserva todas las salas. Un punto periódico puede reconstruir las omitidas desde el esqueleto.
         estado = crear_estado(
             cripta_id=self._datos.id, cripta_version=self._datos.version, catalogo_version="",
             semilla=self._semilla, azar=self._azar, reloj=self._reloj, jugador=self._jugador, mapa=self._mapa,
             salas_preparadas=self._salas_preparadas, acciones_jugador=self._acciones_ejecutadas,
             enemigos_derrotados=self._enemigos_derrotados, mensajes=(), conocimiento=self._conocimiento,
             siguiente_instancia=self._siguiente_instancia,
+            puertas_iniciales=self._puertas_iniciales if periodico else None,
         )
         return (estado, self._siguiente_instancia)
 
@@ -838,7 +841,7 @@ class Partida:
         if len(self._inventarios_previos) > RETROCESO_MAX_ACCIONES:
             self._inventarios_previos.pop(0)
         if self._turno_listo and self._desenlace == EN_CURSO and self._linea.debe_crear_checkpoint():
-            self._linea.registrar_checkpoint(self._capturar())
+            self._linea.registrar_checkpoint(self._capturar(periodico=True))
 
     def _recortar_linea_por_pergamino(self) -> None:
         # El pergamino revierte la última acción: se recorta la línea y se anota la diferencia de inventario

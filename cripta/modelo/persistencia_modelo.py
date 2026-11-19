@@ -66,9 +66,23 @@ def _enemigo_guardado(enemigo) -> EnemigoGuardado:
     )
 
 
-def _sala_guardada(sala, preparada: bool) -> SalaGuardada:
+def puertas_cerradas(sala) -> tuple[bool, bool, bool, bool]:
     puertas = sala.puertas
-    cerradas = (puertas.norte, puertas.sur, puertas.este, puertas.oeste)
+    return (puertas.norte, puertas.sur, puertas.este, puertas.oeste)
+
+
+def _salas_guardadas(mapa, salas_preparadas, puertas_iniciales):
+    for indice, sala in enumerate(mapa.todas_las_salas()):
+        preparada = salas_preparadas.contiene(sala.id)
+        cerradas = puertas_cerradas(sala)
+        if (puertas_iniciales is not None and not preparada
+                and sala.rastro_ultima_visita is None and not sala.enemigos_activos
+                and cerradas == puertas_iniciales[indice]):
+            continue
+        yield _sala_guardada(sala, preparada, cerradas)
+
+
+def _sala_guardada(sala, preparada: bool, cerradas) -> SalaGuardada:
     rastro = -1 if sala.rastro_ultima_visita is None else sala.rastro_ultima_visita
     if not preparada:
         # Una sala cuyo contenido solo se precargó (el jugador nunca llegó a ella) no es estado del
@@ -90,8 +104,8 @@ def _evento_guardado(evento) -> EventoGuardado:
 
 def crear_estado(*, cripta_id, cripta_version, catalogo_version, semilla, azar, reloj, jugador, mapa,
                  salas_preparadas, acciones_jugador, enemigos_derrotados, mensajes, conocimiento,
-                 linea=None, siguiente_instancia=0) -> EstadoPartida:
-    salas = tuple(_sala_guardada(s, salas_preparadas.contiene(s.id)) for s in mapa.todas_las_salas())
+                 linea=None, siguiente_instancia=0, puertas_iniciales=None) -> EstadoPartida:
+    salas = tuple(_salas_guardadas(mapa, salas_preparadas, puertas_iniciales))
     # Los eventos viajan ordenados por (tiempo, secuencia), así el archivo es el mismo para el mismo estado
     pares = [(e.tiempo, e.secuencia, _evento_guardado(e)) for e in reloj.eventos_vigentes()]
     ordenar_auto(pares)

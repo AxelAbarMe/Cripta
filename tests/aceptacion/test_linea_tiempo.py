@@ -438,6 +438,20 @@ class TestCheckpointCadaAceptacion(unittest.TestCase):
                 self.assertEqual(servicio.call_args.kwargs["checkpoint_cada"], int(valido))
                 controlador.return_value.ejecutar.assert_called_once()
 
+    def test_la_partida_usa_k_50_por_defecto_y_respeta_k_explicito(self):  # FR-LIN-013, FR-LIN-014, FR-LIN-022
+        for argumentos, esperado in (([], 50), (["--checkpoint-cada", "7"], 7)):
+            with self.subTest(argumentos=argumentos):
+                with contextlib.redirect_stdout(io.StringIO()), \
+                        mock.patch.object(principal, "DIRECTORIO_FIXTURES", str(RAIZ / "tests" / "datos")), \
+                        mock.patch.object(principal, "CacheDisco", return_value=None), \
+                        mock.patch.object(principal, "VistaConsola"), \
+                        mock.patch.object(principal, "ControladorCripta") as controlador:
+                    self.assertEqual(principal.main(["--offline", *argumentos]), 0)
+                    servicio = controlador.call_args.args[0]
+                    self.addCleanup(servicio.cerrar)
+                    servicio.iniciar_nueva(tsp.CRIPTA, semilla=5)
+                    self.assertEqual(servicio.partida.linea_tiempo().frecuencia, esperado)
+
     def test_la_consulta_no_depende_del_k_elegido(self):  # FR-LIN-013, FR-LIN-015, FR-LIN-017
         resumenes = {}
         for k in (1, 2, 1000):

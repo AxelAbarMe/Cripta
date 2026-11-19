@@ -128,7 +128,7 @@
     - Lectura: no se observa una regresión. Las diferencias son del orden del ruido entre corridas, algunas a favor y otras en contra.
     - Limitación: la carga `historial` es sintética, aplica seis inversas por acción y no incluye cazadores. No mide el costo de registrar y revertir con cazadores activos, que sigue sin medirse y queda pendiente como insumo separado, según la nota anterior.
 
-- [ ] T040 Completar la sección «DECISIONES.md» en `DECISIONES.md` (Modificado): documentar elecciones de implementación resultantes de mediciones y mantener pendiente del grupo el criterio de cripta de referencia frente a `CRIPTA_REFERENCIA`; sin cifras no medidas. FR-LIN-014, FR-LIN-018, SC-LIN-003. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando cada decisión se apoya en resultados existentes y el criterio de referencia sigue sin decisión impuesta.
+- [X] T040 Completar la sección «DECISIONES.md» en `DECISIONES.md` (Modificado): documentar elecciones de implementación resultantes de mediciones y mantener pendiente del grupo el criterio de cripta de referencia frente a `CRIPTA_REFERENCIA`; sin cifras no medidas. FR-LIN-014, FR-LIN-018, SC-LIN-003. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando cada decisión se apoya en resultados existentes y el criterio de referencia sigue sin decisión impuesta.
 
 ## Cobertura de pruebas y criterios independientes
 

@@ -70,10 +70,10 @@ class ServicioPartida:
         if semilla is None:
             semilla = random.SystemRandom().randrange(2 ** 32)   # la semilla queda en la bitácora y en el guardado
         try:
+            mapa = self._armar(general, version_catalogo)
             self.resultado_resolubilidad = ServicioResolubilidad(
                 self._cliente, self._contador, self._cache_disco
-            ).verificar(cripta_id)
-            mapa = self._armar(general, version_catalogo)
+            ).verificar(cripta_id, general=general, mapa=mapa)
             self._partida = Partida(general, mapa, self._catalogo, self._precarga, semilla,
                                     checkpoint_cada=self._checkpoint_cada)
             self._partida.iniciar()

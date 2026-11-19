@@ -1,0 +1,7 @@
+Dos cambios, con pruebas antes del código, y documentos al final.
+
+1. Cripta de referencia: en cripta/bench/cargas_bench.py, ciclo_referencia usa la constante CRIPTA_REFERENCIA = "cripta-06", mientras linea_tiempo elige la cripta con más salas del listado. La constitución prohíbe datos de una cripta concreta en el código. Extrae a una función común la elección de linea_tiempo (la de más salas, desempate por id) y úsala en las dos cargas. Elimina la constante. Ajusta la prueba existente si alguna depende de ella.
+
+2. Retroceso con cazadores (P2 §5.6): agrega una carga historial_cazadores en cargas_bench.py y regístrala en CARGAS. Sobre la cripta de referencia, con los cazadores activos como en ciclo_referencia, mide por cada acción del jugador cuántas operaciones inversas registra su intervalo y cuánto tarda revertir el último intervalo como lo hace el pergamino, con mediana y máximo, y compáralo con la carga historial sintética de la Parte I. Agrega su prueba en tests/servicios/test_servicio_bench.py antes del código.
+
+Corre la suite completa y py -m cripta --bench --solo ciclo_referencia historial historial_cazadores, y pégame la salida. Después agrega el resultado a DECISIONES.md, en el párrafo de la sección 5.6 que dice que el retroceso con cazadores no se midió, y quita esa nota pendiente de 5.5 y de tasks.md (T039). Sin dict ni set como índice, sin sorted, bisect ni collections. CRLF, sin ";" en comentarios ni en el texto nuevo.

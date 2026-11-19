@@ -5,6 +5,8 @@ Se ejecuta desde la raíz del proyecto con:  python -m unittest tests.vista.test
 import unittest
 
 from cripta.controlador.controlador_cripta import Orden
+from cripta.modelo.conocimiento_jugador import SalaConocida, SalidaConocida
+from cripta.modelo.linea_tiempo import ObjetoHistorico, ResumenHistorico
 from cripta.modelo.resultado_partida import EnemigoVista, SalidaVista, VistaPartida
 from cripta.vista.vista_consola import ANCHO, VistaConsola, _caja_mensajes
 
@@ -144,6 +146,168 @@ class TestTerrenoEnLaVista(unittest.TestCase):
             linea = next(l for l in lineas if enemigo.etiqueta in l)
             resto.append(" ".join(linea.replace(enemigo.etiqueta, "").replace(f"{numero}.", "").split()))
         self.assertNotEqual(resto[0], resto[1])
+
+
+class TestComandoHistoria(unittest.TestCase):
+    def interpretar(self, texto):
+        vista, _ = crear(texto)
+        return vista.pedir_orden(None)
+
+    def test_historia_con_un_instante(self):  # FR-LIN-003
+        self.assertEqual(self.interpretar("historia 150"), Orden("historia", "150"))
+        self.assertEqual(self.interpretar("HISTORIA 0"), Orden("historia", "0"))
+
+    def test_historia_con_una_accion(self):  # FR-LIN-003
+        self.assertEqual(self.interpretar("historia #3"), Orden("historia", "#3"))
+        self.assertEqual(self.interpretar("  historia   #12 "), Orden("historia", "#12"))
+
+    def test_el_argumento_mal_formado_se_entrega_tal_cual_para_que_se_informe_el_motivo(self):  # FR-LIN-023
+        self.assertEqual(self.interpretar("historia abc"), Orden("historia", "abc"))
+        self.assertEqual(self.interpretar("historia #"), Orden("historia", "#"))
+        self.assertEqual(self.interpretar("historia -5"), Orden("historia", "-5"))
+        self.assertEqual(self.interpretar("historia 1 2"), Orden("historia", "1 2"))
+
+    def test_historia_sin_argumento_se_entrega_sin_argumento(self):  # FR-LIN-023
+        self.assertEqual(self.interpretar("historia"), Orden("historia", None))
+
+    def test_historia_no_se_confunde_con_otros_comandos(self):  # FR-LIN-003
+        vista, salida = crear("historiax 3", "esperar")
+        self.assertEqual(vista.pedir_orden(None), Orden("esperar"))
+        self.assertTrue(any("no reconocido" in linea for linea in salida))
+
+    def test_los_controles_muestran_el_comando(self):  # FR-LIN-003
+        lineas = pantalla(vista_armada([], []))
+        self.assertTrue(any("historia" in linea for linea in lineas))
+
+
+def resumen_armado(**cambios):
+    """ResumenHistorico mínimo con una sala explorada y una avistada, para presentarlo."""
+    datos = dict(
+        tiempo=150, sala_id=1, vida=40, vida_max=100, ataque=6, defensa=2, velocidad=100,
+        inventario=(ObjetoHistorico("i-1", "itm_antorcha"),), efectos_activos=("Antorcha",),
+        enemigos=(EnemigoVista("Rata gigante [e-201]", "e-201", 8, 12, False),),
+        mapa_conocido=(SalaConocida(1, "explorada", "Sala uno", (SalidaConocida("E", 2, 100, "abierta"),)),
+                       SalaConocida(2, "avistada", None, ())))
+    datos.update(cambios)
+    return ResumenHistorico(**datos)
+
+
+def historia(resumen, referencia="t=150"):
+    """(lo impreso justo tras mostrar_historia, las líneas del bloque de historia tras el siguiente mostrar_estado)."""
+    vista, salida = crear()
+    vista.mostrar_historia(resumen, referencia)
+    inmediato = list(salida)
+    vista.mostrar_estado(vista_armada([], []), ())
+    lineas = [linea for bloque in salida for linea in bloque.splitlines()]
+    inicio = next(i for i, linea in enumerate(lineas) if "HISTORIA" in linea and i > _fin_del_estado(lineas))
+    return inmediato, lineas, lineas[inicio:]
+
+
+def _fin_del_estado(lineas):
+    # Índice de la caja de mensajes: lo que viene después ya no es la pantalla de juego
+    return next(i for i, linea in enumerate(lineas) if "MENSAJES" in linea)
+
+
+class TestPantallaDeHistoria(unittest.TestCase):
+    def test_la_historia_espera_al_siguiente_estado_y_sale_debajo_de_el(self):  # FR-LIN-004
+        inmediato, lineas, _ = historia(resumen_armado())
+        self.assertEqual(inmediato, [])
+        self.assertGreater(len(lineas), _fin_del_estado(lineas) + 1)
+        self.assertTrue(any("HISTORIA" in linea for linea in lineas[_fin_del_estado(lineas):]))
+
+    def test_una_historia_ya_mostrada_no_se_repite(self):  # FR-LIN-005
+        vista, salida = crear()
+        vista.mostrar_historia(resumen_armado(), "t=150")
+        vista.mostrar_estado(vista_armada([], []), ())
+        salida.clear()
+        vista.mostrar_estado(vista_armada([], []), ())
+        lineas = [linea for bloque in salida for linea in bloque.splitlines()]
+        self.assertFalse(any("HISTORIA" in linea for linea in lineas[_fin_del_estado(lineas):]))
+
+    def test_el_titulo_lleva_la_referencia_consultada(self):  # FR-LIN-003
+        for referencia in ("t=150", "#3"):
+            _, _, bloque = historia(resumen_armado(), referencia)
+            self.assertIn(referencia, bloque[0])
+
+    def test_muestra_el_reloj(self):  # FR-LIN-004, SC-LIN-001
+        _, _, bloque = historia(resumen_armado(tiempo=150))
+        self.assertTrue(any("Tiempo" in linea and "150" in linea for linea in bloque))
+
+    def test_muestra_la_sala_del_jugador(self):  # FR-LIN-004, SC-LIN-001
+        _, _, bloque = historia(resumen_armado(sala_id=7))
+        self.assertTrue(any("Sala 7" in linea for linea in bloque))
+
+    def test_muestra_vida_y_estadisticas(self):  # FR-LIN-004, SC-LIN-001
+        _, _, bloque = historia(resumen_armado())
+        texto = "\n".join(bloque)
+        for esperado in ("Vida 40/100", "Ataque 6", "Defensa 2", "Velocidad 100"):
+            self.assertIn(esperado, texto)
+
+    def test_muestra_el_inventario(self):  # FR-LIN-004, SC-LIN-001
+        _, _, bloque = historia(resumen_armado())
+        self.assertTrue(any("INVENTARIO" in linea for linea in bloque))
+        self.assertTrue(any("itm_antorcha" in linea and "i-1" in linea for linea in bloque))
+
+    def test_inventario_vacio(self):  # FR-LIN-004
+        _, _, bloque = historia(resumen_armado(inventario=()))
+        self.assertIn("(vacio)", "\n".join(bloque))
+
+    def test_muestra_los_efectos_activos(self):  # FR-LIN-004, SC-LIN-001
+        _, _, bloque = historia(resumen_armado(efectos_activos=("Veneno", "Antorcha")))
+        self.assertTrue(any("Efectos: Veneno, Antorcha" in linea for linea in bloque))
+        _, _, sin = historia(resumen_armado(efectos_activos=()))
+        self.assertTrue(any("Efectos: ninguno" in linea for linea in sin))
+
+    def test_muestra_los_enemigos_de_la_sala_con_su_vida(self):  # FR-LIN-004, SC-LIN-001
+        _, _, bloque = historia(resumen_armado())
+        linea = next(l for l in bloque if "Rata gigante [e-201]" in l)
+        self.assertIn("PV 8/12", linea)
+        self.assertNotIn("CAZADOR", linea)
+
+    def test_el_cazador_se_distingue_en_la_historia(self):  # FR-LIN-004
+        cazador = EnemigoVista("Sabueso [e-1]", "e-1", 40, 40, True)
+        _, _, bloque = historia(resumen_armado(enemigos=(cazador,)))
+        self.assertIn("[CAZADOR]", next(l for l in bloque if "Sabueso [e-1]" in l))
+
+    def test_sin_enemigos(self):  # FR-LIN-004
+        _, _, bloque = historia(resumen_armado(enemigos=()))
+        self.assertTrue(any("ENEMIGOS" in linea for linea in bloque))
+        self.assertTrue(any("(ninguno)" in linea for linea in bloque))
+
+    def test_muestra_el_mapa_conocido(self):  # FR-LIN-004, FR-LIN-019, SC-LIN-001
+        _, _, bloque = historia(resumen_armado())
+        self.assertTrue(any("MAPA CONOCIDO" in linea for linea in bloque))
+        explorada = next(l for l in bloque if "Sala 1" in l and "explorada" in l)
+        self.assertIn("Sala uno", explorada)
+        self.assertTrue(any("E->2" in linea and "100" in linea and "abierta" in linea for linea in bloque))
+        avistada = next(l for l in bloque if "Sala 2" in l and "avistada" in l)
+        self.assertNotIn("explorada", avistada)
+
+    def test_una_puerta_cerrada_se_marca(self):  # FR-LIN-019
+        mapa = (SalaConocida(1, "explorada", "Sala uno", (SalidaConocida("N", 3, 50, "cerrada"),)),)
+        _, _, bloque = historia(resumen_armado(mapa_conocido=mapa))
+        self.assertTrue(any("N->3" in linea and "cerrada" in linea for linea in bloque))
+
+    def test_ninguna_linea_pasa_del_ancho_de_la_pantalla(self):  # SC-LIN-001
+        _, _, bloque = historia(resumen_armado())
+        for linea in bloque:
+            self.assertLessEqual(len(linea), ANCHO)
+
+    def test_mostrar_historia_no_pide_entrada(self):  # FR-LIN-005
+        def entrada(_indicador):
+            raise AssertionError("mostrar_historia no debe leer del teclado")
+        VistaConsola(entrada, lambda _linea: None).mostrar_historia(resumen_armado(), "t=150")
+
+    def test_dos_consultas_seguidas_salen_en_orden(self):  # FR-LIN-005
+        vista, salida = crear()
+        vista.mostrar_historia(resumen_armado(), "t=150")
+        vista.mostrar_historia(resumen_armado(), "#2")
+        vista.mostrar_estado(vista_armada([], []), ())
+        lineas = [l for bloque in salida for l in bloque.splitlines()]
+        titulos = [l for l in lineas[_fin_del_estado(lineas):] if "HISTORIA" in l]
+        self.assertEqual(len(titulos), 2)
+        self.assertIn("t=150", titulos[0])
+        self.assertIn("#2", titulos[1])
 
 
 if __name__ == "__main__":

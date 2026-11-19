@@ -4,11 +4,16 @@ El ClienteOffline no cuenta solicitudes, así que se envuelve en un cliente que 
 presupuesto igual que ClienteHttp. Se ejecuta desde la raíz del proyecto con:
     python -m unittest tests.servicios.test_servicio_partida -v
 """
+import contextlib
 import dataclasses
+import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from cripta import __main__ as principal
+from cripta.constantes import CHECKPOINT_CADA_DEFECTO
 from cripta.excepciones import CriptaApiError, CriptaLimiteError
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
 from cripta.infraestructura.cache import CacheDisco
@@ -47,10 +52,11 @@ class ClienteContado:
         return llamar
 
 
-def armar(cache_disco=None, tamano=25, falla_en=None):
+def armar(cache_disco=None, tamano=25, falla_en=None, checkpoint_cada=None):
     contador = ContadorSolicitudes()
     cliente = ClienteContado(contador, falla_en)
-    servicio = ServicioPartida(ClienteGeneral(cliente), contador, cache_disco, tamano, asincrono=False)
+    opciones = {} if checkpoint_cada is None else {"checkpoint_cada": checkpoint_cada}
+    servicio = ServicioPartida(ClienteGeneral(cliente), contador, cache_disco, tamano, asincrono=False, **opciones)
     return servicio, contador, cliente
 
 
@@ -220,6 +226,122 @@ class PruebaServicioPartida(unittest.TestCase):
             iniciar(servicio)
         with self.assertRaises(RuntimeError):
             servicio.partida
+
+
+class TestCheckpointCada(unittest.TestCase):
+    def jugar(self, servicio, esperas):
+        iniciar(servicio)
+        for _ in range(esperas):
+            self.assertTrue(servicio.ejecutar(A("esperar")).aceptada)
+        return servicio.partida.linea_tiempo()
+
+    def test_k_1_crea_un_checkpoint_por_accion(self):  # FR-LIN-013, FR-LIN-014
+        servicio, _, _ = armar(checkpoint_cada=1)
+        linea = self.jugar(servicio, 3)
+        self.assertEqual(linea.frecuencia, 1)
+        self.assertEqual(linea.cantidad_checkpoints(), 3)
+        servicio.cerrar()
+
+    def test_k_mayor_que_las_acciones_no_crea_ninguno(self):  # FR-LIN-013, FR-LIN-014
+        servicio, _, _ = armar(checkpoint_cada=1000)
+        linea = self.jugar(servicio, 5)
+        self.assertEqual(linea.frecuencia, 1000)
+        self.assertEqual(linea.cantidad_checkpoints(), 0)
+        servicio.cerrar()
+
+    def test_no_hay_mas_de_un_checkpoint_por_cada_k_acciones(self):  # FR-LIN-013
+        servicio, _, _ = armar(checkpoint_cada=2)
+        linea = self.jugar(servicio, 5)
+        self.assertEqual(linea.cantidad_checkpoints(), 2)
+        self.assertEqual(linea.buscar_checkpoint(5).numero_acciones, 4)
+        servicio.cerrar()
+
+    def test_el_servicio_expone_la_frecuencia_configurada(self):  # FR-LIN-013
+        servicio, _, _ = armar(checkpoint_cada=7)
+        self.assertEqual(servicio.checkpoint_cada, 7)
+
+    def test_sin_configurar_se_usa_el_valor_provisional(self):  # FR-LIN-014
+        servicio, _, _ = armar()
+        self.assertEqual(servicio.checkpoint_cada, CHECKPOINT_CADA_DEFECTO)
+        linea = self.jugar(servicio, 1)
+        self.assertEqual(linea.frecuencia, CHECKPOINT_CADA_DEFECTO)
+        servicio.cerrar()
+
+    def test_una_partida_nueva_conserva_la_frecuencia(self):  # FR-LIN-013
+        servicio, _, _ = armar(checkpoint_cada=3)
+        self.jugar(servicio, 1)
+        iniciar(servicio)
+        self.assertEqual(servicio.partida.linea_tiempo().frecuencia, 3)
+        servicio.cerrar()
+
+    def test_un_k_invalido_se_rechaza_con_motivo_sin_pedir_nada(self):  # FR-LIN-022, SC-LIN-007
+        for invalido in (0, -1, -100, "abc", "5", 2.5, True, [3]):
+            with self.subTest(k=invalido):
+                contador = ContadorSolicitudes()
+                cliente = ClienteContado(contador)
+                with self.assertRaises(ValueError) as contexto:
+                    ServicioPartida(ClienteGeneral(cliente), contador, asincrono=False, checkpoint_cada=invalido)
+                self.assertIn("mayor o igual a 1", str(contexto.exception))
+                self.assertEqual(cliente.llamadas, [])
+
+class TestCheckpointCadaEnLaLineaDeComandos(unittest.TestCase):
+    def setUp(self):
+        carpeta = tempfile.TemporaryDirectory()
+        self.addCleanup(carpeta.cleanup)
+        self.datos = Path(carpeta.name)
+
+    def correr(self, *argumentos):
+        # Ejecuta main() con la infraestructura y la vista sustituidas: devuelve (servicio, controlador, vista, salida, código)
+        salida = io.StringIO()
+        with contextlib.redirect_stdout(salida), mock.patch.object(principal, "DIRECTORIO_DATOS", self.datos), \
+                mock.patch.object(principal, "ServicioPartida") as servicio, \
+                mock.patch.object(principal, "ControladorCripta") as controlador, \
+                mock.patch.object(principal, "VistaConsola") as vista:
+            servicio.return_value.reporte_final.return_value = ""
+            codigo = principal.main(list(argumentos))
+        return servicio, controlador, vista, salida.getvalue(), codigo
+
+    def rechazar(self, *argumentos):
+        error = io.StringIO()
+        with contextlib.redirect_stderr(error), self.assertRaises(SystemExit) as contexto:
+            self.correr(*argumentos)
+        return contexto.exception.code, error.getvalue()
+
+    def test_un_k_valido_llega_al_servicio(self):  # FR-LIN-013
+        servicio, controlador, _, _, codigo = self.correr("--offline", "--checkpoint-cada", "5")
+        self.assertEqual(codigo, 0)
+        self.assertEqual(servicio.call_args.kwargs["checkpoint_cada"], 5)
+        controlador.return_value.ejecutar.assert_called_once()
+
+    def test_sin_la_bandera_el_servicio_recibe_none(self):  # FR-LIN-014
+        servicio, _, _, _, _ = self.correr("--offline")
+        self.assertIsNone(servicio.call_args.kwargs.get("checkpoint_cada"))
+
+    def test_k_1_es_valido(self):  # FR-LIN-013, FR-LIN-022
+        servicio, _, _, _, codigo = self.correr("--offline", "--checkpoint-cada", "1")
+        self.assertEqual(codigo, 0)
+        self.assertEqual(servicio.call_args.kwargs["checkpoint_cada"], 1)
+
+    def test_cero_negativo_y_texto_impiden_iniciar_e_informan_el_motivo(self):  # FR-LIN-022, SC-LIN-007
+        for invalido in ("0", "-3", "abc", "2.5", ""):
+            with self.subTest(k=invalido):
+                codigo, error = self.rechazar("--offline", "--checkpoint-cada", invalido)
+                motivo = error.split("error:", 1)[-1]
+                self.assertEqual(codigo, 2)
+                self.assertIn("--checkpoint-cada", motivo)
+                self.assertIn("mayor o igual a 1", motivo)
+
+    def test_con_un_k_invalido_no_se_construye_servicio_controlador_ni_vista(self):  # FR-LIN-022
+        for invalido in ("0", "-1", "x"):
+            with self.subTest(k=invalido):
+                with mock.patch.object(principal, "ServicioPartida") as servicio, \
+                        mock.patch.object(principal, "ControladorCripta") as controlador, \
+                        mock.patch.object(principal, "VistaConsola") as vista, \
+                        contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                    principal.main(["--offline", "--checkpoint-cada", invalido])
+                servicio.assert_not_called()
+                controlador.assert_not_called()
+                vista.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -12,9 +12,10 @@ El desarrollo de la Parte II se realizó siguiendo la metodología dirigida por 
 
 ### Agentes utilizados
 
-- **Codex CLI 0.169.0** con GPT-6 Luna
-- **Claude Code** con Sonnet 5.5
-- **Antigravity CLI** con Gemini
+- **Codex CLI** (0.167.2, 0.169.0 y 0.170.0) con GPT-6 Luna y GPT-6.2 Sol.
+- **Antigravity CLI** (1.5.3 y 1.5.4) con Gemini, Gemini 3.8 Flash, Claude Sonnet 4.6 y Claude Sonnet 4.6 Thinking.
+- **Claude Code** con Sonnet 5.5.
+- **Claude en la web y en las apps** con Sonnet 5 y Sonnet 5.5 en la web, y Opus 5 y Opus 5.5 en las apps.
 
 ### Flujo de trabajo
 
@@ -74,14 +75,16 @@ Todos los comandos se escriben **desde la carpeta raíz del proyecto**. `-m crip
 |---|---|
 | `py -m cripta` | Juega en línea: descarga la cripta del API. |
 | `py -m cripta --offline` | Juega sin conexión, con las respuestas del API guardadas en `fixtures/`. |
-| `py -m cripta --verificar cripta-02` | Verifica la resolubilidad de la cripta sin abrir el juego y muestra el reporte por consola. Códigos de salida: 0 verificación exitosa (resoluble o no), 1 datos inválidos en el esqueleto, 2 error externo o de red. |
-| `py -m cripta --forzar` | Permite iniciar la partida en una cripta no resoluble con advertencia de inicio forzado. Sin esta bandera se cancela el inicio y vuelve al menú. |
+| `py -m cripta --offline --verificar cripta-02` | Verifica la resolubilidad y muestra el reporte en la salida estándar sin abrir el juego. Admite ejecución en línea omitiendo `--offline`. Devuelve `0` si completa la verificación (sea la cripta resoluble o no), `1` si hay datos inválidos en el esqueleto y `2` si hay un error externo, como presupuesto agotado, fallo de red o archivo dañado. |
+| `py -m cripta --offline --forzar` | Al elegir una cripta, verifica su resolubilidad y muestra el reporte. Si es no resoluble, `--forzar` permite iniciar con una advertencia. Al omitir la bandera, el juego cancela el inicio y vuelve al menú. |
 | `py -m cripta --cache-size 50` | Cambia cuántas fichas del catálogo se guardan en memoria (por defecto 25; debe ser un entero mayor o igual a 1). |
 | `py -m cripta --checkpoint-cada 50` | Cada cuántas acciones se guarda un punto de control de la línea de tiempo (por defecto 50, debe ser un entero mayor o igual a 1). Un valor inválido se rechaza al iniciar, con su motivo, y la partida no inicia. |
 | `py -m cripta --replay datos/partida.log` | Reproduce una partida guardada, sin interfaz (sección 5). |
 | `py -m cripta --replay datos/partida.log --hasta 150` | Reproduce la bitácora completa y además muestra el estado de la partida en el instante 150 (sección 5). |
 | `py -m cripta --bench` | Corre las mediciones de rendimiento, sin interfaz (sección 6). |
 | `py -m cripta --help` | Muestra la ayuda de las banderas. |
+
+Pendiente de integración (capacidad 003): las opciones `--verificar` y `--forzar` todavía no están disponibles en esta rama.
 
 Las banderas se pueden combinar, por ejemplo `py -m cripta --offline --cache-size 10`.
 
@@ -177,9 +180,11 @@ py -m cripta --bench --escala 5 --markdown resultados.md
 
 Corre **cargas sintéticas** (datos generados con una semilla fija, sin red ni interfaz) que miden cada subsistema y, cuando corresponde, también la alternativa descartada, para comparar. Son la evidencia citada en el Documento de Decisiones.
 
-- `--solo` corre solo las cargas nombradas: `agenda`, `cache`, `disco`, `inventario`, `historial`, `historial_cazadores`, `ordenamiento`, `guardado`, `ciclo`, `partida`, `solicitudes`, `ruta_cazador`, `invalidacion`, `ciclo_referencia`, `niebla_rutas`, `linea_tiempo`, `resolubilidad`, `resolubilidad_cota`.
+- `--solo` corre solo las cargas nombradas: `agenda`, `cache`, `disco`, `inventario`, `historial`, `historial_cazadores`, `ordenamiento`, `guardado`, `ciclo`, `partida`, `solicitudes`, `ruta_cazador`, `invalidacion`, `ciclo_referencia`, `niebla_rutas`, `linea_tiempo`.
 - `--escala X` multiplica el tamaño de las cargas (por defecto 1; con 5 las mediciones son más finas pero tardan más).
 - `--markdown ARCHIVO` además escribe la tabla de resultados en ese archivo.
+
+Pendiente de integración (capacidad 003): las cargas `resolubilidad` y `resolubilidad_cota` todavía no están registradas en esta rama.
 
 **Código de salida:** `0` todo cumple el límite de 20 ms por ciclo de eventos · `1` alguna medición de `ciclo`, `partida` o `ciclo_referencia` dice NO CUMPLE · `2` se pidió una carga que no existe.
 
@@ -241,11 +246,12 @@ cripta/
 fixtures/              respuestas del API para --offline (cripta-02 a cripta-06). tests/datos/ tiene cripta-01 congelada
 scripts/               generar_fixtures.py, prueba_api.py y revisar_prohibidos.py (auditoría de estructuras prohibidas, se corre con py -m scripts.revisar_prohibidos)
 tests/                 pruebas, por capa (incluye tests/aceptacion/ para pruebas de aceptación)
-docs/                  Documento de Decisiones, bitácora, contrato de la partida, formato offline
+docs/                  contrato de la partida, formato offline, guías, bitácora, mapa de código, documentación del API, mediciones, ejemplos y enunciados
 ├── bench/             mediciones y reportes de rendimiento
 └── ejemplos/          bitácoras de ejemplo para --replay
 specs/                 especificaciones, planes y tareas de cada capacidad (001 a 004)
 prompts/               prompts ejecutados en cada etapa del desarrollo
+DECISIONES.md          decisiones de diseño y mediciones
 PROMPTS_LLM.md         prompts usados con asistentes de IA
 ```
 

@@ -134,7 +134,7 @@ Las etiquetas describen esta rama, no el estado futuro. Las rutas **Nuevo** son 
 | `cripta/infraestructura/estado_guardado.py` | Modificado, coordinar 004 | Campo lógico para conocimiento; no define codificación binaria. |
 | `cripta/infraestructura/guardado_binario.py` | Depende de 004 | La 004 incorpora la proyección al formato binario y realiza el único cambio de versión. |
 | `cripta/bench/cargas_bench.py` | Modificado | Cargas de ruta, revelación y reversión con alternativas. |
-| `cripta/servicios/servicio_bench.py` | Modificado | Registrar `niebla_rutas`; seguir sin vista. |
+| `cripta/servicios/servicio_bench.py` | Sin cambios | `ServicioBench` ya ejecuta las cargas registradas en `CARGAS` de `cargas_bench.py`; no requiere cambios para `niebla_rutas` y sigue sin instanciar la vista. |
 | `cripta/modelo/buscador_rutas.py` | Sin cambios (previsto por la 001) | No está en esta rama. No se reutiliza ni se modifica; ver la decisión de búsqueda. |
 | `cripta/modelo/ruta_conocida.py` | Nuevo | Búsqueda de costo mínimo sobre el subgrafo conocido, con `HeapMinimo`, y primer paso con desempate por menor id. |
 | `cripta/estructuras/heap_min.py` | Modificado por la 001 | La 001 añade `esta_vacio` y `__len__`; esta capacidad solo lo usa. |

@@ -84,6 +84,10 @@
 - [X] T032 Extender `cripta/bench/cargas_bench.py` (Modificado) para comparar truncamiento desde el final con escaneo/filtrado y restauración con la ruta que prepara salas frente a la vía materializada sin `precarga.preparar_sala`; reportar procesamiento y E/S por consulta. FR-LIN-005, FR-LIN-007, FR-LIN-015, SC-LIN-002. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando las alternativas comparadas son observables y la consulta elegida no prepara salas.
 - [X] T041 Preparar la línea base de T033 en `cripta/bench/cargas_bench.py` y `tests/servicios/test_servicio_bench.py` (Modificados). Medir K=50, 100, 500, 1000 y sin puntos periódicos en partidas independientes con la misma carga. Verificar posiciones de los puntos y consultar los mismos casos, incluidos los estados justo antes de un punto. Informar cantidad de puntos, memoria, registro, mediana y máximo observado de consulta y peor ciclo. Conservar la salida íntegra a escala 1. FR-LIN-013, FR-LIN-014, FR-LIN-015, FR-LIN-016, FR-LIN-018, SC-LIN-003, SC-LIN-004. Validar con `py -m unittest tests.servicios.test_servicio_bench` y `py -m cripta --bench --solo linea_tiempo --escala 1`.
   La corrida a escala 1 completó 5 000 acciones por escenario y verificó 100, 50, 10, 5 y 0 puntos periódicos. [Captura íntegra de la línea base](../../docs/bench/resultados_004_linea_base.md).
+- [X] T042 Reducir solo los puntos periódicos en `cripta/modelo/partida.py` y `cripta/modelo/persistencia_modelo.py`. Omitir salas nunca preparadas únicamente cuando sus puertas, rastro y enemigos activos permitan reconstruirlas desde el esqueleto. Verificar ambas representaciones v2 y la equivalencia de historia, replay y guardado/carga en `tests/modelo/test_partida_linea_tiempo.py` y `tests/aceptacion/test_linea_tiempo.py`. Ejecutar `py -m unittest discover -s tests -t .` y `py -m cripta --bench --solo linea_tiempo --escala 1`. Conservar y comparar la medición en `docs/bench/resultados_004_puntos_reducidos.md`. FR-LIN-004, FR-LIN-005, FR-LIN-008, FR-LIN-010, FR-LIN-013, FR-LIN-014, FR-LIN-015, FR-LIN-016, FR-LIN-017, FR-LIN-018, FR-LIN-019, FR-LIN-021.
+
+  - Verificación de T042. La suite completa pasó 628 pruebas y el benchmark terminó con código 0. La [comparación con la línea base](../../docs/bench/resultados_004_puntos_reducidos.md) conserva la salida íntegra. Con K=100 se observaron 11885.9 KiB y 51.072 ms de máximo de consulta.
+
 - [ ] T033 Registrar la salida observada del benchmark y proponer K predeterminado en `specs/004-linea-de-tiempo/tasks.md` (Modificado) únicamente después de ejecutar todas las mediciones y justificarlo; no elegir si faltan resultados del grupo. FR-LIN-014, FR-LIN-018, SC-LIN-003. Validar con `py -m cripta --bench --solo linea_tiempo --escala 1`; hecho cuando la justificación cita resultados realmente obtenidos y verifica <50 ms, sin anticipar cifras.
 
 ## Fase F: Cierre
@@ -111,7 +115,7 @@
 - Fase B: T006–T009 son pruebas en archivos distintos y pueden prepararse en paralelo; la reconstrucción T010/T011 antecede a T012. T013 y T014 esperan a la integración de sus capacidades respectivas.
 - Fase C: T015 y T016 son pruebas independientes sobre el mismo archivo y se secuencian para evitar conflicto; T017–T019 siguen el orden de pruebas y modelo.
 - Fase D: T020, T021, T023 y T025 pueden prepararse en paralelo; sus implementaciones esperan a las pruebas correspondientes.
-- Fase E: T027 precede la carga T028; T029–T032 modifican la misma carga y se ejecutan en secuencia. T041 amplía y verifica las mediciones antes de T033.
+- Fase E: T027 precede la carga T028; T029–T032 modifican la misma carga y se ejecutan en secuencia. T041 establece la línea base y precede a la comparación de T042. Ambas mediciones alimentan T033.
 - Fase F: T034 precede T035; T036 requiere las pruebas y dependencias integradas. T037–T040 son cierre secuencial.
 
 ## Estrategia de entrega

@@ -70,3 +70,6 @@ def direccion_opuesta(direccion: str) -> str:
 
 # === MODELO ===
 VELOCIDAD_MINIMA = 1   # ninguna velocidad (por efectos) puede bajar de este valor
+
+# === LINEA DE TIEMPO ===
+CHECKPOINT_CADA_DEFECTO = 50

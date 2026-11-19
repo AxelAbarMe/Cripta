@@ -4,14 +4,14 @@
 
 **Términos.** *µs* y *ms* son millonésimas y milésimas de segundo. *Mediana*: el valor del medio de varias corridas (no la afecta una corrida atípica). *Peor caso*: la corrida o el ciclo más lento de un conjunto. *O(...)* describe cómo crece el costo con el tamaño: O(1) no crece, O(log n) crece muy despacio, O(n) crece en proporción. *n* es la cantidad de elementos de la estructura que se está midiendo; las demás letras se definen en cada sección. *Lote*: una sola solicitud al API que lleva hasta 10 elementos. *Alternativa descartada*: la opción que se midió contra la elegida para justificar la decisión.
 
-**Cómo se reproduce.** `python -m cripta --bench` corre todas las cargas; `python -m cripta --bench --solo <carga> --escala <factor>` corre una (cargas: agenda, cache, disco, inventario, historial, ordenamiento, guardado, ciclo, partida, solicitudes, ruta_cazador, invalidacion, ciclo_referencia). Los conteos de solicitudes no dependen del equipo; los tiempos sí, por eso se reportan medianas de varias corridas y el equipo usado.
+**Cómo se reproduce.** `python -m cripta --bench` corre todas las cargas; `python -m cripta --bench --solo <carga> --escala <factor>` corre una (cargas: agenda, cache, disco, inventario, historial, historial_cazadores, ordenamiento, guardado, ciclo, partida, solicitudes, ruta_cazador, invalidacion, ciclo_referencia, linea_tiempo). Los conteos de solicitudes no dependen del equipo; los tiempos sí, por eso se reportan medianas de varias corridas y el equipo usado.
 
 **Equipos de medición.**
 
 | Equipo | Hardware y sistema | Python | Se usó en |
 |---|---|---|---|
 | A | Ryzen 5 5600GT, 32 GB, Windows | 3.12.10 | 4.1 |
-| B | Intel Core Ultra 7, 16 GB, Windows | 3.14.6 | 4.1, 4.2, 4.4, 4.9, 4.10, 5.1, 5.2, 5.6 |
+| B | Intel Core Ultra 7, 16 GB, Windows | 3.14.6 | 4.1, 4.2, 4.4, 4.9, 4.10, 5.1, 5.2, 5.5, 5.6 |
 | C | Linux | 3.12 | 4.5, 4.6, 4.7, 4.8 |
 
 Cada sección indica en qué equipo se midió, y las cifras de equipos distintos no se comparan entre sí. Las mediciones del Equipo C que no salen de `--bench` se hicieron con un script propio y se indican como tales en su sección. Los conteos de operaciones por acción ("frecuencia medida") salen de un script que cuenta llamadas sobre la partida real y no dependen del equipo.
@@ -721,7 +721,7 @@ Los conteos de búsquedas son idénticos en las tres corridas, porque no depende
 - **Límite de 20 ms.** Con cálculo compartido ningún ciclo superó 6.967 ms en ninguno de los escenarios de las tres corridas (es el peor de los 120 ciclos del escenario mixto con H=30, corrida b). Con el individual, R=2400 y H=30, la mediana del ciclo es 70.175 ms y el peor ciclo llegó a 207.195 ms. Esta carga no verifica FR-TER-020, eso lo hace `ciclo_referencia` (ver 5.6).
 - **Costo de consultar `costo_de_conexion`.** Con R=2400 y H=1, la búsqueda sola tardó una mediana de 2423.53 µs y las consultas de costo dentro de ella 1116.72 µs (39 721 consultas de unos 1.69 µs), es decir cerca de 46 % del tiempo de una búsqueda, casi la mitad. La medición usa una envoltura que suma su propio costo, así que la fracción puede estar algo sobrestimada.
 
-**Alternativa no implementada.** La consulta cuesta O(log n) porque `CriptaMapa` localiza cada conexión con búsqueda binaria. Se mantuvo así porque el ciclo ya cumple el límite con holgura (5.6). Si hiciera falta recortar tiempo, se podrían precalcular los costos en una tabla plana al construir el mapa, con O(1) por consulta. No se implementó ni se midió.
+**Alternativa no implementada.** La consulta cuesta O(log n) porque `CriptaMapa` localiza cada conexión con búsqueda binaria. Se mantuvo así porque el ciclo ya cumple el límite con holgura (5.6). Si hiciera falta recortar tiempo, se podrían precalcular los costos en una tabla plana al construir el mapa, con O(1) por consulta. No se implementó ni se midió. La consulta de salas por id, en cambio, ya es O(1) desde la 004 (ver 5.5).
 
 ### Límites conocidos
 
@@ -789,6 +789,137 @@ Medido con `py -m cripta --bench --solo invalidacion` en el Equipo B, mediana de
 - El plan se proponía medir a partir de qué frecuencia de cambios de puertas deja de convenir reutilizar. Solo se midió un punto (5 puertas cada 15 ticks) y en él conviene con claridad. No se encontró el punto de cruce.
 - La carga cierra y abre las puertas directamente sobre el mapa y apaga la bandera de la tabla a mano. No mide la ruta real de `EfectoCierrePuerta` hacia la invalidación. Esa conexión se comprueba con las pruebas de la capacidad y no con esta medición.
 - La carga es sintética (400 salas, 20 cazadores de rango 2400, el jugador sin moverse). Con un jugador que se mueve en cada ciclo la tabla se invalida cada vez y la ventaja desaparece, como muestra el caso H=1 de 5.1.
+
+
+## 5.5 La línea de tiempo
+
+Especificación: [spec.md](specs/004-linea-de-tiempo/spec.md). Plan: [plan.md](specs/004-linea-de-tiempo/plan.md). Investigación: [research.md](specs/004-linea-de-tiempo/research.md).
+
+**Coincidencia con el plan original.** La decisión coincide con el plan en sus cuatro elecciones de diseño: re-simular desde el punto de control más cercano, buscar con búsqueda binaria manual, recortar desde el final al usar un pergamino y restaurar el estado ya materializado sin preparar salas. Las mediciones de la carga `linea_tiempo` confirmaron las cuatro y ninguna se cambió. Hay tres diferencias respecto del plan, cada una motivada por una medición:
+1. **Índice plano por id en `CriptaMapa.obtener`.** El plan no lo contemplaba. Lo motivó un perfil de la consulta, donde `obtener` era el 40 % del tiempo total (ver "Cambios motivados por mediciones").
+2. **Puntos de control reducidos (T042).** El plan guardaba el estado completo en cada punto. Lo motivó la memoria de la línea base, 34494.7 KiB con K=50.
+3. **K=50 como valor predeterminado (T033).** El plan no fijaba K y exigía medirlo. Lo fijaron las mediciones de la tabla de esta sección.
+
+### Problema
+
+La partida debe poder mostrar su estado en un instante pasado (`historia <t>`) o justo antes de una acción numerada (`historia #k`) sin alterar la partida viva (FR-LIN-005). Una consulta debe aplicar o deshacer los cambios de no más de K acciones (FR-LIN-015), tardar menos de 50 ms con 5 000 acciones (FR-LIN-018) y la memoria debe crecer con los cambios y los puntos de control y no con acciones por tamaño del estado (FR-LIN-016). El pergamino recorta la línea y las acciones revertidas dejan de existir para la consulta (FR-LIN-007). La línea debe sobrevivir al guardado y a la carga (FR-LIN-010).
+
+**Frecuencia.** Registrar una acción ocurre en cada acción del jugador. Consultar ocurre pocas veces por partida, pero su costo es el que limita el valor de K. El recorte ocurre una vez por pergamino.
+
+### Alternativas consideradas
+
+Las razones de descarte vienen de [research.md](specs/004-linea-de-tiempo/research.md). Todas se midieron con `py -m cripta --bench --solo linea_tiempo --escala 1`. Las cifras de esta lista salen de `docs/bench/resultados_004_puntos_reducidos.md` y la de la restauración también de la línea base (`resultados_004_linea_base.md`).
+
+1. **Reconstruir hacia atrás con cambios serializables** frente a **re-simular desde el punto de control** (elegida). Con puntos cada 100 acciones y 13 consultas, la reconstrucción hacia atrás tardó una mediana de 0.843 ms y un máximo de 1.173 ms. Re-simular tardó 28.929 ms y 52.927 ms. Registrar costó 14.9 µs por acción hacia atrás y 6.7 µs re-simulando. La memoria fue 9193.6 KiB y 11885.9 KiB. **Hacia atrás es mucho más rápida al consultar y se descartó igual**, por tres razones. Primero, la medición es un modelo de cota inferior que solo registra los 9 campos visibles (sala, vida, estadísticas, inventario, efectos y enemigos de la sala) y no el azar, la agenda ni el mapa conocido, así que no reconstruye el estado completo que exige FR-LIN-017. Segundo, cada mutación del motor tendría que quedar cubierta de forma explícita, y una que falte cambia en silencio lo que muestra la historia. Tercero, su costo crece con las acciones que faltan hasta el final y no con K. El modelo coincidió con la re-simulación en 13 de 13 consultas.
+2. **Búsqueda lineal frente a binaria** (elegida) en dos lugares. Para pasar de un instante a una acción con 5000 elementos y 400 consultas, la binaria tardó 1.16 µs con 12.3 inspecciones en promedio y la lineal 106.13 µs con 2627.7, es decir 91.7 veces más lenta (en la línea base 76.1 veces). Para hallar el punto de control anterior con 50 elementos, la binaria tardó 0.54 µs con 5.8 inspecciones y la lineal 0.96 µs con 25.2, 1.8 veces más lenta. La comparación favorece algo a la lineal, porque la binaria cuenta la llamada al método y la lineal es un bucle directo.
+3. **Recorte desde el final frente a escanear y filtrar** (elegida la primera). Con 5000 acciones y 30 repeticiones, recortar desde el final tardó 3.18 µs y procesó 2 registros. Filtrar tardó 405.12 µs y examinó 5050 registros, 127.5 veces más lento (en la línea base 1.80 µs contra 388.34 µs, 215.3 veces).
+4. **Restaurar un punto con el estado ya materializado frente a preparar cada sala** (elegida la primera). Con 75 salas con contenido y 5 repeticiones, la vía materializada tardó 3.584 ms y 0.0 llamadas al cliente por consulta. Preparar las salas tardó 12.702 ms con 16.0 llamadas al cliente por consulta (75 llamadas a `preparar_sala`), 3.5 veces más lento. Cada llamada al cliente de fixtures lee un archivo, que es la E/S de la consulta. Con la red real, cada una sería además una solicitud contra el presupuesto.
+5. **Frecuencia de los puntos de control (K)**: 50, 100, 500, 1000 y ninguno. Se comparan en la tabla de Evidencia empírica.
+
+También se descartó reutilizar las inversas del historial de retroceso como registro histórico, porque son closures (no se pueden consultar ni guardar) y solo conservan cinco intervalos. Esa razón viene de research.md y no se midió.
+
+### Decisión
+
+La línea de tiempo (`LineaTiempo`, `cripta/modelo/linea_tiempo.py`) es un registro puro, sin red, archivos ni vista, hecho con listas contiguas. Guarda las acciones vigentes con su instante (dos listas paralelas), los puntos de control (`PuntoControl`, un número de acciones y un estado) y los ajustes de inventario del pergamino (una posición y las instancias afectadas). `Partida` (`cripta/modelo/partida.py`) la alimenta y la consulta.
+
+- **Qué es un punto de control.** `Partida._capturar` arma con `crear_estado` un estado plano que incluye el generador aleatorio, el reloj con su agenda, el jugador, el mapa, el conocimiento del jugador y el contador de instancias. Hay una base, capturada al iniciar la partida, que conserva todas las salas. Los puntos periódicos se crean tras registrar una acción cuando el número de acciones es múltiplo de K, siempre que haya turno listo y la partida siga en curso, y omiten las salas que se pueden reconstruir desde el esqueleto (T042).
+- **Consulta por acción** (`consultar_accion(k)`). Busca con búsqueda binaria el último punto con número de acciones menor o igual que k menos 1, o parte de la base si no hay ninguno, y re-simula las acciones que faltan hasta justo antes de la acción k.
+- **Consulta por instante** (`consultar_instante(t)`). Valida que t sea entero, no negativo, no posterior al reloj y no anterior al inicio de la línea. Con dos búsquedas binarias cuenta las acciones con instante menor que t y las de instante menor o igual que t. Si hay una decisión en t, o t es el reloj actual, reconstruye el estado tras las acciones anteriores a t, que es el estado justo antes de esa decisión (FR-LIN-002). Si no hay decisión en t, reconstruye hasta la acción previa y ejecuta además los eventos de la acción siguiente con tiempo menor o igual que t (FR-LIN-001).
+- **Reconstrucción aislada.** `_crear_aislada` copia el mapa estático (`copiar_mapa_estatico`) y arma una `Partida` nueva marcada como aislada y silenciosa, con una `PrecargaMaterializada` que sirve el contenido inicial de las salas y las fichas del catálogo. Restaura el punto con el azar y la agenda, apaga el registro de retroceso y re-simula con la misma lógica de las acciones. Aplica los ajustes de inventario en su posición. Si una acción re-simulada no se acepta, lanza `RuntimeError`. La copia no escribe bitácora, no emite mensajes ni toca la partida viva, y el resumen sale de ella.
+- **Contenido estático.** La primera vez que se prepara una sala viva, `_marcar_preparada_viva` guarda su contenido inicial en una tabla propia de la partida (`_contenido_inicial`). La reconstrucción lee de ahí y no llama a `preparar_sala`, así que no hay E/S del contenido de las salas ni solicitudes contra el presupuesto. Esto difiere en el detalle del plan, que proponía tomar el contenido de las salas ya materializadas, y el resultado observable es el mismo.
+- **Pergamino.** El pergamino revierte la última acción. `_recortar_linea_por_pergamino` trunca la línea en una acción menos, quita los puntos de control con número de acciones mayor que el nuevo largo y conserva el del borde. Anota un ajuste de inventario en esa posición con la diferencia entre el inventario previo a la acción revertida y el inventario vivo. El pergamino no se numera, y si ya había ajustes posteriores a la nueva posición se acumulan en ella.
+- **Guardado.** La línea completa, el contenido inicial de las salas y la base se guardan en el formato binario, que sube de versión una sola vez y rechaza los archivos de la Parte I (FR-LIN-011).
+- **K predeterminado.** K=50 (`CHECKPOINT_CADA_DEFECTO`), con `--checkpoint-cada K` para cambiarlo.
+
+**Por qué K=50.** Es el único valor de los medidos cuyo máximo observado de consulta queda por debajo de los 50 ms de FR-LIN-018: 24.457 ms con K=50 contra 51.072 ms con K=100, el siguiente. La mediana de K=100 (32.976 ms) sí cumple, pero el máximo no. Con K=50 el registro medio es 9.2 µs por acción y el peor ciclo 1.933 ms, ambos lejos de los 20 ms. El precio es memoria: la estimación del bench para K=50 es 22873.6 KiB contra 11885.9 KiB para K=100, es decir 1.92 veces más, y el archivo guardado de una partida de 5000 acciones pesa 1288.5 KiB (ver "Tamaño del archivo de guardado"). El criterio es el máximo de 21 consultas comunes y no una garantía para toda consulta posible (ver Límites conocidos).
+
+### Análisis de complejidad
+
+Letras usadas: **N** = acciones vigentes, **C** = puntos de control (cerca de N/K), **K** = frecuencia de los puntos, **S** = tamaño del estado completo, **r** = registros descartados por un pergamino.
+- **Pasar de un instante a una acción:** O(log N), con búsqueda binaria manual.
+- **Hallar el punto de control anterior:** O(log C).
+- **Reconstruir:** crear la copia aislada (copiar el mapa estático y restaurar el punto) cuesta en proporción al número de salas y al tamaño del estado, y re-simular cuesta como máximo K acciones, cada una con el costo normal de un ciclo de eventos. Una consulta no depende de N salvo por las búsquedas logarítmicas.
+- **Obtener una sala por id durante la reconstrucción:** O(1) con el índice plano de `CriptaMapa` (antes O(log n)).
+- **Registrar una acción:** O(1) por la acción y O(S) por cada punto de control, que ocurre una vez cada K acciones.
+- **Recortar por pergamino:** O(r), con r los registros que se descartan desde el final. En la medición r fue 2.
+- **Memoria:** O(N + C·S), con C = N/K. No crece como N·S (FR-LIN-016).
+
+### Evidencia empírica
+
+Medido con `py -m cripta --bench --solo linea_tiempo --escala 1` en el Equipo B (Intel Core Ultra 7, Windows 11, Python 3.14.6). La salida íntegra de cada corrida está en `docs/bench/resultados_004_linea_base.md` y `docs/bench/resultados_004_puntos_reducidos.md`. Cripta de referencia elegida por el mayor total de salas entre los fixtures (cripta-06, 300 salas y 760 salidas), semilla 20261117, 5000 acciones, vida máxima fijada antes de iniciar y 21 consultas comunes por escenario, incluidos los estados inmediatamente anteriores a un punto de control. Cada escenario es una partida independiente con la misma carga. La mediana y el máximo son de esas 21 consultas.
+
+| K | Puntos | Memoria estimada (KiB) | Mediana de consulta (ms) | Máximo observado (ms) | Registro medio (µs por acción) | Peor ciclo (ms) | Máximo bajo 50 ms |
+|---|---|---|---|---|---|---|---|
+| 50 | 100 | 22873.6 | 11.935 | 24.457 | 9.2 | 1.933 | Sí |
+| 100 | 50 | 11885.9 | 32.976 | 51.072 | 7.1 | 4.349 | No |
+| 500 | 10 | 3093.4 | 119.972 | 247.549 | 2.7 | 2.667 | No |
+| 1000 | 5 | 1992.5 | 210.444 | 481.429 | 2.5 | 2.745 | No |
+| Sin puntos | 0 | 882.7 | 793.650 | 2232.532 | 1.8 | 2.655 | No |
+
+Los cinco escenarios cumplen el límite de 20 ms del ciclo. La memoria estimada es la suma de `sys.getsizeof` de cada objeto que se alcanza desde la línea, sin descontar lo que comparten. **Es una cota superior** y no la memoria real, que es menor. Con K=50 la parte de las acciones es 882.6 KiB y la de los puntos 21990.9 KiB.
+
+Lo que muestra la tabla:
+- **El tiempo de consulta crece con K y la memoria baja con K.** Pasar de K=50 a K=1000 multiplica la mediana por 17.6 (de 11.935 a 210.444 ms) y divide la memoria estimada por 11.5 (de 22873.6 a 1992.5 KiB).
+- **Sin puntos periódicos es inviable.** La mediana es 793.650 ms y el máximo 2232.532 ms, porque cada consulta re-simula desde el inicio.
+- **El costo de registrar es bajo en todos los casos.** El peor ciclo nunca pasó de 4.349 ms.
+
+### Cambios motivados por mediciones
+
+**a. Índice plano por id en `CriptaMapa.obtener`.** No estaba en el plan. Un perfil de la consulta mostró que el 83 % del tiempo era re-simular y que `obtener` ocupaba el 40 % del tiempo total, porque la reconstrucción pide muchas veces la sala por id y cada pedido era una búsqueda binaria de O(log n). Se reemplazó por una lista indexada por id de sala (`_indice`), que da O(1). Es el cambio de una decisión de la Parte I (ver 5.1 y 5.6).
+
+Medición en el mismo equipo, mediana y máximo de consulta en ms. «Antes» sale de `docs/bench/resultados_004_antes_indice.md`, medido en el commit anterior al índice. «Después» sale de `docs/bench/resultados_004_linea_base.md`, con el índice ya aplicado.
+
+**Los dos archivos no usan exactamente la misma carga.** El de «antes» es la versión vieja de la carga: no tiene el escenario K=50, hace 16 consultas por escenario y no 21, y juega una sola partida con K=100 de la que los otros K reutilizan sus puntos de control. La carga nueva juega una partida independiente por escenario. Por eso la tabla compara solo los escenarios que existen en los dos archivos (K=100, 500, 1000 y sin puntos) y el máximo, que depende del conjunto de consultas, es el valor menos comparable. La memoria estimada de la línea es idéntica en los dos archivos para esos escenarios (por ejemplo 17690.4 KiB con K=100), así que el índice no la cambió.
+
+| K | Antes del índice (mediana, máximo) | Después del índice (mediana, máximo) | Razón de la mediana |
+|---|---|---|---|
+| 100 | 59.438, 101.570 | 31.490, 53.273 | 1.89 |
+| 500 | 227.926, 521.301 | 115.495, 249.615 | 1.97 |
+| 1000 | 458.146, 1089.326 | 205.440, 467.162 | 2.23 |
+| Sin puntos | 1901.980, 4291.973 | 856.935, 2222.919 | 2.22 |
+
+La consulta se hizo entre 1.9 y 2.2 veces más rápida en la mediana en los cuatro escenarios. Con K=100 el máximo pasó de 101.570 a 53.273 ms. En una corrida posterior al índice, K=100 dio una mediana de 31.8 ms y un máximo de 54.6 ms, en línea con la fila anterior. `ciclo_referencia` pasó de 3.144 ms (`resultados_001_a.md`) a 2.541 ms. Las razones de la mediana son más fiables que las de los máximos, y la diferencia de carga entre los dos archivos puede explicar parte de ellas.
+
+**b. Puntos de control reducidos (T042).** No estaba en el plan. En los puntos periódicos se omiten las salas nunca preparadas cuando sus puertas, rastro y enemigos activos permiten reconstruirlas desde el esqueleto. Solo cambia el contenido de los puntos periódicos, y no el punto inicial ni la correspondencia con la historia, el replay o el guardado. Comparación de la memoria estimada entre la línea base y la medición reducida (`resultados_004_puntos_reducidos.md`):
+
+| K | Antes (KiB) | Después (KiB) | Ahorro |
+|---|---|---|---|
+| 50 | 34494.7 | 22873.6 | 33.7 % |
+| 100 | 17690.4 | 11885.9 | 32.8 % |
+| 500 | 4245.8 | 3093.4 | 27.1 % |
+| 1000 | 2565.4 | 1992.5 | 22.3 % |
+| Sin puntos | 882.7 | 882.7 | 0.0 % |
+
+Los tiempos quedaron dentro del ruido entre corridas. La mediana con K=50 pasó de 12.616 a 11.935 ms y con K=100 de 31.490 a 32.976 ms. El máximo con K=100 pasó de 53.273 a 51.072 ms y siguió sobre los 50 ms. Con K=50 el máximo bajó de 24.817 a 24.457 ms. El ahorro es menor con K más grandes porque los puntos pesan menos en el total.
+
+### Tamaño del archivo de guardado
+
+Se midió el tamaño real en disco de `partida.sav` con K=50, tras jugar la partida con el mismo ayudante del bench (`_jugar_linea` de `cripta/bench/cargas_bench.py`, misma cripta de referencia y misma semilla) y guardar con `ServicioPartida.guardar`. Script propio, que se corre desde la raíz del proyecto:
+
+```text
+cliente = ClienteOffline(str(cb.DIRECTORIO_FIXTURES_BENCH))
+referencia = min(cliente.listar_criptas(), key=lambda c: (-c.salas, c.id))
+with cb._jugar_linea(acciones, 50, referencia.id) as corrida:
+    corrida.servicio.guardar(ruta)
+    tamano = os.path.getsize(ruta)
+```
+
+| Acciones | Puntos de control | Archivo (bytes) | Archivo (KiB) |
+|---|---|---|---|
+| 1000 | 20 | 281459 | 274.9 |
+| 5000 | 100 | 1319470 | 1288.5 |
+
+El archivo crece casi en proporción a las acciones (4.7 veces con 5 veces más acciones). **La memoria del bench y el archivo no son la misma cantidad.** La memoria del bench (22873.6 KiB con K=50 y 5000 acciones) es una cota superior, porque suma los objetos compartidos más de una vez y mide objetos de Python, y solo cuenta la línea. El archivo es el tamaño real en disco, en binario compacto, y contiene además el resto del estado de la partida. Por eso no se pueden restar entre sí. Con 5000 acciones y K=50 el archivo pesa unas 18 veces menos que la cota del bench. Una sola corrida, sin medir el tiempo de guardar ni de cargar.
+
+### Límites conocidos
+
+- **El estado cambiado a mano fuera de las acciones no se puede reconstruir.** La consulta re-simula acciones registradas, así que un cambio hecho directamente sobre el estado (por ejemplo subir la vida del jugador en una prueba) solo aparece si se hizo antes de iniciar la línea. Las pruebas de aceptación lo resuelven recapturando el estado base después del cambio.
+- **Una ficha desalojada de la caché puede obligar a leer disco o red.** La reconstrucción no prepara salas, pero si una ficha del catálogo ya no está en memoria, pedirla puede leer disco y, sin caché de disco, gastar solicitudes del presupuesto. No se midió con la red real.
+- **Una partida cargada conserva el K con que se guardó.** `--checkpoint-cada` no cambia la frecuencia de una partida ya guardada, y los puntos ya creados no se recalculan.
+- **`PuntoControlGuardado.siguiente_instancia` repite el valor de su estado.** Es un dato duplicado en el formato, que ocupa espacio sin aportar información nueva.
+- **La cripta de referencia ya no está fijada en el código.** Las cargas con partida real (`ciclo_referencia`, `historial_cazadores` y `linea_tiempo`) eligen la misma cripta con una función común, la de más salas entre los fixtures con desempate por menor id (cripta-06 con estos fixtures). Se eliminó la constante `CRIPTA_REFERENCIA`, que fijaba el id de una cripta concreta. Si el grupo prefiere otro criterio, solo cambia esa función.
+- **El máximo observado no es una garantía.** El valor de K se eligió con el máximo de 21 consultas comunes en una máquina y una cripta. Una consulta lejos de un punto de control, en otro equipo o con otra partida, podría pasar de 50 ms.
+- **La historia es una sola línea vigente.** El pergamino descarta la rama revertida (FR-LIN-007) y el inventario de instantes anteriores al pergamino se reconstruye con las acciones vigentes. Esta regla es una decisión del grupo pendiente de confirmar con el profesor.
 
 
 ## 5.6 Revisión de decisiones de la Parte I
@@ -864,7 +995,23 @@ Con 400 salas, el tiempo típico de una acción fue 8.85 ms antes y 5.42 ms desp
 
 La agenda y el historial mantienen su ventaja sobre las alternativas descartadas, con razones parecidas a las de la Parte I, y el ciclo sin cazadores sigue bajo el límite de 20 ms (1.654, 4.130 y 8.509 ms con 100, 300 y 600 actores). Las diferencias en microsegundos entre la Parte I y ahora vienen en buena parte de que se midieron en otro equipo y otro Python, así que no se interpretan como un cambio real. Se conservan las decisiones de la Parte I para la agenda y el historial.
 
-**Cuidado con la carga `historial`.** Es la misma carga sintética de la Parte I (6 inversas por acción, 200 salas y 60 actores) y **no tiene cazadores**. No mide el costo del historial con decenas de cazadores moviéndose entre dos acciones, que era el riesgo que el plan anotaba para el responsable de la capacidad 004. Ese riesgo sigue sin medirse con una carga propia.
+**Revisión repetida en la 004 (T039).** Con la línea de tiempo integrada se corrió `py -m cripta --bench --solo agenda historial ciclo partida ciclo_referencia` (Windows 11, Python 3.14.6, una sola corrida) y se comparó con `docs/bench/resultados_001_a.md`. No se encontró una regresión. Las diferencias son del orden del ruido entre corridas y van en ambos sentidos, y no se fijó un umbral de regresión.
+
+| Carga | `resultados_001_a.md` | T039 |
+|---|---|---|
+| Agenda, heap con 100, 500 y 2000 pendientes | 2.79, 3.80 y 5.09 µs por operación | 2.83, 3.95 y 5.41 µs por operación |
+| Agenda, cancelar y reprogramar | 0.47 µs por operación | 0.40 µs por operación |
+| Historial, registrar con 6 inversas | 1.90 µs | 1.59 µs |
+| Historial, deshacer 5 acciones | 3.34 µs | 2.68 µs |
+| Ciclo con 100, 300 y 600 actores | 1.16, 4.13 y 8.64 ms | 0.80, 4.15 y 7.12 ms |
+| Partida con 25, 100 y 400 salas (mediana de los peores casos) | 0.29, 3.12 y 13.21 ms | 0.34, 2.26 y 9.80 ms |
+| `ciclo_referencia` (cripta-06, 36 cazadores) | 3.144 ms | 2.675 ms |
+
+Todos los casos de `ciclo`, `partida` y `ciclo_referencia` cumplen el límite de 20 ms. Se conservan las decisiones de la Parte I para la agenda (montículo con orden `(tiempo, secuencia)`) y el historial de retroceso (inversas por cambio). **Una decisión de la Parte I sí cambió: la consulta de salas por id de `CriptaMapa`.** Pasó de búsqueda binaria a un índice plano por id con costo O(1), porque un perfil de la consulta histórica mostró que `obtener` ocupaba el 40 % del tiempo total (en 4.7 la búsqueda binaria del mapa había ocupado cerca del 8 % en otra carga). Con el índice, `ciclo_referencia` pasó de 3.144 ms a 2.541 ms en la medición de la sección 5.5. La carga `historial` sigue siendo sintética y sin cazadores. El costo del retroceso con cazadores se midió con la carga nueva `historial_cazadores`, descrita más abajo en esta sección.
+
+**Cuidado con la carga `historial`.** Es la misma carga sintética de la Parte I (6 inversas por acción, 200 salas y 60 actores) y **no tiene cazadores**. No mide el costo del historial con decenas de cazadores moviéndose entre dos acciones, que era el riesgo que el plan anotaba para el responsable de la capacidad 004. Ese riesgo se midió después con una carga propia, `historial_cazadores`, con `py -m cripta --bench --solo ciclo_referencia historial historial_cazadores` a escala 1 en el Equipo B y en una sola corrida. Sobre la cripta de referencia (cripta-06 con estos fixtures), con 36 cazadores activos al medir, cada una de 500 acciones se ejecutó, se revirtió con la acción pergamino real y se volvió a ejecutar. El intervalo de una acción registró una mediana de 200 operaciones inversas, un máximo de 637 y un mínimo de 21, frente a las 6 de la carga sintética. Revertir tardó una mediana de 267.5 µs y un máximo de 1435.9 µs por acción, con 1.37 µs por inversa en promedio. La carga sintética dio en esa misma corrida 5.44 µs por acción y 0.91 µs por inversa (la corrida de `historial` del mismo comando dio 4.04 µs por acción). Con cazadores, la mediana de revertir fue 49.2 veces la sintética. Casi todo ese aumento viene de la cantidad de inversas (200 contra 6, unas 33 veces más) y poco del costo de cada una (1.5 veces). El máximo de 1435.9 µs queda muy por debajo de los 20 ms del ciclo, que se usa aquí solo como referencia.
+
+Límites de esa medición. Es una sola corrida. El tiempo es el de la acción pergamino completa, que incluye invalidar las rutas, quitar el pergamino y recortar la línea. Los 36 cazadores se activan desde el inicio, igual que en `ciclo_referencia`, así que cada acción tiene más trabajo que en una partida normal. El costo de registrar las inversas no se midió por separado, solo cuántas son. En esa misma corrida `ciclo_referencia` dio un peor caso de 4.526 ms (peores de cada corrida 14.007, 4.526 y 4.502 ms) y cumple el límite de 20 ms por la mediana de los peores casos.
 
 ### Límites conocidos
 

@@ -20,7 +20,7 @@ CURSO = "Estructuras de Datos - II Ciclo 2026"
 _CONTROLES = (
     "n/s/e/o  moverse", "abrir <dir>  abrir puerta", "atacar <#>  ataca enemigo", "esperar  pasar el tiempo",
     "recoger <#>  del suelo", "sig / ant  mover cursor", "usar / equipar / soltar", "ordenar peso|valor|nombre",
-    "pergamino  deshacer", "guardar  guardar partida", "cargar  cargar partida", "salir  volver al menu",
+    "pergamino  deshacer", "guardar / cargar partida", "historia <t> | #<k>", "salir  volver al menu",
 )
 
 
@@ -173,6 +173,8 @@ class VistaConsola(VistaBase):
         if not partes:
             return None
         comando, argumento = partes[0], partes[1] if len(partes) > 1 else None
+        if comando == "historia":
+            return Orden("historia", " ".join(partes[1:]) or None)   # el controlador interpreta y rechaza
         if comando.upper() in _DIRECCIONES and argumento is None:
             return Orden("mover", comando.upper())
         if comando in ("mover", "abrir"):
@@ -312,6 +314,32 @@ class VistaConsola(VistaBase):
         lineas = [f"{n}. {o.ficha.nombre}  (peso {o.ficha.peso}, valor {o.ficha.valor})"
                   for n, o in enumerate(objetos, start=1)]
         self._pendientes += _caja(f"INVENTARIO ORDENADO POR {criterio.upper()}", lineas or ["(vacio)"], ANCHO)
+
+    def mostrar_historia(self, resumen, referencia: str) -> None:
+        # Sale con el siguiente estado, debajo de los mensajes, igual que el inventario ordenado
+        general = [f"Tiempo virtual: {resumen.tiempo}  |  Sala {resumen.sala_id}",
+                   f"Vida {resumen.vida}/{resumen.vida_max}",
+                   f"Ataque {resumen.ataque} | Defensa {resumen.defensa} | Velocidad {resumen.velocidad}",
+                   "Efectos: " + (", ".join(resumen.efectos_activos) or "ninguno")]
+        inventario = [f"{n}. {o.ficha_id}  ({o.instancia_id})" for n, o in enumerate(resumen.inventario, start=1)]
+        enemigos = [f"{n}. {e.etiqueta}   PV {e.vida}/{e.vida_max}" + ("  [CAZADOR]" if e.es_cazador else "")
+                    for n, e in enumerate(resumen.enemigos, start=1)]
+        self._pendientes += ([""] + _caja(f"HISTORIA  {referencia}", general, ANCHO)
+                             + _caja("INVENTARIO", inventario or ["(vacio)"], ANCHO)
+                             + _caja("ENEMIGOS", enemigos or ["(ninguno)"], ANCHO)
+                             + _caja("MAPA CONOCIDO", self._lineas_del_mapa(resumen.mapa_conocido), ANCHO))
+
+    @staticmethod
+    def _lineas_del_mapa(mapa_conocido) -> list[str]:
+        # Una línea por sala conocida y, si está explorada, una por cada salida con su costo y su puerta.
+        lineas = []
+        for sala in mapa_conocido:
+            nombre = f"{sala.nombre} " if sala.nombre else ""
+            lineas.append(f"Sala {sala.id_sala}: {nombre}({sala.estado})")
+            for s in sala.salidas:
+                costo = "?" if s.costo is None else s.costo
+                lineas.append(f"    {s.direccion}->{s.id_sala_destino} ({costo}) {s.estado_puerta}")
+        return lineas or ["(nada conocido)"]
 
     # ------------------------------------------------------- puntajes y final
     def mostrar_resultado(self, desenlace, resumen, nombre, ranking, puntajes) -> None:

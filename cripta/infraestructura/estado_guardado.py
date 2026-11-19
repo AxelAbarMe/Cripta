@@ -9,7 +9,7 @@ acciones a partir de esos datos.
 Incluye el estado interno de random.Random(semilla) para que, al continuar una
 partida cargada, la secuencia de azar sea EXACTAMENTE la que habría seguido (§2.6).
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 # Tipos de evento de la agenda (qué debe reconstruir el cargador)
 EV_TURNO_ACTOR = 0        # sujeto = "jugador" o instancia del enemigo
@@ -103,6 +103,51 @@ class EstadoRNG:
 
 
 @dataclass(frozen=True, slots=True)
+class AccionGuardada:
+    """Una acción vigente de la línea de tiempo. El argumento es texto, entero o None."""
+    tipo: str
+    argumento: str | int | None
+    tiempo: int                              # instante de la decisión en que se tomó
+
+
+@dataclass(frozen=True, slots=True)
+class AjusteGuardado:
+    """Una operación de ajuste de inventario anotada en una posición de la línea (sin número de acción)."""
+    posicion: int
+    operacion: str                           # "quitar" o "agregar"
+    instancia_id: str
+    ficha_id: str                            # vacío al quitar
+
+
+@dataclass(frozen=True, slots=True)
+class PuntoControlGuardado:
+    """Estado completo tras `numero_acciones` acciones, con su azar y su conocimiento dentro de `estado`."""
+    numero_acciones: int
+    estado: "EstadoPartida"
+    siguiente_instancia: int                 # contador de ids de objetos recogidos, que el estado no trae
+
+
+@dataclass(frozen=True, slots=True)
+class ContenidoSalaGuardado:
+    """Contenido de una sala al prepararla por primera vez, necesario para reconstruir el pasado."""
+    sala_id: int
+    objetos: tuple[str, ...]
+    trampas: tuple[tuple[str, str], ...]     # (instancia, tipo)
+    enemigos: tuple[tuple[str, str, int], ...]   # (instancia, tipo, vida)
+
+
+@dataclass(frozen=True, slots=True)
+class LineaGuardada:
+    """Línea de tiempo vigente completa (004): base, acciones, ajustes y checkpoints."""
+    frecuencia: int
+    base: PuntoControlGuardado
+    acciones: tuple[AccionGuardada, ...]
+    ajustes: tuple[AjusteGuardado, ...]
+    checkpoints: tuple[PuntoControlGuardado, ...]
+    contenidos: tuple[ContenidoSalaGuardado, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class EstadoPartida:
     cripta_id: str
     cripta_version: str
@@ -117,5 +162,6 @@ class EstadoPartida:
     salas: tuple[SalaGuardada, ...]
     eventos: tuple[EventoGuardado, ...]
     mensajes: tuple[str, ...]
-    # La 004 debe codificar este campo y quitar compare=False.
-    conocimiento: ConocimientoGuardado | None = field(default=None, compare=False)
+    conocimiento: ConocimientoGuardado | None = None
+    linea: LineaGuardada | None = None
+    siguiente_instancia: int = 0             # contador de ids "i-N" de los objetos recogidos

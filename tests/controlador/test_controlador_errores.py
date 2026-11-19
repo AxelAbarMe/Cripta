@@ -77,6 +77,9 @@ class VistaDeDesplazamientos:
 
     def confirmar(self, pregunta):
         return True
+    
+    def mostrar_reporte_resolubilidad(self, resultado, forzada=False):
+        pass
 
 
 class TestDesplazamientoRechazado(unittest.TestCase):

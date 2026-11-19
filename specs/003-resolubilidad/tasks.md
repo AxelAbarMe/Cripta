@@ -45,22 +45,22 @@ aislada de red, disco y vista. Las pruebas van primero.
 
 ### Pruebas de dominio — se escriben primero
 
-- [ ] T001 [US1][US2][US3] Crear el esqueleto de `tests/modelo/test_resolubilidad.py` con los fixtures sintéticos reutilizables (cripta lineal simple, cripta con ciclo, cripta con enemigo errante, cripta con varios órdenes válidos); todos los casos de prueba del bloque T002–T004 se colocan en este archivo — **Nuevo**: `tests/modelo/test_resolubilidad.py`
+- [X] T001 [US1][US2][US3] Crear el esqueleto de `tests/modelo/test_resolubilidad.py` con los fixtures sintéticos reutilizables (cripta lineal simple, cripta con ciclo, cripta con enemigo errante, cripta con varios órdenes válidos); todos los casos de prueba del bloque T002–T004 se colocan en este archivo — **Nuevo**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-001 a FR-RES-012, FR-RES-018, FR-RES-019, FR-RES-022, SC-003, SC-004
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: el archivo existe, `discover` lo encuentra, todos los casos fallan con `ImportError` o `AttributeError` (aún no hay implementación).
 
-- [ ] T002 [US1][US2] Escribir casos de prueba del recorrido incremental básico en `tests/modelo/test_resolubilidad.py`: cripta resoluble directa, llaves no consumibles, trampas no bloquean, puerta abierta a sala_salida sin llave_salida = NO resoluble (caso límite de spec.md), cripta desconectada sin puertas, sala inicial sin salidas transitables, llave_salida inmediatamente accesible — **Modificado**: `tests/modelo/test_resolubilidad.py`
+- [X] T002 [US1][US2] Escribir casos de prueba del recorrido incremental básico en `tests/modelo/test_resolubilidad.py`: cripta resoluble directa, llaves no consumibles, trampas no bloquean, puerta abierta a sala_salida sin llave_salida = NO resoluble (caso límite de spec.md), cripta desconectada sin puertas, sala inicial sin salidas transitables, llave_salida inmediatamente accesible — **Modificado**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-001, FR-RES-002, FR-RES-003, FR-RES-006, SC-004
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: todos los métodos de este bloque existen en el archivo y fallan (implementación ausente).
 
-- [ ] T003 [US3][US4][US5] Escribir casos de prueba de diagnóstico, determinismo y enemigos en `tests/modelo/test_resolubilidad.py`: llave de salida tras su propia puerta (Apéndice B), llaves obtenibles del campo `suelta` de cualquier enemigo (Apéndice B), varios órdenes válidos producen misma secuencia (Apéndice B, SC-003), cadena doble de ciclos independientes, puerta cerrada sin llave, llave exigida sin ubicación (FR-RES-022), puertas bilaterales (FR-RES-019) — **Modificado**: `tests/modelo/test_resolubilidad.py`
+- [X] T003 [US3][US4][US5] Escribir casos de prueba de diagnóstico, determinismo y enemigos en `tests/modelo/test_resolubilidad.py`: llave de salida tras su propia puerta (Apéndice B), llaves obtenibles del campo `suelta` de cualquier enemigo (Apéndice B), varios órdenes válidos producen misma secuencia (Apéndice B, SC-003), cadena doble de ciclos independientes, puerta cerrada sin llave, llave exigida sin ubicación (FR-RES-022), puertas bilaterales (FR-RES-019) — **Modificado**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-005, FR-RES-007, FR-RES-008, FR-RES-009, FR-RES-010, FR-RES-011, FR-RES-012, FR-RES-019, FR-RES-022, SC-003, SC-004
   - Comando: `py -m unittest tests.modelo.test_resolubilidad -k ApendiceB`
   - Hecho: métodos nombrados con sufijo `_ApendiceB` existen y fallan.
 
-- [ ] T004 [US1][US3] Escribir casos de prueba del recorrido incremental único (`FR-RES-018`) y de la alternativa ingenua `verificar_ingenuo_reiniciado` en `tests/modelo/test_resolubilidad.py`: ambos métodos producen el mismo `ResultadoResolubilidad.es_resoluble` sobre la misma cripta; `verificar_ingenuo_reiniciado` existe como método separado — **Modificado**: `tests/modelo/test_resolubilidad.py`
+- [X] T004 [US1][US3] Escribir casos de prueba del recorrido incremental único (`FR-RES-018`) y de la alternativa ingenua `verificar_ingenuo_reiniciado` en `tests/modelo/test_resolubilidad.py`: ambos métodos producen el mismo `ResultadoResolubilidad.es_resoluble` sobre la misma cripta; `verificar_ingenuo_reiniciado` existe como método separado — **Modificado**: `tests/modelo/test_resolubilidad.py`
   - Requisitos: FR-RES-018, FR-RES-020
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: métodos existen y fallan por `AttributeError`.
@@ -69,27 +69,27 @@ aislada de red, disco y vista. Las pruebas van primero.
 
 ### Implementación del módulo de dominio
 
-- [ ] T005 Implementar entidades de datos inmutables en `cripta/modelo/resolubilidad.py`: `ResultadoResolubilidad` (`frozen=True, slots=True`; atributos: `es_resoluble: bool`, `llaves_obtenidas: tuple[str,...]`, `llaves_no_obtenibles: tuple[str,...]`, `frontera_bloqueada: tuple[FronteraBloqueadaPuerta,...]`, `ubicaciones_llaves: tuple[UbicacionLlaveDiagnostico,...]`, `ciclos_dependencia: tuple[CicloDependenciaLlaves,...]`, `motivo_no_resoluble: str | None`; método `reporte_texto() -> str`), `FronteraBloqueadaPuerta`, `CicloDependenciaLlaves` (método `formato() -> str`), `UbicacionLlaveDiagnostico` (estados `"obtenible"`, `"no_obtenible"`, `"sin_ubicacion"`) — **Nuevo**: `cripta/modelo/resolubilidad.py`
+- [X] T005 Implementar entidades de datos inmutables en `cripta/modelo/resolubilidad.py`: `ResultadoResolubilidad` (`frozen=True, slots=True`; atributos: `es_resoluble: bool`, `llaves_obtenidas: tuple[str,...]`, `llaves_no_obtenibles: tuple[str,...]`, `frontera_bloqueada: tuple[FronteraBloqueadaPuerta,...]`, `ubicaciones_llaves: tuple[UbicacionLlaveDiagnostico,...]`, `ciclos_dependencia: tuple[CicloDependenciaLlaves,...]`, `motivo_no_resoluble: str | None`; método `reporte_texto() -> str`), `FronteraBloqueadaPuerta`, `CicloDependenciaLlaves` (método `formato() -> str`), `UbicacionLlaveDiagnostico` (estados `"obtenible"`, `"no_obtenible"`, `"sin_ubicacion"`) — **Nuevo**: `cripta/modelo/resolubilidad.py`
   - Requisitos: FR-RES-007, FR-RES-008, FR-RES-009, FR-RES-010, FR-RES-011, FR-RES-012
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: las cuatro clases de datos pueden importarse; los tests de instanciación directa pasan.
 
-- [ ] T006 Implementar catálogo ordenado y búsqueda binaria manual en `cripta/modelo/resolubilidad.py`: función `_busqueda_binaria(catalogo: list[str], clave: str) -> int` (10 líneas, sin `bisect`); función `_construir_catalogo(llaves_salida: str, llaves_puertas: list[str], llaves_ubicaciones: list[str]) -> list[str]` que ordena con `Ordenamiento.merge_sort` de `cripta/estructuras/ordenamientos.py` y deduplica en pasada lineal; tablas contiguas `llave_obtenida`, `puertas_pendientes`, `ubicaciones_por_llave`, `llaves_en_sala`, `visitada` como listas de Python indexadas por entero — **Modificado**: `cripta/modelo/resolubilidad.py`
+- [X] T006 Implementar catálogo ordenado y búsqueda binaria manual en `cripta/modelo/resolubilidad.py`: función `_busqueda_binaria(catalogo: list[str], clave: str) -> int` (10 líneas, sin `bisect`); función `_construir_catalogo(llaves_salida: str, llaves_puertas: list[str], llaves_ubicaciones: list[str]) -> list[str]` que ordena con `Ordenamiento.merge_sort` de `cripta/estructuras/ordenamientos.py` y deduplica en pasada lineal; tablas contiguas `llave_obtenida`, `puertas_pendientes`, `ubicaciones_por_llave`, `llaves_en_sala`, `visitada` como listas de Python indexadas por entero — **Modificado**: `cripta/modelo/resolubilidad.py`
   - Requisitos: FR-RES-002, FR-RES-003, FR-RES-008 (desempate por menor índice en catálogo ordenado)
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: `_busqueda_binaria` y `_construir_catalogo` importables; pruebas de catálogo pasan.
 
-- [ ] T007 Implementar `VerificadorResolubilidad.__init__` y el recorrido incremental único `verificar()` en `cripta/modelo/resolubilidad.py`: recibe `mapa: CriptaMapa`, `sala_inicial: int`, `sala_salida: int`, `llave_salida: str`, `llaves_ubicaciones: tuple[LlaveUbicacionDTO, ...]`; usa `Cola` (`cripta/estructuras/cola.py`) para la cola de salas, `HeapMinimo` (`cripta/estructuras/heap_min.py`) como `candidatas` para elegir la llave de menor identificador al vaciarse la cola; al agotarse candidatas sin cumplir condición de victoria, construye `frontera_bloqueada` y `llaves_no_obtenibles`; bandera `entro_por_llave_salida` según Regla 1 de `data-model.md`; retorna `ResultadoResolubilidad` — **Modificado**: `cripta/modelo/resolubilidad.py`
+- [X] T007 Implementar `VerificadorResolubilidad.__init__` y el recorrido incremental único `verificar()` en `cripta/modelo/resolubilidad.py`: recibe `mapa: CriptaMapa`, `sala_inicial: int`, `sala_salida: int`, `llave_salida: str`, `llaves_ubicaciones: tuple[LlaveUbicacionDTO, ...]`; usa `Cola` (`cripta/estructuras/cola.py`) para la cola de salas, `HeapMinimo` (`cripta/estructuras/heap_min.py`) como `candidatas` para elegir la llave de menor identificador al vaciarse la cola; al agotarse candidatas sin cumplir condición de victoria, construye `frontera_bloqueada` y `llaves_no_obtenibles`; bandera `entro_por_llave_salida` según Regla 1 de `data-model.md`; retorna `ResultadoResolubilidad` — **Modificado**: `cripta/modelo/resolubilidad.py`
   - Requisitos: FR-RES-001, FR-RES-002, FR-RES-003, FR-RES-004, FR-RES-005, FR-RES-006, FR-RES-007, FR-RES-008, FR-RES-018
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: T002 y T004 pasan; sin uso de `dict`, `set`, `heapq`, `bisect` ni `sort`/`sorted`.
 
-- [ ] T008 Implementar detección de ciclos por DFS tricolor en `cripta/modelo/resolubilidad.py`: función interna `_detectar_ciclos(llaves_no_obtenibles, puertas_pendientes, ubicaciones_por_llave, catalogo)` que (1) hace flood-fill O(V+E) desde frontera bloqueada sobre salas inalcanzables para construir `G_dep` como `list[list[int]]` bipartito (nodos: las llaves no obtenibles y los bloques de salas inalcanzables; aristas bloque→llave exigida por cada puerta que entra al bloque y llave→bloque donde está la llave), (2) ejecuta DFS tricolor con `color: list[int]` del tamaño de ese total de nodos (0=blanco, 1=gris, 2=negro) y `pila_camino: list[int]` como lista contigua sin `deque`, (3) informa cada ciclo solo con llaves (se omiten los bloques) y lo normaliza al menor identificador léxico rotando con índices enteros, (4) ordena ciclos entre grupos por llave menor; retorna `tuple[CicloDependenciaLlaves, ...]` — **Modificado**: `cripta/modelo/resolubilidad.py`
+- [X] T008 Implementar detección de ciclos por DFS tricolor en `cripta/modelo/resolubilidad.py`: función interna `_detectar_ciclos(llaves_no_obtenibles, puertas_pendientes, ubicaciones_por_llave, catalogo)` que (1) hace flood-fill O(V+E) desde frontera bloqueada sobre salas inalcanzables para construir `G_dep` como `list[list[int]]` bipartito (nodos: las llaves no obtenibles y los bloques de salas inalcanzables; aristas bloque→llave exigida por cada puerta que entra al bloque y llave→bloque donde está la llave), (2) ejecuta DFS tricolor con `color: list[int]` del tamaño de ese total de nodos (0=blanco, 1=gris, 2=negro) y `pila_camino: list[int]` como lista contigua sin `deque`, (3) informa cada ciclo solo con llaves (se omiten los bloques) y lo normaliza al menor identificador léxico rotando con índices enteros, (4) ordena ciclos entre grupos por llave menor; retorna `tuple[CicloDependenciaLlaves, ...]` — **Modificado**: `cripta/modelo/resolubilidad.py`
   - Requisitos: FR-RES-009, FR-RES-010, FR-RES-011, FR-RES-012
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: T003 pasa (Apéndice B, cadena doble de ciclos, puerta sin llave, llave sin ubicación).
 
-- [ ] T009 Implementar `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` en `cripta/modelo/resolubilidad.py`: alternativa descartada que reinicia un BFS completo desde `sala_inicial` con las llaves disponibles en cada ronda hasta que ninguna pasada descubre llaves nuevas; misma firma de retorno (`ResultadoResolubilidad`) para validación cruzada en `--bench` — **Modificado**: `cripta/modelo/resolubilidad.py`
+- [X] T009 Implementar `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` en `cripta/modelo/resolubilidad.py`: alternativa descartada que reinicia un BFS completo desde `sala_inicial` con las llaves disponibles en cada ronda hasta que ninguna pasada descubre llaves nuevas; misma firma de retorno (`ResultadoResolubilidad`) para validación cruzada en `--bench` — **Modificado**: `cripta/modelo/resolubilidad.py`
   - Requisitos: FR-RES-018, FR-RES-020
   - Comando: `py -m unittest tests.modelo.test_resolubilidad`
   - Hecho: T004 pasa; `verificar_ingenuo_reiniciado` produce mismo `es_resoluble` que `verificar` en todos los fixtures.
@@ -107,7 +107,7 @@ Depende de Fase A completa (T001–T009 en ✅).
 
 ### Pruebas de servicio — se escriben primero
 
-- [ ] T010 Escribir `tests/servicios/test_servicio_resolubilidad.py` con casos: obtiene llaves por red y persiste en caché, segunda llamada usa caché sin consumir presupuesto, presupuesto agotado antes de llaves lanza `CriptaLimiteError` sin reporte parcial, costos contradictorios en esqueleto lanzan `CriptaDatosInvalidosError`, retorna `ResultadoResolubilidad` completo sobre fixture resoluble — **Nuevo**: `tests/servicios/test_servicio_resolubilidad.py`
+- [X] T010 Escribir `tests/servicios/test_servicio_resolubilidad.py` con casos: obtiene llaves por red y persiste en caché, segunda llamada usa caché sin consumir presupuesto, presupuesto agotado antes de llaves lanza `CriptaLimiteError` sin reporte parcial, costos contradictorios en esqueleto lanzan `CriptaDatosInvalidosError`, retorna `ResultadoResolubilidad` completo sobre fixture resoluble — **Nuevo**: `tests/servicios/test_servicio_resolubilidad.py`
   - Requisitos: FR-RES-017, FR-RES-021, FR-RES-023, SC-006, SC-008
   - Comando: `py -m unittest tests.servicios.test_servicio_resolubilidad`
   - Hecho: archivo existe, `discover` lo encuentra, todos los casos fallan por `ImportError`.
@@ -116,7 +116,7 @@ Depende de Fase A completa (T001–T009 en ✅).
 
 ### Implementación del servicio
 
-- [ ] T011 Implementar `ServicioResolubilidad` en `cripta/servicios/servicio_resolubilidad.py`: recibe `cliente: ClienteCripta`, `contador: ContadorSolicitudes`, `cache_disco: CacheDisco | None = None`; método `verificar(id_cripta: str) -> ResultadoResolubilidad` que (a) obtiene datos generales y esqueleto paginado con `contador`, (b) consulta `cache_disco.leer_llaves` antes de llamar `cliente.obtener_llaves` (clave versionada `cripta.<id>.<ver>.llaves.json`), (c) si presupuesto se agota lanza `CriptaLimiteError`, (d) construye `CriptaMapa` (si lanza `CriptaDatosInvalidosError` propaga sin reporte), (e) instancia `VerificadorResolubilidad` y retorna resultado — **Nuevo**: `cripta/servicios/servicio_resolubilidad.py`
+- [X] T011 Implementar `ServicioResolubilidad` en `cripta/servicios/servicio_resolubilidad.py`: recibe `cliente: ClienteCripta`, `contador: ContadorSolicitudes`, `cache_disco: CacheDisco | None = None`; método `verificar(id_cripta: str) -> ResultadoResolubilidad` que (a) obtiene datos generales y esqueleto paginado con `contador`, (b) consulta `cache_disco.leer_llaves` antes de llamar `cliente.obtener_llaves` (clave versionada `cripta.<id>.<ver>.llaves.json`), (c) si presupuesto se agota lanza `CriptaLimiteError`, (d) construye `CriptaMapa` (si lanza `CriptaDatosInvalidosError` propaga sin reporte), (e) instancia `VerificadorResolubilidad` y retorna resultado — **Nuevo**: `cripta/servicios/servicio_resolubilidad.py`
   - Requisitos: FR-RES-017, FR-RES-021, FR-RES-023, SC-006, SC-008
   - Comando: `py -m unittest tests.servicios.test_servicio_resolubilidad`
   - Hecho: T010 pasa; sin importaciones de red en modelo; `ClienteFalso` de `tests/cliente_falso.py` suficiente para los tests.
@@ -134,7 +134,7 @@ Depende de Fase B completa.
 
 ### Pruebas de controlador — se escriben primero
 
-- [ ] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación (caso del Apéndice B, método con sufijo `_ApendiceB`), el reporte se imprime con el formato del §3 del contrato (métodos con `reporte` en el nombre), inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista, y devuelve el código 0 (cripta resoluble o no resoluble), 1 (datos inválidos) o 2 (error externo) según el contrato §1.1 (métodos con `codigo_salida` en el nombre) — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
+- [X] T012 [P] Escribir `tests/controlador/test_controlador_resolubilidad.py` con casos: inicio regular sobre cripta resoluble muestra reporte y arranca partida, inicio regular sobre cripta no resoluble sin `--forzar` aborta sin bucle de simulación (caso del Apéndice B, método con sufijo `_ApendiceB`), el reporte se imprime con el formato del §3 del contrato (métodos con `reporte` en el nombre), inicio regular con `--forzar` muestra advertencia y continúa, `--verificar` llama servicio sin instanciar vista, y devuelve el código 0 (cripta resoluble o no resoluble), 1 (datos inválidos) o 2 (error externo) según el contrato §1.1 (métodos con `codigo_salida` en el nombre) — **Nuevo**: `tests/controlador/test_controlador_resolubilidad.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015, FR-RES-016, FR-RES-024, SC-005
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: archivo existe, todos los casos fallan por `ImportError`.
@@ -143,22 +143,22 @@ Depende de Fase B completa.
 
 ### Implementación de CLI y vista
 
-- [ ] T013 Agregar el método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False) -> None` a `cripta/vista/vista_base.py`, agregar implementación vacía a las vistas falsas que heredan de `VistaBase` en `tests/controlador/test_controlador_cripta.py`, e implementar el método en `cripta/vista/vista_consola.py`. La implementación imprime por `sys.stdout` el reporte según `contracts/contrato_resolubilidad.md` §3, con ancho de 81 caracteres, secciones de llaves obtenidas o diagnóstico de no resolubilidad, puertas de frontera y ciclos, y advertencia cuando `forzada` sea verdadero — **Modificado**: `cripta/vista/vista_base.py`, `tests/controlador/test_controlador_cripta.py` y `cripta/vista/vista_consola.py`
+- [X] T013 Agregar el método abstracto `mostrar_reporte_resolubilidad(resultado: ResultadoResolubilidad, forzada: bool = False) -> None` a `cripta/vista/vista_base.py`, agregar implementación vacía a las vistas falsas que heredan de `VistaBase` en `tests/controlador/test_controlador_cripta.py`, e implementar el método en `cripta/vista/vista_consola.py`. La implementación imprime por `sys.stdout` el reporte según `contracts/contrato_resolubilidad.md` §3, con ancho de 81 caracteres, secciones de llaves obtenidas o diagnóstico de no resolubilidad, puertas de frontera y ciclos, y advertencia cuando `forzada` sea verdadero — **Modificado**: `cripta/vista/vista_base.py`, `tests/controlador/test_controlador_cripta.py` y `cripta/vista/vista_consola.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
   - Comando: `py -m unittest discover -s tests -t .`
   - Hecho: todas las vistas siguen instanciándose; la suite completa pasa y el reporte coincide con el formato de §3 (81 caracteres).
 
-- [ ] T014 Integrar verificación en `cripta/servicios/servicio_partida.py`: antes de instanciar `Partida`, invocar `ServicioResolubilidad.verificar(id_cripta)` y adjuntar el `ResultadoResolubilidad` al objeto devuelto al controlador — **Modificado**: `cripta/servicios/servicio_partida.py`
+- [X] T014 Integrar verificación en `cripta/servicios/servicio_partida.py`: antes de instanciar `Partida`, invocar `ServicioResolubilidad.verificar(id_cripta)` y adjuntar el `ResultadoResolubilidad` al objeto devuelto al controlador — **Modificado**: `cripta/servicios/servicio_partida.py`
   - Requisitos: FR-RES-013
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: el controlador recibe el resultado sin abrir vista; T012 pasa.
 
-- [ ] T015 Modificar `cripta/controlador/controlador_cripta.py`: aceptar `forzar: bool = False`; en `_iniciar_partida` (o equivalente), obtener `ResultadoResolubilidad` del servicio, llamar `vista.mostrar_reporte_resolubilidad(resultado, forzada=forzar)`; si `not resultado.es_resoluble and not forzar` retornar sin entrar al bucle interactivo — **Modificado**: `cripta/controlador/controlador_cripta.py`
+- [X] T015 Modificar `cripta/controlador/controlador_cripta.py`: aceptar `forzar: bool = False`; en `_iniciar_partida` (o equivalente), obtener `ResultadoResolubilidad` del servicio, llamar `vista.mostrar_reporte_resolubilidad(resultado, forzada=forzar)`; si `not resultado.es_resoluble and not forzar` retornar sin entrar al bucle interactivo — **Modificado**: `cripta/controlador/controlador_cripta.py`
   - Requisitos: FR-RES-013, FR-RES-014, FR-RES-015
   - Comando: `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: T012 pasa; las pruebas previas siguen en OK.
 
-- [ ] T016 Agregar banderas `--verificar <id_cripta>` y `--forzar` en `cripta/__main__.py`: si `--verificar` está presente, instanciar `ServicioResolubilidad` con `ClienteOffline` o `ClienteHttp` y `CacheDisco`, llamar `servicio.verificar(id_cripta)`, imprimir `resultado.reporte_texto()` a `sys.stdout`, salir con código `0`/`1`/`2` según contrato §1.1 sin instanciar `VistaConsola`; si no está `--verificar`, pasar `forzar` al controlador — **Modificado**: `cripta/__main__.py`
+- [X] T016 Agregar banderas `--verificar <id_cripta>` y `--forzar` en `cripta/__main__.py`: si `--verificar` está presente, instanciar `ServicioResolubilidad` con `ClienteOffline` o `ClienteHttp` y `CacheDisco`, llamar `servicio.verificar(id_cripta)`, imprimir `resultado.reporte_texto()` a `sys.stdout`, salir con código `0`/`1`/`2` según contrato §1.1 sin instanciar `VistaConsola`; si no está `--verificar`, pasar `forzar` al controlador — **Modificado**: `cripta/__main__.py`
   - Requisitos: FR-RES-014, FR-RES-015, FR-RES-016, FR-RES-024, SC-005
   - Comando: `py -m cripta --offline --verificar cripta-02` (sin vista interactiva; requiere que los datos de esa cripta ya estén guardados para --offline, por ejemplo tras descargarla en línea una vez); `py -m unittest tests.controlador.test_controlador_resolubilidad`
   - Hecho: T012 pasa; `--verificar` imprime reporte y sale sin instanciar la vista; `--forzar` pasa la bandera al controlador.
@@ -174,21 +174,21 @@ Depende de Fase A completa (el verificador ya funciona); puede solaparse con Fas
 
 ---
 
-- [ ] T017 Escribir `tests/servicios/test_servicio_bench.py` para comprobar que el generador sintético y las cargas producen la misma salida con la misma semilla, usando `test_bench_resolubilidad_reproducible` definido en el plan — **Nuevo**: `tests/servicios/test_servicio_bench.py`
+- [X] T017 Escribir `tests/servicios/test_servicio_bench.py` para comprobar que el generador sintético y las cargas producen la misma salida con la misma semilla, usando `test_bench_resolubilidad_reproducible` definido en el plan — **Nuevo**: `tests/servicios/test_servicio_bench.py`
   - Requisitos: FR-RES-020, SC-007
   - Comando: `py -m unittest tests.servicios.test_servicio_bench`
   - Hecho: el test verifica igualdad reproducible para el generador y las cargas con semilla fija.
-- [ ] T018 Implementar generador sintético determinista en `cripta/bench/cargas_bench.py`: función `_generar_cripta_encadenada(k: int, salas_por_segmento: int, semilla: int) -> tuple[CriptaMapa, int, int, str, tuple[LlaveUbicacionDTO,...]]` que construye una cripta de `k` llaves en cadena a través de `k * salas_por_segmento` salas usando `random.Random(semilla)` para ruido aleatorio deterministico (sin `random` global), cada segmento `i` tiene puerta cerrada que requiere llave `k_i` y llave `k_i` en sala lateral; última sala tiene puerta que exige `llave_salida`; sin ningún `dict` ni `set` en la función — **Modificado**: `cripta/bench/cargas_bench.py`
+- [X] T018 Implementar generador sintético determinista en `cripta/bench/cargas_bench.py`: función `_generar_cripta_encadenada(k: int, salas_por_segmento: int, semilla: int) -> tuple[CriptaMapa, int, int, str, tuple[LlaveUbicacionDTO,...]]` que construye una cripta de `k` llaves en cadena a través de `k * salas_por_segmento` salas usando `random.Random(semilla)` para ruido aleatorio deterministico (sin `random` global), cada segmento `i` tiene puerta cerrada que requiere llave `k_i` y llave `k_i` en sala lateral; última sala tiene puerta que exige `llave_salida`; sin ningún `dict` ni `set` en la función — **Modificado**: `cripta/bench/cargas_bench.py`
   - Requisitos: FR-RES-020, SC-007
   - Comando: `py -m cripta --bench --solo resolubilidad`
   - Hecho: función importable; generador produce siempre la misma cripta para `SEMILLA_BENCH = 20260928`.
 
-- [ ] T019 Registrar carga `"resolubilidad"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad(escala: float = 1.0)` que llama `_generar_cripta_encadenada(k, 20, SEMILLA_BENCH)` para tres escalas crecientes: `k` de 10, 20 y 40 (ajustados por `escala`), con 200, 400 y 800 salas respectivamente; ejecuta `VerificadorResolubilidad.verificar()` y `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` cada una 3 veces con `_medir`, reporta con `_comparar` la aceleración sin fijar cifras de rendimiento en el código fuente. Debe funcionar sin red y admitir ejecución a escala mínima (`escala=0.01`), como la recorre `tests/bench/test_cargas_bench.py`  El valor de `k` y las salas por segmento nunca bajan de 1 (por ejemplo con `max(1, int(k * escala))`), para que el generador reciba siempre una cripta con al menos una llave — **Modificado**: `cripta/bench/cargas_bench.py`
+- [X] T019 Registrar carga `"resolubilidad"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad(escala: float = 1.0)` que llama `_generar_cripta_encadenada(k, 20, SEMILLA_BENCH)` para tres escalas crecientes: `k` de 10, 20 y 40 (ajustados por `escala`), con 200, 400 y 800 salas respectivamente; ejecuta `VerificadorResolubilidad.verificar()` y `VerificadorResolubilidad.verificar_ingenuo_reiniciado()` cada una 3 veces con `_medir`, reporta con `_comparar` la aceleración sin fijar cifras de rendimiento en el código fuente. Debe funcionar sin red y admitir ejecución a escala mínima (`escala=0.01`), como la recorre `tests/bench/test_cargas_bench.py`  El valor de `k` y las salas por segmento nunca bajan de 1 (por ejemplo con `max(1, int(k * escala))`), para que el generador reciba siempre una cripta con al menos una llave — **Modificado**: `cripta/bench/cargas_bench.py`
   - Requisitos: FR-RES-018, FR-RES-020, SC-002, SC-007
   - Comando: `py -m cripta --bench --solo resolubilidad`
   - Hecho: salida con formato `=== RESOLUBILIDAD ... ===` y línea `recorrido_ingenuo_reiniciado es N.Nx más lento que recorrido_incremental`; `py -m unittest tests.bench.test_cargas_bench` pasa con la carga registrada.
 
-- [ ] T020 Registrar carga `"resolubilidad_cota"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad_cota(escala: float = 1.0)` que lee sin red el listado de criptas publicadas desde `fixtures/` mediante `ClienteOffline`, siguiendo el patrón de `ciclo_referencia` de la capacidad 001; elige la cripta con mayor total de salas **sin fijar su id en el código** (Principio IV), carga los datos necesarios desde fixtures y ejecuta `VerificadorResolubilidad.verificar()` con `_medir` (se mide solo la verificación, sin contar la lectura de datos) y lo compara contra el límite de 200 ms; imprime `CUMPLE` o `FALLA`. Debe admitir escala mínima (`escala=0.01`) y ejecutarse sin red, como la recorre `tests/bench/test_cargas_bench.py` — **Modificado**: `cripta/bench/cargas_bench.py`
+- [X] T020 Registrar carga `"resolubilidad_cota"` en `CARGAS` dentro de `cripta/bench/cargas_bench.py`: función `bench_resolubilidad_cota(escala: float = 1.0)` que lee sin red el listado de criptas publicadas desde `fixtures/` mediante `ClienteOffline`, siguiendo el patrón de `ciclo_referencia` de la capacidad 001; elige la cripta con mayor total de salas **sin fijar su id en el código** (Principio IV), carga los datos necesarios desde fixtures y ejecuta `VerificadorResolubilidad.verificar()` con `_medir` (se mide solo la verificación, sin contar la lectura de datos) y lo compara contra el límite de 200 ms; imprime `CUMPLE` o `FALLA`. Debe admitir escala mínima (`escala=0.01`) y ejecutarse sin red, como la recorre `tests/bench/test_cargas_bench.py` — **Modificado**: `cripta/bench/cargas_bench.py`
   - Requisitos: FR-RES-020, SC-001, SC-002
   - Comando: `py -m cripta --bench --solo resolubilidad_cota`
   - Hecho: salida con formato `=== RESOLUBILIDAD_COTA ... ===` indicando `(límite 200.0 ms: CUMPLE)`; el id de cripta se obtiene dinámicamente del listado; `py -m unittest tests.bench.test_cargas_bench` pasa con la carga registrada.
@@ -197,7 +197,7 @@ Depende de Fase A completa (el verificador ya funciona); puede solaparse con Fas
 
 
 
-- [ ] T021 Ejecutar `py -m cripta --bench --solo resolubilidad` y `py -m cripta --bench --solo resolubilidad_cota`, y guardar sus resultados medidos en `docs/bench/` — **Nuevo**: archivos de resultados en `docs/bench/`
+- [X] T021 Ejecutar `py -m cripta --bench --solo resolubilidad` y `py -m cripta --bench --solo resolubilidad_cota`, y guardar sus resultados medidos en `docs/bench/` — **Nuevo**: archivos de resultados en `docs/bench/`
   - Requisitos: FR-RES-020, SC-001, SC-002, SC-007
   - Comando: ambos comandos indicados
   - Hecho: ambas cargas terminan y sus resultados quedan guardados en `docs/bench/`.
@@ -212,20 +212,22 @@ Depende de Fases A–D completas.
 ---
 
 
-- [ ] T022 [P] Ejecutar la suite completa (pruebas de la Parte I y nuevas) y verificar que todas terminan en `OK` — Sin archivos nuevos
+- [X] T022 [P] Ejecutar la suite completa (pruebas de la Parte I y nuevas) y verificar que todas terminan en `OK` — Sin archivos nuevos
   - Requisitos: Principio VIII de la Constitución
   - Comando: `py -m unittest discover -s tests -t .`
   - Hecho: salida `Ran N tests ... OK`, con N igual o mayor al total que tenía main antes de esta rama (sin errores ni fallos en ninguna prueba preexistente).
+  - Resultado (2026-11-18): `Ran 728 tests in 54.874s` y `OK`, sin errores ni fallos.
 
-- [ ] T023 [P] Auditar importaciones prohibidas con `Select-String` en todos los archivos `.py` de `cripta/` y `tests/`: verificar ausencia de `import heapq`, `import bisect`, `from collections`, `import networkx`, y ausencia de `.sort(` / `sorted(` en módulos evaluados — Sin archivos nuevos
+- [X] T023 [P] Auditar importaciones prohibidas con `Select-String` en todos los archivos `.py` de `cripta/` y `tests/`: verificar ausencia de `import heapq`, `import bisect`, `from collections`, `import networkx`, y ausencia de `.sort(` / `sorted(` en módulos evaluados — Sin archivos nuevos
   - Requisitos: Principio I de la Constitución
   - Comando:
     ```powershell
     Select-String -Path (Get-ChildItem cripta,tests -Recurse -Filter *.py).FullName -Pattern "heapq|bisect|collections|networkx|sorted\(|\.sort\("
     ```
   - Hecho: no aparece ninguna importación prohibida; cada `sorted(` o `.sort(` que aparezca se revisa a mano y solo se permite fuera de los ordenamientos evaluados; el uso de `dict` y `set` como índice o caché se revisa en la revisión del Pull Request.
+  - Resultado (2026-11-18): auditados `modelo/resolubilidad.py`, `servicios/servicio_resolubilidad.py`, `servicios/servicio_partida.py`, `controlador/`, `vista/`, `__main__.py` y la sección 12 de `bench/cargas_bench.py`. No hay heapq, bisect, collections, networkx, sorted, .sort, defaultdict, Counter ni lru_cache. No hay dict ni set como índice, caché o tabla de búsqueda. La única coincidencia es `a_dict()` en `servicio_partida.py` línea 122, un método de la Parte I que no es una estructura. `cargas_bench.py` importa `HeapMinimo` de `cripta.estructuras`, que es la estructura propia del proyecto.
 
-- [ ] T024 Redactar la sección `5.4 Resolubilidad` en `DECISIONES.md` (en la raíz del repositorio): documentar alternativas consideradas, complejidad, evidencia medida en T021 y límites conocidos según plan §6 — **Modificado**: `DECISIONES.md`
+- [X] T024 Redactar la sección `5.4 Resolubilidad` en `DECISIONES.md` (en la raíz del repositorio): documentar alternativas consideradas, complejidad, evidencia medida en T021 y límites conocidos según plan §6 — **Modificado**: `DECISIONES.md`
   - Depende de: T021
   - Requisitos: Principio VII de la Constitución; plan §6; evidencia de T021
   - Comando: (ninguno automatizable; revisión manual)

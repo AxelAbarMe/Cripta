@@ -12,6 +12,7 @@ from pathlib import Path
 from cripta.constantes import CACHE_TAMANO_DEFAULT
 from cripta.controlador.controlador_cripta import ControladorCripta
 from cripta.excepciones import CriptaError
+from cripta.excepciones import CriptaDatosInvalidosError
 from cripta.infraestructura.almacen_disco import AlmacenDiscoArchivos
 from cripta.infraestructura.cache import CacheDisco
 from cripta.infraestructura.cliente_general import ClienteGeneral
@@ -20,6 +21,7 @@ from cripta.infraestructura.cliente_offline import ClienteOffline
 from cripta.infraestructura.contador_solicitudes import ContadorSolicitudes
 from cripta.infraestructura.puntajes_disco import RepositorioPuntajes
 from cripta.servicios.servicio_partida import ServicioPartida
+from cripta.servicios.servicio_resolubilidad import ServicioResolubilidad
 from cripta.servicios.servicio_replay import ServicioReplay
 from cripta.vista.vista_consola import VistaConsola
 
@@ -68,6 +70,8 @@ def main(argv=None) -> int:
     parser.add_argument("--checkpoint-cada", type=_entero_positivo, default=None, metavar="K",
                         help="cada cuántas acciones se guarda un punto de control de la línea de tiempo (entero >= 1)")
     parser.add_argument("--replay", metavar="PARTIDA.LOG", help="reproduce una partida desde su bitácora, sin vista")
+    parser.add_argument("--verificar", metavar="ID_CRIPTA", help="verifica la resolubilidad sin iniciar una partida")
+    parser.add_argument("--forzar", action="store_true", help="permite iniciar una cripta no resoluble")
     parser.add_argument("--hasta", type=_entero_no_negativo, default=None, metavar="T",
                         help="con --replay: consulta el estado en el instante T tras reproducir la bitácora completa")
     parser.add_argument("--bench", action="store_true",
@@ -85,10 +89,23 @@ def main(argv=None) -> int:
 
     contador = ContadorSolicitudes()
     cliente = ClienteOffline(DIRECTORIO_FIXTURES) if argumentos.offline else ClienteHttp(contador)
+    cache_disco = CacheDisco(AlmacenDiscoArchivos(DIRECTORIO_DATOS / "cache"))
+    if argumentos.verificar is not None:
+        servicio_resolubilidad = ServicioResolubilidad(cliente, contador, cache_disco)
+        try:
+            resultado = servicio_resolubilidad.verificar(argumentos.verificar)
+        except CriptaDatosInvalidosError as error:
+            print(f"[Error] {error}", file=sys.stderr)
+            return 1
+        except CriptaError as error:
+            print(f"[Error] {error}", file=sys.stderr)
+            return 2
+        print(resultado.reporte_texto())
+        return 0
     repositorio_puntajes = RepositorioPuntajes(AlmacenDiscoArchivos(DIRECTORIO_DATOS / "puntajes"))
     servicio = ServicioPartida(
         ClienteGeneral(cliente), contador,
-        cache_disco=CacheDisco(AlmacenDiscoArchivos(DIRECTORIO_DATOS / "cache")),
+        cache_disco=cache_disco,
         tamano_cache=argumentos.cache_size,
         repositorio_puntajes=repositorio_puntajes,
         checkpoint_cada=argumentos.checkpoint_cada,
@@ -100,6 +117,7 @@ def main(argv=None) -> int:
         ruta_guardado=str(DIRECTORIO_DATOS / "partida.sav"),
         ruta_bitacora=str(DIRECTORIO_DATOS / "partida.log"),
         leer_puntajes=servicio.puntajes_globales,
+        forzar=argumentos.forzar,
     ).ejecutar()
     print("\n" + servicio.reporte_final())
     return 0

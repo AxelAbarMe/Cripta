@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from cripta.controlador.controlador_cripta import DatosFinales, Orden
     from cripta.modelo.linea_tiempo import ResumenHistorico
     from cripta.modelo.puntajes import Puntaje
+    from cripta.modelo.resolubilidad import ResultadoResolubilidad
     from cripta.modelo.resultado_partida import ResumenPuntaje, VistaPartida
 
 
@@ -55,6 +56,11 @@ class VistaBase(ABC):
     @abstractmethod
     def mostrar_error(self, texto: str) -> None:
         '''Error de infraestructura o de uso ya capturado por el controlador.'''
+
+
+    @abstractmethod
+    def mostrar_reporte_resolubilidad(self, resultado: "ResultadoResolubilidad", forzada: bool = False) -> None:
+        '''Presenta el reporte de resolubilidad antes de entrar a una partida interactiva.'''
 
 
     @abstractmethod

@@ -4,17 +4,19 @@
 
 **Términos.** *µs* y *ms* son millonésimas y milésimas de segundo. *Mediana*: el valor del medio de varias corridas (no la afecta una corrida atípica). *Peor caso*: la corrida o el ciclo más lento de un conjunto. *O(...)* describe cómo crece el costo con el tamaño: O(1) no crece, O(log n) crece muy despacio, O(n) crece en proporción. *n* es la cantidad de elementos de la estructura que se está midiendo; las demás letras se definen en cada sección. *Lote*: una sola solicitud al API que lleva hasta 10 elementos. *Alternativa descartada*: la opción que se midió contra la elegida para justificar la decisión.
 
-**Cómo se reproduce.** `python -m cripta --bench` corre todas las cargas; `python -m cripta --bench --solo <carga> --escala <factor>` corre una (cargas: agenda, cache, disco, inventario, historial, ordenamiento, guardado, ciclo, partida, solicitudes, ruta_cazador, invalidacion, ciclo_referencia). Los conteos de solicitudes no dependen del equipo; los tiempos sí, por eso se reportan medianas de varias corridas y el equipo usado.
+**Cómo se reproduce.** `python -m cripta --bench` corre todas las cargas; `python -m cripta --bench --solo <carga> --escala <factor>` corre una (cargas: agenda, cache, disco, inventario, historial, ordenamiento, guardado, ciclo, partida, solicitudes, ruta_cazador, invalidacion, ciclo_referencia, niebla_rutas). Los conteos de solicitudes no dependen del equipo; los tiempos sí, por eso se reportan medianas de varias corridas y el equipo usado.
 
 **Equipos de medición.**
 
 | Equipo | Hardware y sistema | Python | Se usó en |
 |---|---|---|---|
-| A | Ryzen 5 5600GT, 32 GB, Windows | 3.12.10 | 4.1 |
+| A | Ryzen 5 5600GT, 32 GB, Windows | 3.12.10 | 4.1, 5.3 |
 | B | Intel Core Ultra 7, 16 GB, Windows | 3.14.6 | 4.1, 4.2, 4.4, 4.9, 4.10, 5.1, 5.2, 5.6 |
 | C | Linux | 3.12 | 4.5, 4.6, 4.7, 4.8 |
 
 Cada sección indica en qué equipo se midió, y las cifras de equipos distintos no se comparan entre sí. Las mediciones del Equipo C que no salen de `--bench` se hicieron con un script propio y se indican como tales en su sección. Los conteos de operaciones por acción ("frecuencia medida") salen de un script que cuenta llamadas sobre la partida real y no dependen del equipo.
+
+Las cifras de la sección 5.3 se midieron en el Equipo A con Python 3.14.7, a diferencia de la versión que figura en su fila.
 
 
 ## 4.1 Qué ocurre a continuación (agenda de eventos)
@@ -789,6 +791,68 @@ Medido con `py -m cripta --bench --solo invalidacion` en el Equipo B, mediana de
 - El plan se proponía medir a partir de qué frecuencia de cambios de puertas deja de convenir reutilizar. Solo se midió un punto (5 puertas cada 15 ticks) y en él conviene con claridad. No se encontró el punto de cruce.
 - La carga cierra y abre las puertas directamente sobre el mapa y apaga la bandera de la tabla a mano. No mide la ruta real de `EfectoCierrePuerta` hacia la invalidación. Esa conexión se comprueba con las pruebas de la capacidad y no con esta medición.
 - La carga es sintética (400 salas, 20 cazadores de rango 2400, el jugador sin moverse). Con un jugador que se mueve en cada ciclo la tabla se invalida cada vez y la ventaja desaparece, como muestra el caso H=1 de 5.1.
+
+
+## 5.3 Niebla de guerra e «ir a»
+
+Especificación: [spec.md](specs/002-niebla-ir-a/spec.md). Plan: [plan.md](specs/002-niebla-ir-a/plan.md). Investigación: [research.md](specs/002-niebla-ir-a/research.md).
+
+**Coincidencia con el plan original.** La decisión final coincide con la del plan: conocimiento en listas por id, revelación incremental, reversión mediante inversas puntuales, búsqueda propia con `HeapMinimo` desde el destino y costos guardados en el conocimiento. La medición confirmó la elección del heap: con las 300 salas conectadas de cripta-06, la selección lineal fue más lenta, así que la hipótesis de `research.md` de que podría ganar en mapas pequeños no se cumplió en el tamaño medido.
+
+### Problema
+
+Cada entrada a una sala observa sus puertas y revela las salas vecinas si la antorcha está encendida. Cada paso de «ir a» calcula un primer paso usando solo el conocimiento del jugador, pues una puerta no observada no cuenta como abierta. El pergamino revierte la entrada y también los cambios de conocimiento que produjo. La decisión debe limitar el costo de esa revelación y de cada consulta frecuente de ruta, cumplir FR-NIE-018 bajo 5 ms y mantener el mapa conocido separado del mapa real (SC-NIE-002 y SC-NIE-004).
+
+### Alternativas consideradas
+
+1. **Representar el conocimiento con listas contiguas por id (elegida).** Consultas directas de sala, puerta y costo. Frente a **recalcular desde el mapa real en cada consulta**, que se descarta porque el mapa real contiene datos que el jugador aún no conoce y repetiría el trabajo.
+2. **Revelación incremental (elegida).** Visita las salidas de la sala de entrada y las vecinas que se revelan. Frente a una **pasada completa por el mapa** en cada entrada, que no escala con lo que cambió.
+3. **Reversión con inversas puntuales por celda (elegida).** Registra solo los valores que cambian. Frente a una **copia completa del conocimiento** en cada acción, que duplica estado aunque solo cambien unas celdas.
+4. **Búsqueda propia con `HeapMinimo` desde el destino (elegida).** Calcula sobre salas exploradas, puertas recordadas abiertas y costos conocidos. Frente a **selección lineal manual**, cuya complejidad es cuadrática, y a reutilizar `BuscadorRutas` de la 001, descartada porque calcula sobre el mapa real, poda por rango de cazadores y conserva una caché pensada para sus eventos.
+5. **Costo de salida guardado en el conocimiento (elegido).** Frente a consultar `CriptaMapa.costo_de_conexion` durante la búsqueda, lo que consulta la representación real en cada relajación.
+
+### Decisión
+
+Se mantienen las decisiones del plan. Cada entrada actualiza solo las celdas afectadas y registra sus inversas. La búsqueda de producción recalcula desde el destino con heap antes de cada paso, usando los costos guardados en el conocimiento. La carga abre las 28 puertas cerradas de su instancia del mapa para probar el peor caso conectado, selecciona al azar 12 pares de salas con ruta usando semilla 20261118 y mide tres cálculos por alternativa y consulta. La cripta de referencia se selecciona por el mayor total de salas del listado, sin fijar su id en el código. Para la medición resultó ser cripta-06, de 300 salas y 760 salidas.
+
+### Análisis de complejidad
+
+Consultar sala, puerta y costo es O(1). Revelar R salas cuesta O(R), pues el grado está acotado por cuatro. La búsqueda con heap cuesta O((V+E) log V). La selección lineal cuesta O(V²+E). La reversión ejecuta una operación inversa por cada celda modificada.
+
+### Evidencia empírica
+
+Comando `py -m cripta --bench --solo niebla_rutas --escala 1`. Equipo A, Python 3.14.7. Las medianas de las tablas son medianas de tres corridas y cada máximo es el mayor de los máximos de esas corridas. Se hicieron tres cálculos por consulta de ruta y 12 consultas con ruta. La primera versión de la carga usaba pares de salas vecinas con las puertas cerradas, que separaban el mapa en regiones diminutas. Se corrigió abriendo las puertas del harness y eligiendo al azar pares que sí tuvieran ruta, para medir el peor caso conectado. Resultados completos: [corrida A](docs/bench/resultados_002_a.md), [corrida B](docs/bench/resultados_002_b.md) y [corrida C](docs/bench/resultados_002_c.md).
+
+| Alternativa | Mediana (ms) | Máximo (ms) |
+|---|---:|---:|
+| Ruta de producción con costos guardados | 3.095 | 4.834 |
+| Selección lineal manual | 4.799 | 7.142 |
+| Heap del harness con costos guardados | 3.069 | 4.503 |
+| Heap del harness consultando `CriptaMapa.costo_de_conexion` | 4.217 | 7.101 |
+
+La producción cumplió FR-NIE-018 en las tres corridas: los máximos fueron 4.834, 3.799 y 4.599 ms. El peor máximo fue 4.834 ms, con 0.166 ms de margen al límite. La selección lineal no ganó en este mapa conectado y tuvo máximo superior a 5 ms. Consultar el mapa durante el heap también tuvo máximo superior a 5 ms.
+
+| Revelación | Incremental mediana / máximo (ms) | Pasada ingenua mediana / máximo (ms) | Razón de medianas |
+|---|---:|---:|---:|
+| R=10 | 0.032 / 0.057 | 0.360 / 0.504 | 11.25x |
+| R=50 | 0.028 / 0.073 | 0.362 / 0.571 | 12.93x |
+| R=200 | 0.016 / 0.081 | 0.366 / 0.645 | 22.88x |
+
+| Reversión | Mediana / máximo (ms) | Razón de medianas |
+|---|---:|---:|
+| Inversas puntuales, 409 operaciones | 0.800 / 1.059 | — |
+| Copia completa | 1.185 / 1.270 | 1.48x más lenta |
+
+Las equivalencias de las alternativas fueron verdaderas en las tres corridas. Los máximos que superaron 5 ms fueron la selección lineal y el heap consultando `CriptaMapa.costo_de_conexion`; la ruta de producción y las mediciones de revelación y reversión quedaron por debajo.
+
+### Límites conocidos
+
+- El margen de producción al límite de 5 ms es estrecho: el peor máximo observado fue 4.834 ms. La función de producción proyecta el conocimiento y reconstruye las aristas entrantes en cada llamada (`cripta/modelo/ruta_conocida.py`); que esa preparación domine el tiempo es una hipótesis que no se midió por separado.
+- En la revelación, R es la cantidad de entradas aleatorias con reemplazo, no R salas nuevas. Solo se midió un tamaño de mapa, cripta-06. Se midió el cálculo del primer paso y no un viaje completo dentro de una partida real.
+- El guardado binario del conocimiento depende de la 004 y T040 sigue pendiente; hasta completar esa integración, cargar una partida de archivo no conserva el mapa explorado.
+- Al entrar a una sala se observan todas sus puertas. Por eso, en la sala actual no hay puertas sin observar y `Partida.vista()` presenta cada una según su estado observado, abierta o cerrada.
+- El grupo decidió considerar abierta al explorar su sala una salida que no tenga puerta cerrable. Esta decisión está pendiente de confirmación con el profesor.
+- Los costos de las salidas conocidas ocupan memoria proporcional a las salidas representadas.
 
 
 ## 5.6 Revisión de decisiones de la Parte I

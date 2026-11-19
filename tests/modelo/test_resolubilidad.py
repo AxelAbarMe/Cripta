@@ -36,6 +36,15 @@ def armar_mapa_desde_salas(salas_dict):
 
 def armar_mapa_conexiones(conexiones):
     """Construye un CriptaMapa simetrico a partir de una lista de conexiones."""
+    claves_vistas = []
+    for conn in conexiones:
+        origen, direccion, destino = conn[0], conn[1], conn[2]
+        claves = ((origen, direccion), (destino, direccion_opuesta(direccion)))
+        for clave in claves:
+            if clave in claves_vistas:
+                raise ValueError(f"Dirección repetida en el fixture: {clave}")
+            claves_vistas.append(clave)
+
     salidas = {}
     for conn in conexiones:
         origen, direccion, destino = conn[0], conn[1], conn[2]
@@ -255,30 +264,28 @@ class TestResolubilidad(unittest.TestCase):
         self.assertEqual(res1.llaves_obtenidas[0], "itm_llave_alfa")
         self.assertEqual(res1.llaves_obtenidas[1], "itm_llave_beta")
 
-    def test_cadena_doble_ciclos_independientes(self):  # FR-RES-009, FR-RES-010, FR-RES-012
+    def test_doble_ciclo_con_fixture_consistente(self):  # FR-RES-009, FR-RES-010, FR-RES-012
         """Reporta un ciclo representativo por cada grupo de bloqueo mutuo."""
         conexiones = [
             (1, "N", 2, True, "itm_c1_b"),
             (1, "S", 3, True, "itm_c1_a"),
-            (1, "E", 4, True, "itm_c2_y"),
-            (1, "O", 5, True, "itm_c2_x"),
-            (1, "N", 6, True, "itm_llave_salida"),
+            (1, "E", 7),
+            (7, "N", 4, True, "itm_c2_y"),
+            (7, "S", 5, True, "itm_c2_x"),
+            (7, "E", 6, True, "itm_llave_salida"),
         ]
         mapa = armar_mapa_conexiones(conexiones)
         llaves = (
-            LlaveUbicacionDTO(id="itm_c1_a", sala=2, enemigo=None),
-            LlaveUbicacionDTO(id="itm_c1_b", sala=3, enemigo=None),
-            LlaveUbicacionDTO(id="itm_c2_x", sala=4, enemigo=None),
-            LlaveUbicacionDTO(id="itm_c2_y", sala=5, enemigo=None),
-            LlaveUbicacionDTO(id="itm_llave_salida", sala=6, enemigo=None),
+            LlaveUbicacionDTO(id="itm_c1_a", sala=2, enemigo=None), LlaveUbicacionDTO(id="itm_c1_b", sala=3, enemigo=None),
+            LlaveUbicacionDTO(id="itm_c2_x", sala=4, enemigo=None), LlaveUbicacionDTO(id="itm_c2_y", sala=5, enemigo=None)
         )
         verificador = VerificadorResolubilidad(mapa, 1, 6, "itm_llave_salida", llaves)
         resultado = verificador.verificar()
         self.assertFalse(resultado.es_resoluble)
-        self.assertEqual(len(resultado.ciclos_dependencia), 2)
-        self.assertTrue(resultado.ciclos_dependencia[0].llaves[0] < resultado.ciclos_dependencia[1].llaves[0])
-        self.assertEqual(resultado.ciclos_dependencia[0].formato(), "itm_c1_a -> itm_c1_b -> itm_c1_a")
-        self.assertEqual(resultado.ciclos_dependencia[1].formato(), "itm_c2_x -> itm_c2_y -> itm_c2_x")
+        self.assertEqual(
+            [c.formato() for c in resultado.ciclos_dependencia],
+            ["itm_c1_a -> itm_c1_b -> itm_c1_a", "itm_c2_x -> itm_c2_y -> itm_c2_x"],
+        )
 
     def test_puerta_cerrada_sin_llave(self):  # FR-RES-010, FR-RES-022
         """Puerta cerrada sin llave es permanentemente infranqueable."""
@@ -327,12 +334,49 @@ class TestResolubilidad(unittest.TestCase):
     # --- Bloque T004: Recorrido incremental y alternativa ingenua ---
 
     def test_equivalencia_verificar_e_ingenuo_reiniciado(self):  # FR-RES-018, FR-RES-020
-        """Ambos metodos producen el mismo es_resoluble sobre la misma cripta."""
-        mapa, ini, salida, llave_salida, llaves = fixture_cripta_lineal_simple()
-        verificador = VerificadorResolubilidad(mapa, ini, salida, llave_salida, llaves)
-        res_incremental = verificador.verificar()
-        res_ingenuo = verificador.verificar_ingenuo_reiniciado()
-        self.assertEqual(res_incremental.es_resoluble, res_ingenuo.es_resoluble)
+        """Ambos metodos coinciden en criptas resolubles y no resolubles."""
+        casos = [
+            fixture_cripta_lineal_simple(),
+            fixture_cripta_con_ciclo(),
+            fixture_cripta_con_enemigo_errante(),
+            fixture_cripta_con_varios_ordenes_validos(),
+            (armar_mapa_conexiones([(1, "E", 3), (3, "E", 2), (1, "N", 2, True, "itm_llave_salida")]),
+             1, 2, "itm_llave_salida", (LlaveUbicacionDTO(id="itm_llave_salida", sala=1, enemigo=None),)),
+            (armar_mapa_conexiones([(1, "E", 2, True, "itm_llave_salida")]),
+             1, 2, "itm_llave_salida", (LlaveUbicacionDTO(id="itm_llave_salida", sala=2, enemigo=None),)),
+        ]
+        for mapa, ini, salida, llave_salida, llaves in casos:
+            with self.subTest(sala_salida=salida, llaves=llaves):
+                verificador = VerificadorResolubilidad(mapa, ini, salida, llave_salida, llaves)
+                res_incremental = verificador.verificar()
+                res_ingenuo = verificador.verificar_ingenuo_reiniciado()
+                self.assertEqual(res_incremental.es_resoluble, res_ingenuo.es_resoluble)
+
+    def test_dos_rutas_a_la_salida_cuenta_la_puerta_con_llave_salida(self):  # FR-RES-001, FR-RES-002
+        """Una segunda ruta registra la entrada por la puerta de llave de salida."""
+        mapa = armar_mapa_conexiones([
+            (1, "E", 3), (3, "E", 2), (1, "N", 2, True, "itm_llave_salida")
+        ])
+        llaves = (LlaveUbicacionDTO(id="itm_llave_salida", sala=1, enemigo=None),)
+        verificador = VerificadorResolubilidad(mapa, 1, 2, "itm_llave_salida", llaves)
+        self.assertTrue(verificador.verificar().es_resoluble)
+        self.assertTrue(verificador.verificar_ingenuo_reiniciado().es_resoluble)
+
+    def test_llave_salida_dentro_de_la_sala_de_salida_ApendiceB(self):  # FR-RES-001, FR-RES-012
+        """La llave tras la puerta que ella abre produce un ciclo propio."""
+        mapa = armar_mapa_conexiones([(1, "E", 2, True, "itm_llave_salida")])
+        llaves = (LlaveUbicacionDTO(id="itm_llave_salida", sala=2, enemigo=None),)
+        resultado = VerificadorResolubilidad(mapa, 1, 2, "itm_llave_salida", llaves).verificar()
+        self.assertFalse(resultado.es_resoluble)
+        self.assertEqual([c.formato() for c in resultado.ciclos_dependencia],
+                         ["itm_llave_salida -> itm_llave_salida"])
+
+    def test_orden_de_entrada_no_cambia_el_resultado(self):  # FR-RES-008
+        """Permutar las ubicaciones no cambia el resultado determinista."""
+        mapa, ini, salida, llave_salida, llaves = fixture_cripta_con_varios_ordenes_validos()
+        original = VerificadorResolubilidad(mapa, ini, salida, llave_salida, llaves).verificar()
+        invertido = VerificadorResolubilidad(mapa, ini, salida, llave_salida, tuple(reversed(llaves))).verificar()
+        self.assertEqual(original, invertido)
 
     def test_metodo_verificar_ingenuo_reiniciado_separado(self):  # FR-RES-018, FR-RES-020
         """Verifica que verificar_ingenuo_reiniciado existe como metodo separado."""

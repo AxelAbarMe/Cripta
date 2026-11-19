@@ -241,8 +241,6 @@ def _detectar_ciclos(
         idx_cat = _busqueda_binaria(catalogo, k_nombre)
         if idx_cat >= 0:
             for ub in ubicaciones_por_llave[idx_cat]:
-                if ub.sala == sala_salida and k_nombre == llave_salida:
-                    continue
                 if 1 <= ub.sala <= max_sala_id and not visitada[ub.sala]:
                     b_id = bloque_de_sala[ub.sala]
                     if b_id >= 0:
@@ -396,15 +394,15 @@ class VerificadorResolubilidad:
         candidatas = HeapMinimo()
 
         def _activar_llave(idx_k: int) -> None:
+            nonlocal entro_por_llave_salida
             if llave_obtenida[idx_k]:
                 return
             llave_obtenida[idx_k] = True
             llaves_obtenidas_orden.append(catalogo[idx_k])
             for origen, direc, destino in puertas_pendientes[idx_k]:
+                if destino == sala_salida and idx_k == idx_llave_salida:
+                    entro_por_llave_salida = True
                 if not visitada[destino]:
-                    nonlocal entro_por_llave_salida
-                    if destino == sala_salida and idx_k == idx_llave_salida:
-                        entro_por_llave_salida = True
                     visitada[destino] = True
                     cola.enqueue(destino)
 
@@ -439,9 +437,9 @@ class VerificadorResolubilidad:
                             idx_k = _busqueda_binaria(catalogo, llave_puerta)
                             if idx_k >= 0:
                                 if llave_obtenida[idx_k]:
+                                    if destino == sala_salida and idx_k == idx_llave_salida:
+                                        entro_por_llave_salida = True
                                     if not visitada[destino]:
-                                        if destino == sala_salida and idx_k == idx_llave_salida:
-                                            entro_por_llave_salida = True
                                         visitada[destino] = True
                                         cola.enqueue(destino)
                                 else:

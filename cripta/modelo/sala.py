@@ -55,7 +55,7 @@ class Sala(Reversible):
         self.esqueleto = esqueleto
         self.puertas = EstadoPuertas(esqueleto)
         self.contenido_cargado = False
-        self.objetos_en_suelo: list[str] = []  # ids de catálogo;
+        self.objetos_en_suelo: list[str] = []  # ids de catálogo
         self.trampas: list[Trampa] = []
         self.enemigos_dormidos: list = []  # Enemigo aún no activados
         self.enemigos_activos: list = []   # Enemigo activos actualmente en esta sala
@@ -77,7 +77,7 @@ class Sala(Reversible):
         self.rastro_ultima_visita = tiempo_actual
 
     def rastro_es_fresco(self, tiempo_actual: int, antiguedad_maxima: int) -> bool:
-        # Una sala nunca visitada no sirve como rastro; una visitada hace mucho, tampoco
+        # Una sala nunca visitada no sirve como rastro, una visitada hace mucho, tampoco
         if self.rastro_ultima_visita is None:
             return False
         return (tiempo_actual - self.rastro_ultima_visita) < antiguedad_maxima
@@ -95,7 +95,7 @@ class Sala(Reversible):
         return False
 
     def activar_enemigos_dormidos(self) -> list:
-        # Mueve todos los enemigos dormidos a activos y los devuelve; no calcula
+        # Mueve todos los enemigos dormidos a activos y los devuelve, no calcula
         # sus tiempos de próxima acción, eso lo hace quien programa el reloj.
         activados = list(self.enemigos_dormidos)
         self.enemigos_activos.extend(activados)

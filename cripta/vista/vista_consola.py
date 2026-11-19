@@ -29,7 +29,7 @@ _CONTROLES = (
 
 # ------------------------------------------------------------ dibujo
 def _caja(titulo: str, lineas: list[str], ancho: int, borde: str = "-", lado: str = "|", esquina: str = "+") -> list[str]:
-    # Caja de ancho fijo con el título dentro del borde superior; las líneas largas se recortan.
+    # Caja de ancho fijo con el título dentro del borde superior, las líneas largas se recortan.
     interior = ancho - 4
     encabezado = f"{borde * 2} {titulo} " if titulo else ""
     arriba = esquina + encabezado.ljust(ancho - 2, borde) + esquina
@@ -53,7 +53,7 @@ def _caja_mensajes(mensajes) -> list[str]:
 
 
 def _tabla(titulo: str, encabezados: tuple, filas: list[tuple]) -> list[str]:
-    # Tabla con título; cada columna toma el ancho de su contenido más largo.
+    # Tabla con título, cada columna toma el ancho de su contenido más largo.
     anchos = [max(len(str(fila[i])) for fila in [encabezados] + filas) for i in range(len(encabezados))]
     total = sum(anchos) + 3 * len(anchos) + 1
     if total < len(titulo) + 4:
@@ -186,7 +186,7 @@ class VistaConsola(VistaBase):
 
 
     def _interpretar(self, partes: list[str]) -> Orden | None:
-        # Convierte las palabras escritas en una Orden; None si no se entiende.
+        # Convierte las palabras escritas en una Orden, None si no se entiende.
         if not partes:
             return None
         comando, argumento = partes[0], partes[1] if len(partes) > 1 else None
@@ -296,7 +296,7 @@ class VistaConsola(VistaBase):
 
     @staticmethod
     def _minimapa(vista) -> list[str]:
-        # Tu sala va en un cuadro doble (#=#) con @; las vecinas en cuadros simples con dirección:sala,
+        # Tu sala va en un cuadro doble (#=#) con @, las vecinas en cuadros simples con dirección:sala,
         # unidas por --- / | si la puerta está abierta y -X- / X si está cerrada. Siempre 11 líneas.
         def salida(direccion):
             for s in vista.salidas:
@@ -341,7 +341,7 @@ class VistaConsola(VistaBase):
 
 
     def _avisar(self, linea: str) -> None:
-        # En juego el aviso espera y sale justo encima de la entrada; fuera del juego sale de inmediato.
+        # En juego el aviso espera y sale justo encima de la entrada, fuera del juego sale de inmediato.
         if self._en_juego:
             self._pendientes.append(linea)
         else:

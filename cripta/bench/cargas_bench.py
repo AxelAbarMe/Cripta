@@ -424,7 +424,7 @@ def estado_sintetico(n_salas: int, semilla: int = SEMILLA_BENCH) -> EstadoPartid
             i, True, (i % 2 == 0, False, i % 3 == 0, False), -1 if i % 4 else i * 10,
             ("itm_daga", "itm_antorcha")[: 1 + i % 2],
             (TrampaGuardada(f"t-{i}", "trp_dardos", i % 3 != 0),) if i % 5 == 0 else (),
-            tuple(EnemigoGuardado(f"e-{i}{k}", "ent_rata_gigante", 7, k == 1, i, 66 + i) for k in range(1 + i % 3))))
+            tuple(EnemigoGuardado(f"e-{i}{k}", "enemigo-sintetico-a", 7, k == 1, i, 66 + i) for k in range(1 + i % 3))))
     jugador = JugadorGuardado(24, 30, 6, 2, 100, 3, 250, 10, 1,
                               tuple(ObjetoGuardado(f"o-{k}", "itm_daga", k == 0) for k in range(8)))
     eventos = tuple(EventoGuardado(100 + k, k, k % 7, f"e-{k}1", k, k * 2) for k in range(min(300, n_salas * 2)))
@@ -467,7 +467,7 @@ def bench_ciclo_eventos(escala: float = 1.0):
     for actores in (100, 300, 600):
         azar = random.Random(SEMILLA_BENCH)
         jugador = Jugador(type("J", (), {"vida_max": 10**9, "ataque": 6, "defensa": 2, "velocidad": 100})(), 1, 10)
-        ficha = type("F", (), {"id": "ent_rata", "nombre": "Rata", "vida_max": 10**9, "ataque": 5, "defensa": 1,
+        ficha = type("F", (), {"id": "enemigo-sintetico-b", "nombre": "Rata", "vida_max": 10**9, "ataque": 5, "defensa": 1,
                                "velocidad": 150, "comportamiento": "rastreador", "suelta": (), "rango": None})()
         reloj = RelojEventos()
         enemigos = [Enemigo(f"e-{i}", ficha, 1) for i in range(actores)]
@@ -486,7 +486,7 @@ def bench_ciclo_eventos(escala: float = 1.0):
             reloj.programar(66 + i % 5, turno(enemigo))
 
 
-        # varios ciclos consecutivos; se reporta el peor
+        # varios ciclos consecutivos, se reporta el peor
         peores = 0.0
         for k in range(20):
             objetivo = reloj.tiempo_actual + 100
@@ -519,7 +519,7 @@ def _recorrido_en_zigzag(filas: int, columnas: int):
 def _jugar_y_medir(lado: int):
     """Una corrida: arma la partida, recorre la cripta, espera 50 veces y devuelve
     (tiempos de cada acción en segundos, enemigos activos al final)."""
-    # Imports locales: tests/ no es parte del paquete cripta; si fallaran, solo fallaría esta carga
+    # Imports locales: tests/ no es parte del paquete cripta, si fallaran solo fallaría esta carga
     from tests.cliente_falso import ClienteFalso
     from tests.cripta_artificial import construir
 
@@ -594,7 +594,7 @@ def bench_solicitudes(escala: float = 1.0):
     catálogo, lo elegido) contra pedir cada cosa por separado (lo descartado). No mide tiempo:
     cuenta las llamadas que registra ClienteFalso. Lo descartado se calcula a partir de lo que
     realmente se necesitó: una solicitud por cada sala visitada y una por cada ficha distinta."""
-    # Imports locales: tests/ no es parte del paquete cripta; si fallaran, solo fallaría esta carga
+    # Imports locales: tests/ no es parte del paquete cripta, si fallaran solo fallaría esta carga
     from tests.cliente_falso import ClienteFalso
     from tests.cripta_artificial import construir
 

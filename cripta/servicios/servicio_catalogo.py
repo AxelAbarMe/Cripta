@@ -136,7 +136,7 @@ class ServicioCatalogo:
     # ------------------------------------------------------------- internos
     def _version_catalogo(self) -> str:
         # Una sola consulta de versión por ejecución, y solo si hay caché en disco
-        # que validar/alimentar; sin disco no hace falta gastar esa solicitud.
+        # que validar/alimentar, sin disco no hace falta gastar esa solicitud.
         if self._version is None:
             self._version = self._cliente.obtener_version_catalogo().version
         return self._version

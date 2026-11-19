@@ -52,7 +52,7 @@ def _entero_no_negativo(texto: str) -> int:
 
 
 def _reproducir(servicio, ruta: str, hasta: int | None = None) -> int:
-    # --replay: sin vista ni interacción (§6). Código 0 solo si la reproducción fue fiel; 2 si falla algo externo
+    # --replay: sin vista ni interacción (§6). Código 0 solo si la reproducción fue fiel, 2 si falla algo externo
     try:
         resultado = ServicioReplay(servicio).reproducir(ruta, hasta=hasta)
     except CriptaError as error:

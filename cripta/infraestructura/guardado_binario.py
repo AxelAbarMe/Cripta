@@ -87,7 +87,7 @@ class _Escritor:
             raise ValueError(f"No se pudo guardar {valores!r} con el formato {formato.format!r}: {error}") from None
 
     # Cada método escribe UN valor de tamaño fijo. Nombre: u = sin signo, i = con signo,
-    # f = decimal; el número son los bits (8 bits = 1 byte). Todos pasan por _empacar:
+    # f = decimal, el número son los bits (8 bits = 1 byte). Todos pasan por _empacar:
     def bool_(self, v):
         self._empacar(_U8, 1 if v else 0)  # verdadero/falso como 1 o 0, en 1 byte
 

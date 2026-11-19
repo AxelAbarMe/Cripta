@@ -6,6 +6,46 @@ El proyecto usa estructuras de datos propias (montículo para la agenda de event
 
 ---
 
+## Proceso de desarrollo con Spec Kit
+
+El desarrollo de la Parte II se realizó siguiendo la metodología dirigida por especificaciones con **Spec Kit v1.2.3**.
+
+### Agentes utilizados
+
+- **Codex CLI** (0.167.2, 0.169.0 y 0.170.0) con GPT-6 Luna y GPT-6.2 Sol.
+- **Antigravity CLI** (1.5.3 y 1.5.4) con Gemini, Gemini 3.8 Flash, Claude Sonnet 4.6 y Claude Sonnet 4.6 Thinking.
+- **Claude Code** con Sonnet 5.5.
+- **Claude en la web y en las apps** con Sonnet 5 y Sonnet 5.5 en la web, y Opus 5 y Opus 5.5 en las apps.
+
+### Flujo de trabajo
+
+El ciclo de desarrollo de cada capacidad siguió las fases de Spec Kit:
+1. **specify**: especificación de requisitos funcionales y criterios de éxito en lenguaje natural
+2. **clarify**: aclaración de ambigüedades y resolución de dudas sobre el enunciado
+3. **plan**: diseño de arquitectura, contratos de interfaces y decisiones técnicas
+4. **tasks**: desglose ordenado de tareas con dependencias y fases de implementación
+5. **analyze**: verificación de consistencia entre especificación, plan y tareas
+6. **implement**: implementación del código y pruebas asociadas guiada por tareas
+
+### Capacidades desarrolladas
+
+Cada capacidad cuenta con su carpeta propia dentro de `specs/`:
+- `specs/001-terreno-cazador/`: 001 terreno y cazador
+- `specs/002-niebla-ir-a/`: 002 niebla de guerra e ir a
+- `specs/003-resolubilidad/`: 003 resolubilidad
+- `specs/004-linea-de-tiempo/`: 004 línea de tiempo
+
+### Ubicación de artefactos
+
+- `specs/NNN-.../`: especificación (`spec.md`), plan (`plan.md`) y lista de tareas (`tasks.md`) de cada capacidad
+- `prompts/p2/`: prompts preparados para cada corrida y fase del proyecto
+- `PROMPTS_LLM.md`: bitácora completa de los prompts utilizados con los asistentes de IA
+- `DECISIONES.md`: justificación de diseño de cada estructura y algoritmo con sus mediciones empíricas
+- `.specify/memory/constitution.md`: principios de gobernanza, prohibiciones y reglas del proyecto
+- [docs/TRAZABILIDAD.md](docs/TRAZABILIDAD.md): matriz que vincula cada requisito con su escenario, tarea, código y prueba
+
+---
+
 ## 1. Requisitos
 
 - **Python 3.11 o más reciente.** Se probó con 3.12 y 3.14.
@@ -73,6 +113,8 @@ Se escribe el comando y se pulsa Enter. Mayúsculas y minúsculas dan igual. Los
 | `usar`, `equipar`, `soltar` | Actúan sobre el objeto que marca el cursor. |
 | `ordenar peso` / `valor` / `nombre` | Muestra el inventario ordenado por ese criterio. No cambia el orden real del inventario. |
 | `pergamino [1-5]` | Deshace las últimas acciones: cada pergamino deshace una (por defecto 1, máximo 5). Requiere tener pergaminos en el inventario. |
+| `mapa` | Muestra el mapa conocido con las salas exploradas y sus conexiones visibles. No gasta tiempo. |
+| `ir a <sala>` | Viaja automáticamente a una sala conocida siguiendo la ruta más corta por territorio ya explorado. |
 | `historia <t>` | Muestra el estado de la partida en el instante `t` del reloj (por ejemplo `historia 150`). Si en `t` el jugador debía decidir, muestra el estado justo antes de esa decisión. No gasta tiempo, no se anota en la bitácora y no cambia la partida. |
 | `historia #<k>` | Muestra el estado justo antes de la acción número `k` (por ejemplo `historia #3`). Solo cuentan las acciones ejecutadas y vigentes, desde 1, y el pergamino no se numera. No gasta tiempo ni cambia la partida. |
 | `guardar` | Guarda la partida en `datos/partida.sav`. |
@@ -178,15 +220,24 @@ Borrar `datos/` deja el juego como recién instalado: se pierden los puntajes y 
 
 ## 8. Pruebas
 
-Las pruebas usan `unittest`, que viene con Python (no hace falta instalar nada más):
+Las pruebas usan `unittest`, que viene con Python (no hace falta instalar nada más).
+
+Para correr la suite completa de pruebas unitarias y de integración:
 
 ```
 py -m unittest discover -s tests -t .
 ```
 
+Para correr únicamente la suite de pruebas de aceptación:
+
+```
+py -m unittest discover -s tests/aceptacion -t .
+```
+
 - `discover` busca todos los archivos `test_*.py`; `-s tests` indica la carpeta donde buscar y `-t .` que la raíz del proyecto es la carpeta actual (así funcionan los `import cripta...`).
 - Al final debe aparecer `OK`. Ninguna prueba usa la red: usan clientes falsos y criptas generadas (`tests/cliente_falso.py`, `tests/cripta_artificial.py`).
 - Una sola carpeta o un solo archivo: `py -m unittest discover -s tests/estructuras -t .` o `py -m unittest tests.servicios.test_servicio_replay -v` (`-v` muestra el nombre de cada prueba).
+- Las pruebas de rendimiento no se ejecutan con `unittest` sino mediante el comando `py -m cripta --bench` (sección 6).
 
 ## 9. Estructura del proyecto
 
@@ -196,6 +247,9 @@ cripta/
 ├── constantes.py      números del juego y de la red en un solo lugar
 ├── excepciones.py     errores propios
 ├── modelo/            reglas del juego (sin red, sin pantalla)
+│   ├── linea_tiempo.py          línea de tiempo con puntos de control y consultas históricas
+│   ├── conocimiento_jugador.py  mapa conocido y niebla de guerra por exploración
+│   └── ruta_conocida.py         búsqueda de rutas sobre territorio explorado para ir a
 ├── controlador/       traduce comandos en acciones
 ├── vista/             pantalla de consola
 ├── servicios/         une modelo e infraestructura: partida, catálogo, precarga, replay, bench
@@ -204,10 +258,14 @@ cripta/
 ├── dto/               conversión de las respuestas JSON del API a objetos
 └── bench/             cargas sintéticas de --bench
 fixtures/              respuestas del API para --offline (cripta-02 a cripta-06). tests/datos/ tiene cripta-01 congelada
-scripts/               generar_fixtures.py y prueba_api.py (prueba rápida del API)
-tests/                 pruebas, por capa
-docs/                  Documento de Decisiones, bitácora, contrato de la partida, formato offline
+scripts/               generar_fixtures.py, prueba_api.py y revisar_prohibidos.py (auditoría de estructuras prohibidas, se corre con py -m scripts.revisar_prohibidos)
+tests/                 pruebas, por capa (incluye tests/aceptacion/ para pruebas de aceptación)
+docs/                  contrato de la partida, formato offline, bitácora, mapa de código, documentación del API, mediciones, ejemplos y enunciados
+├── bench/             mediciones y reportes de rendimiento
 └── ejemplos/          bitácoras de ejemplo para --replay
+specs/                 especificaciones, planes y tareas de cada capacidad (001 a 004)
+prompts/               prompts ejecutados en cada etapa del desarrollo
+DECISIONES.md          decisiones de diseño y mediciones
 PROMPTS_LLM.md         prompts usados con asistentes de IA
 ```
 

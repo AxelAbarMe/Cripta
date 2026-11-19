@@ -48,7 +48,7 @@ class ControladorCripta:
     def __init__(self, servicio, vista, ruta_guardado: str = "partida.sav",
                  ruta_bitacora: str = "partida.log", semilla: int | None = None, leer_puntajes=None,
                  forzar: bool = False):
-        # servicio: ServicioPartida; vista: VistaBase (consola o gráfica);
+        # servicio: ServicioPartida, vista: VistaBase (consola o gráfica),
         # leer_puntajes: función sin argumentos que devuelve todos los puntajes guardados (None = sin tabla).
         self._servicio = servicio
         self._vista = vista
@@ -79,7 +79,7 @@ class ControladorCripta:
 
     # ------------------------------------------------------------ flujo
     def _jugar(self) -> None:
-        # Una partida: elegir cripta y jugar; al terminar se muestran puntajes y final. Siempre libera la precarga.
+        # Una partida: elegir cripta y jugar, al terminar se muestran puntajes y final. Siempre libera la precarga.
         try:
             if self._iniciar_partida():
                 self._bucle_principal()
@@ -244,7 +244,7 @@ class ControladorCripta:
 
 
     def _retroceder(self, cantidad: int, vista) -> bool:
-        # Cada pergamino deshace una acción; se limita a lo que la vista dice que es posible.
+        # Cada pergamino deshace una acción, se limita a lo que la vista dice que es posible.
         cantidad = min(cantidad, vista.retrocesos_posibles)
         if cantidad <= 0:
             self._vista.mostrar_aviso("No hay ninguna acción que se pueda deshacer.")
@@ -256,7 +256,7 @@ class ControladorCripta:
 
     # ------------------------------------------------- orden -> acción
     def _traducir(self, orden: Orden, vista) -> Accion | None:
-        # Convierte posiciones de la vista en ids reales; None si la orden no se puede formar.
+        # Convierte posiciones de la vista en ids reales, None si la orden no se puede formar.
         tipo, arg = orden.tipo, orden.argumento
         if tipo in ("mover", "abrir"):
             return self._crear_accion(tipo, arg)
@@ -299,7 +299,7 @@ class ControladorCripta:
 
     # ---------------------------------------------------------- acciones
     def _ejecutar_accion(self, accion: Accion) -> bool:
-        # Una acción rechazada se avisa con su motivo; una aceptada que termina la partida la finaliza.
+        # Una acción rechazada se avisa con su motivo, una aceptada que termina la partida la finaliza.
         ok, resultado = self._intentar(self._servicio.ejecutar, accion)
         if not ok:
             return False
@@ -335,7 +335,7 @@ class ControladorCripta:
 
 
     def _puntajes_globales(self) -> tuple:
-        # Todos los puntajes guardados; vacío si no hay tabla o falló la lectura.
+        # Todos los puntajes guardados, vacío si no hay tabla o falló la lectura.
         if self._leer_puntajes is None:
             return ()
         ok, puntajes = self._intentar(self._leer_puntajes)
@@ -351,7 +351,7 @@ class ControladorCripta:
 
     # -------------------------------------------------------- inventario
     def _mover_cursor(self, sentido: str) -> None:
-        # Mueve el cursor del inventario (no consume tiempo); la vista lo refleja en el siguiente estado.
+        # Mueve el cursor del inventario (no consume tiempo), la vista lo refleja en el siguiente estado.
         if sentido == "siguiente":
             self._intentar(lambda: self._servicio.partida.inventario_siguiente())
         else:
@@ -359,7 +359,7 @@ class ControladorCripta:
 
 
     def _mostrar_ordenado(self, criterio) -> None:
-        # Vista ordenada por peso, valor o nombre; no altera el orden real del inventario.
+        # Vista ordenada por peso, valor o nombre, no altera el orden real del inventario.
         if criterio not in CRITERIOS_ORDEN:
             self._vista.mostrar_aviso(f"Criterio de orden inválido: {criterio!r}.")
             return
@@ -413,7 +413,7 @@ class ControladorCripta:
 
     # ------------------------------------------------------------ errores
     def _intentar(self, operacion, *argumentos):
-        # Ejecuta la operación; si falla muestra el error y devuelve (False, None) sin cortar el programa.
+        # Ejecuta la operación, si falla muestra el error y devuelve (False, None) sin cortar el programa.
         try:
             return True, operacion(*argumentos)
         except _ERRORES as error:

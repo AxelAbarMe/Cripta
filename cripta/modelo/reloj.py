@@ -24,7 +24,7 @@ class EventoProgramado:
         self.secuencia = secuencia
         self.accion = accion
         self.descripcion = descripcion
-        self.datos = datos   # (tipo, sujeto, a, b) para guardar la partida; ver estado_guardado.py
+        self.datos = datos   # (tipo, sujeto, a, b) para guardar la partida, ver estado_guardado.py
         self.cancelado = False
         self.ejecutado = False
         self.en_agenda = True

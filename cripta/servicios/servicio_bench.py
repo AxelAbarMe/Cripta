@@ -12,13 +12,16 @@ import sys
 import time
 
 from cripta.bench.cargas_bench import CARGAS
+from cripta.estructuras.ordenamiento_selector import ordenar_auto
 
 
 class SubsistemaDesconocidoError(ValueError):
     def __init__(self, pedidos, validos):
         self.pedidos = pedidos
+        pedidos_ordenados = list(pedidos)
+        ordenar_auto(pedidos_ordenados)
         super().__init__(
-            f"Subsistema(s) desconocido(s): {', '.join(sorted(pedidos))}. "
+            f"Subsistema(s) desconocido(s): {', '.join(pedidos_ordenados)}. "
             f"Válidos: {', '.join(n for n, _ in validos)}"
         )
 
@@ -33,11 +36,35 @@ class ServicioBench:
         """subsistemas: nombres a correr (None = todos, en el orden de CARGAS).
         Devuelve {nombre: (segundos_totales, [Resultado, ...])}."""
         if subsistemas is not None:
-            validos = {n for n, _ in CARGAS}
-            faltantes = set(subsistemas) - validos
+            nombres_validos = []
+            for par in CARGAS:
+                nombres_validos.append(par[0])
+
+            faltantes = []
+            for pedido in subsistemas:
+                es_valido = False
+                for valido in nombres_validos:
+                    if pedido == valido:
+                        es_valido = True
+                        break
+                if not es_valido:
+                    ya_agregado = False
+                    for f in faltantes:
+                        if f == pedido:
+                            ya_agregado = True
+                            break
+                    if not ya_agregado:
+                        faltantes.append(pedido)
+
             if faltantes:
                 raise SubsistemaDesconocidoError(faltantes, CARGAS)
-            elegidos = [par for par in CARGAS if par[0] in subsistemas]
+
+            elegidos = []
+            for par in CARGAS:
+                for pedido in subsistemas:
+                    if par[0] == pedido:
+                        elegidos.append(par)
+                        break
         else:
             elegidos = CARGAS
 

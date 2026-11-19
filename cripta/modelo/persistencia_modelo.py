@@ -131,7 +131,7 @@ def crear_estado(*, cripta_id, cripta_version, catalogo_version, semilla, azar, 
     
 # ----------------------------------------------------------------------------------------------
 # La "vuelta": de EstadoPartida a los objetos del modelo (§4.10). Estas funciones solo reponen
-# datos; las acciones de la agenda las recrea Partida, porque son métodos suyos.
+# datos, las acciones de la agenda las recrea Partida, porque son métodos suyos.
 # ----------------------------------------------------------------------------------------------
 def restaurar_jugador(jugador, guardado, catalogo) -> None:
     jugador.vida_max = guardado.vida_max

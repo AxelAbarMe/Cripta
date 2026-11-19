@@ -493,7 +493,7 @@ class Partida:
         return self._aceptar()
 
     def _puerta_exige_llave_de_salida(self, origen_id: int, direccion: str) -> bool:
-        # 2.12: la puerta cruzada exige llave_salida; solo se cruza abierta y abrirla requirió esa llave
+        # 2.12: la puerta cruzada exige llave_salida, solo se cruza abierta y abrirla requirió esa llave
         llave, _cierre = self._mapa.datos_de_puerta(origen_id, direccion)
         return llave is not None and llave == self._datos.llave_salida
 
@@ -545,7 +545,7 @@ class Partida:
 
 
     def _avisar_cierre_de_puerta(self) -> None:
-        # El efecto cierra los dos lados; quien ya cruzó se queda donde está (solo se impide volver a atravesar)
+        # El efecto cierra los dos lados, quien ya cruzó se queda donde está (solo se impide volver a atravesar)
         self._buscador.invalidar()
         self._decir("Una puerta se cierra sola.")
 

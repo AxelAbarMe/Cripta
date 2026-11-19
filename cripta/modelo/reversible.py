@@ -7,7 +7,7 @@ que se pisa, nunca una copia del estado completo (§4.6). Sin registrador no hac
 
 
 class Reversible:
-    registrador = None           # función(inversa) o None; la asigna quien arma el retroceso
+    registrador = None           # función(inversa) o None, la asigna quien arma el retroceso
     _no_reversibles = ()         # nombres de atributos que no deben deshacerse
 
     def __setattr__(self, nombre, valor):
